@@ -20,11 +20,11 @@
 
 | Field | Value |
 |---|---|
-| Full legal name | <!-- FILL: e.g. Al-Ameen International Public School --> |
+| Full legal name | Al Iqra International Public School |
 | Short name / how we refer to ourselves | AlIPS |
-| Board / affiliation | <!-- FILL: CBSE / ICSE / State Board / IB --> |
-| Grades offered | <!-- FILL: e.g. Nursery to Class XII --> |
-| Location (city, area) | <!-- FILL --> |
+| Board / affiliation | CBSE |
+| Grades offered | Nursery to Class X |
+| Location (city, area) | <!-- FILL: message cut off at "K" --> |
 | Founded | <!-- FILL: year --> |
 | Approx. student strength | <!-- FILL --> |
 | Approx. teaching staff | <!-- FILL --> |
