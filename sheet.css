@@ -138,6 +138,7 @@
 .answer-key h4 { font-size: 1.05rem; margin-bottom: 8px; }
 .answer-key ol { padding-inline-start: 26px; font-size: 0.92rem; }
 .answer-key li { margin-bottom: 3px; }
+.answer-key .ms-steps { font-size: 0.8rem; color: #555; margin: 1px 0 5px; }
 
 .sheet-footnote { margin-top: 20px; font-size: 0.75rem; color: #666; text-align: center; }
 

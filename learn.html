@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AlIPS Practice &amp; Learn</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="learn.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">∑</div>
+      <div class="brand-text">
+        <h1 data-i18n="schoolName"></h1>
+        <p data-i18n="learnSubtitle"></p>
+      </div>
+    </div>
+    <div class="controls">
+      <a href="index.html" class="lang-btn" data-i18n="backToCurriculum"></a>
+      <button id="lang-toggle" class="lang-btn"></button>
+    </div>
+  </header>
+
+  <div class="learn-layout">
+    <aside class="learn-side">
+      <div class="panel-group">
+        <label for="grade-select" data-i18n="gradeLabel"></label>
+        <select id="grade-select"></select>
+      </div>
+      <div class="panel-group">
+        <label data-i18n="topicsLabel"></label>
+        <div id="topic-menu" class="topic-menu"></div>
+      </div>
+      <div class="score-card">
+        <h3 data-i18n="scoreTitle"></h3>
+        <div class="score-row"><span data-i18n="scoreCorrect"></span><strong id="score-right">0</strong></div>
+        <div class="score-row"><span data-i18n="scoreTried"></span><strong id="score-total">0</strong></div>
+        <div class="score-row"><span data-i18n="scoreStreak"></span><strong id="score-streak">0</strong></div>
+      </div>
+    </aside>
+
+    <main class="learn-main">
+      <h2 id="topic-title"></h2>
+
+      <div class="tabs">
+        <button id="tab-learn" class="tab active" data-i18n="tabLearn"></button>
+        <button id="tab-practice" class="tab" data-i18n="tabPractice"></button>
+      </div>
+
+      <section id="pane-learn" class="pane">
+        <div class="lesson-card">
+          <h3 data-i18n="conceptTitle"></h3>
+          <p id="lesson-concept"></p>
+        </div>
+        <div class="lesson-card">
+          <h3 data-i18n="exampleTitle"></h3>
+          <pre id="lesson-example" class="example-block"></pre>
+        </div>
+        <div class="lesson-card">
+          <h3 data-i18n="tipsTitle"></h3>
+          <ul id="lesson-tips"></ul>
+        </div>
+        <div class="lesson-card">
+          <h3 data-i18n="researchTitle"></h3>
+          <p class="research-note" data-i18n="researchNote"></p>
+          <div id="research-links" class="research-links"></div>
+          <div id="video-embed"></div>
+        </div>
+        <p class="draft-note" data-i18n="lessonDraftNote"></p>
+      </section>
+
+      <section id="pane-practice" class="pane hidden">
+        <div class="diff-row">
+          <span data-i18n="difficultyLabel"></span>
+          <button class="diff-chip active" data-diff="1" data-i18n="diffEasy"></button>
+          <button class="diff-chip" data-diff="2" data-i18n="diffMedium"></button>
+          <button class="diff-chip" data-diff="3" data-i18n="diffChallenging"></button>
+        </div>
+
+        <div class="q-card">
+          <p id="q-text" class="q-text"></p>
+
+          <div id="answer-numeric" class="answer-row hidden">
+            <input id="answer-input" type="text" inputmode="numeric" autocomplete="off">
+            <button id="check-btn" class="primary-btn" data-i18n="checkBtn"></button>
+          </div>
+
+          <div id="answer-reveal" class="answer-row hidden">
+            <button id="reveal-btn" class="primary-btn" data-i18n="revealBtn"></button>
+          </div>
+
+          <div id="feedback" class="feedback hidden"></div>
+
+          <div id="self-mark" class="answer-row hidden">
+            <span data-i18n="selfMarkPrompt"></span>
+            <button id="self-right" class="primary-btn small" data-i18n="selfRight"></button>
+            <button id="self-wrong" class="primary-btn small secondary" data-i18n="selfWrong"></button>
+          </div>
+
+          <details id="solution-box" class="solution hidden">
+            <summary data-i18n="solutionTitle"></summary>
+            <ol id="solution-steps"></ol>
+          </details>
+
+          <div class="next-row">
+            <button id="next-btn" class="primary-btn secondary" data-i18n="nextBtn"></button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="gen.js"></script>
+  <script src="lessons.js"></script>
+  <script src="learn.js"></script>
+</body>
+</html>

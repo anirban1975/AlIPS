@@ -67,7 +67,19 @@ Always check **both** languages — RTL regressions are the most common bug here
 
 1. ~~v0.1 Curriculum browser (bilingual, both views)~~ — done
 2. ~~v0.2 Worksheet + term-exam generator for teachers~~ — done
-3. Interactive practice for students: reuse `gen.js` generators with instant
-   feedback and scoring
+3. ~~v0.3 Practice & Learn (`learn.html`/`learn.js`/`lessons.js`): guided
+   lessons, deep-research links, infinite practice with mark-scheme
+   solutions~~ — done
 4. More generators (statistics tables, geometry with diagrams, word problems)
 5. Progress tracking
+
+## v0.3 notes
+
+- Every generator's `gen()` also returns `sol`: worked steps with Cambridge
+  mark codes (M1/A1/B1) — shown in practice and in worksheet answer keys.
+- `lessons.js` holds one bilingual mini-lesson per generator id, plus
+  search-based "deep research" links (YouTube EN/AR, Khan Academy,
+  Corbettmaths). NO hard-coded video IDs — the department can pin a vetted
+  video by setting `yt: "<videoId>"` on a lesson; it then embeds automatically.
+- Practice answers matching `x = n` / plain numbers are typed and checked;
+  other formats use reveal + self-marking.

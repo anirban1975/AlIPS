@@ -144,7 +144,14 @@
     const box = el("div", "answer-key");
     box.appendChild(el("h4", "", t(UI_STRINGS.answerKeyWord)));
     const ol = el("ol");
-    for (const item of all) ol.appendChild(el("li", "", t(item.a)));
+    for (const item of all) {
+      const li = el("li", "", t(item.a));
+      if (item.sol && item.sol.length > 1) {
+        const steps = item.sol.map((s) => `${t(s.t)} [${s.m}]`).join("  →  ");
+        li.appendChild(el("div", "ms-steps", steps));
+      }
+      ol.appendChild(li);
+    }
     box.appendChild(ol);
     return box;
   }

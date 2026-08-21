@@ -447,6 +447,7 @@ const UI_STRINGS = {
   noResults: T("No topics match your search in this grade.", "لا توجد مواضيع مطابقة لبحثك في هذا الصف."),
   langButton: T("العربية", "English"),
   worksheetLink: T("Worksheets & Exams", "أوراق العمل والاختبارات"),
+  practiceLink: T("Practice & Learn", "تدرّب وتعلّم"),
   draftNote: T("Draft content — to be verified by the Mathematics Department against the official Cambridge and Oman bilingual frameworks.",
                "محتوى أولي — يُراجع من قِبل قسم الرياضيات وفق أطر كامبريدج والمنهج العُماني ثنائي اللغة الرسمية.")
 };
