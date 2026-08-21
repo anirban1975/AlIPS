@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AlIPS Math Curriculum</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">∑</div>
+      <div class="brand-text">
+        <h1 data-i18n="schoolName"></h1>
+        <p data-i18n="appSubtitle"></p>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="view-toggle" role="group" aria-label="View mode">
+        <button id="view-student" class="toggle-btn active" data-i18n="studentView"></button>
+        <button id="view-teacher" class="toggle-btn" data-i18n="teacherView"></button>
+      </div>
+      <button id="lang-toggle" class="lang-btn" aria-label="Switch language"></button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="grade-nav" aria-label="Grades">
+      <h2 data-i18n="grades"></h2>
+      <ul id="grade-list"></ul>
+    </nav>
+
+    <main class="content">
+      <div class="content-header">
+        <div>
+          <h2 id="grade-title"></h2>
+          <p id="grade-stage" class="stage-label"></p>
+        </div>
+        <input id="search" type="search" data-i18n-placeholder="searchPlaceholder">
+      </div>
+
+      <div class="legend">
+        <span class="badge badge-cambridge" data-i18n="cambridge"></span>
+        <span class="badge badge-oman" data-i18n="oman"></span>
+        <span class="badge badge-both" data-i18n="bothCurricula"></span>
+      </div>
+
+      <div id="strands"></div>
+
+      <p class="draft-note" data-i18n="draftNote"></p>
+    </main>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
