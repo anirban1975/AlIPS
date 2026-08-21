@@ -11,10 +11,26 @@ Bilingual curriculum browser: grades 1–12 → strands → topics, with
 Cambridge / Oman Bilingual / Both tags, a Student/Teacher view toggle, and
 search. Static site — no build step, no server.
 
-- `index.html` — page structure; UI text filled in by `app.js` from `UI_STRINGS`
+- `index.html` — curriculum browser; UI text filled in by `app.js` from `UI_STRINGS`
 - `styles.css` — uses logical properties (`inline-start` etc.) so RTL works free
 - `data.js` — the curriculum dataset (`CURRICULUM`) and UI strings (`UI_STRINGS`)
-- `app.js` — rendering + state (language, view, grade, search)
+- `app.js` — curriculum browser rendering + state (language, view, grade, search)
+- `worksheets.html` / `sheet.css` / `sheet.js` — teacher tool: infinite worksheet
+  and term-exam generator (print → PDF via the browser)
+- `gen.js` — the question generator engine: seeded RNG (`mulberry32`) +
+  ~30 bilingual generators in `GENERATORS`, mapped to grades via `GRADE_GENS`
+
+### Question generator conventions
+
+- A generator is `{ name: T(en,ar), grades: [..], gen(r, d) -> {q: T, a: T} }`
+  where `r` is the RNG and `d` is difficulty 1–3. Answers that are pure math
+  use `N(value)` (same string in both languages).
+- Generators MUST produce clean answers (integers, exact fractions, or values
+  that round nicely) — construct the answer first, derive the question from it.
+- Same seed ⇒ identical paper ("Paper no." printed on exams), so teachers can
+  reprint or share a paper by its number.
+- Exam structure: Section A = 1 mark/easy, B = 2 marks/medium, C = 4 marks/hard.
+- Numerals are Western (0-9) in both languages — confirm with the department.
 
 ## Conventions
 
@@ -50,6 +66,8 @@ Always check **both** languages — RTL regressions are the most common bug here
 ## Roadmap (agreed with the department head)
 
 1. ~~v0.1 Curriculum browser (bilingual, both views)~~ — done
-2. Interactive practice: one grade, a few topics, instant feedback
-3. Quiz/assessment builder for teachers
-4. Progress tracking
+2. ~~v0.2 Worksheet + term-exam generator for teachers~~ — done
+3. Interactive practice for students: reuse `gen.js` generators with instant
+   feedback and scoring
+4. More generators (statistics tables, geometry with diagrams, word problems)
+5. Progress tracking
