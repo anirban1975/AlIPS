@@ -107,6 +107,12 @@ fallback face — that is expected; check sizes, not the letterforms.
 `gh-pages` branch is the live site: https://anirban1975.github.io/AlIPS/
 Deploy by fast-forwarding `gh-pages` to the feature branch and force-pushing.
 
+Google Cloud (Firebase Hosting) is the school's second target:
+`firebase.json` holds the hosting config, `deploy/gcp-deploy.sh` does the whole
+deploy in one command, and `docs/CLOUDSHELL.md` is the Cloud Shell tutorial the
+one-click link opens. See `docs/DEPLOY-GCP.md`. `.firebaserc` is generated per
+user and git-ignored.
+
 ## Roadmap
 
 1. ~~v0.1 Curriculum browser~~ — done

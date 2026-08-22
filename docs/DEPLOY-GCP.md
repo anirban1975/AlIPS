@@ -1,73 +1,77 @@
 # Deploying the AlIPS Math App to Google Cloud
 
-The app is a static site (HTML/CSS/JS, no server), so the best-fit Google
-service is **Firebase Hosting** — it's part of Google Cloud, has a generous
-free tier that this app will never exceed, serves over HTTPS, and gives you a
-URL like `https://alips-math.web.app`.
+The app is a static site (HTML/CSS/JS, no server), so the best fit on Google
+Cloud is **Firebase Hosting**: free tier, HTTPS included, custom domains
+supported, and no billing account required.
 
-> Already live for free at: https://anirban1975.github.io/AlIPS/
-> Use this guide only if the school prefers hosting on Google's cloud.
+## The one-click way (recommended, ~3 minutes)
 
-## Option A — Firebase Hosting (recommended)
+Open this link. Google Cloud Shell starts in your browser, already signed in
+to your Google account, with this repository cloned and a step-by-step
+tutorial in the side panel:
 
-**One-time setup (about 15 minutes):**
+**[▶ Open in Google Cloud Shell](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fanirban1975%2FAlIPS&cloudshell_git_branch=gh-pages&cloudshell_workspace=.&cloudshell_tutorial=docs%2FCLOUDSHELL.md)**
 
-1. Install Node.js from https://nodejs.org if you don't have it.
-2. Install the Firebase tools. In a terminal:
-   ```
-   npm install -g firebase-tools
-   ```
-3. Sign in with the school's Google account:
-   ```
-   firebase login
-   ```
-4. Create a project at https://console.firebase.google.com — click
-   **Add project**, name it `alips-math`, and disable Analytics (not needed).
-5. In the folder containing the app files (`index.html`, `styles.css`,
-   `data.js`, `app.js`) run:
-   ```
-   firebase init hosting
-   ```
-   Answers: use existing project → `alips-math`; public directory → `.`
-   (a single dot, meaning "this folder"); single-page app → `No`;
-   set up automatic builds → `No`; overwrite index.html → **No** (important).
+Then run one command:
 
-**Deploying (every time, 30 seconds):**
-
-```
-firebase deploy --only hosting
+```bash
+bash deploy/gcp-deploy.sh
 ```
 
-The command prints your live URL, e.g. `https://alips-math.web.app`.
-You can attach a custom school domain later under Hosting → Add custom domain.
+It lists your Google Cloud projects, lets you pick one (or type a new id such
+as `alips-math` to create it), enables Firebase, uploads the app, and prints
+your live address — something like `https://alips-math.web.app`.
 
-Cost: free. The free tier includes 10 GB storage and 360 MB/day transfer —
-far more than this app uses.
+Nothing to install: Cloud Shell already has `gcloud` and Node.js.
 
-## Option B — Google Cloud Storage bucket
+## Deploying an update later
 
-Works, but is more fiddly than Firebase (HTTPS on a custom domain requires
-setting up a load balancer, which costs ~USD 18/month). Only choose this if
-your IT policy requires plain GCP:
+Back in Cloud Shell:
 
-1. Create a project at https://console.cloud.google.com and enable billing.
-2. Create a bucket (Cloud Storage → Create bucket), uncheck
-   "Enforce public access prevention".
-3. Upload `index.html`, `styles.css`, `data.js`, `app.js`.
-4. Grant public read: bucket → Permissions → Grant access →
-   principal `allUsers`, role `Storage Object Viewer`.
-5. Bucket → Edit website configuration → main page `index.html`.
-6. The site is served at
-   `https://storage.googleapis.com/YOUR-BUCKET-NAME/index.html`.
+```bash
+git pull && bash deploy/gcp-deploy.sh
+```
 
-## Which to choose
+## From your own computer instead
 
-| | GitHub Pages (current) | Firebase Hosting | Cloud Storage |
+If you would rather not use Cloud Shell:
+
+```bash
+npm install -g firebase-tools     # once
+firebase login                    # once
+firebase deploy --only hosting --project YOUR-PROJECT-ID
+```
+
+`firebase.json` in this repository already contains the hosting configuration,
+so no `firebase init` is needed.
+
+## Adding a school domain
+
+Firebase console → your project → **Hosting** → **Add custom domain** →
+enter e.g. `math.alinjaz.edu.om`. Firebase issues a free HTTPS certificate;
+your IT team adds the two DNS records it shows.
+
+## Alternative: Cloud Storage bucket
+
+Possible, but weaker for this use: HTTPS on a custom domain needs a load
+balancer (~USD 18/month), and there is no atomic deploy or rollback.
+
+1. Create a bucket in Cloud Storage; uncheck "Enforce public access prevention".
+2. Upload the site files (all `.html`, `.css`, `.js`, `letterhead.png`).
+3. Permissions → Grant access → principal `allUsers`, role
+   `Storage Object Viewer`.
+4. Edit website configuration → main page `index.html`.
+5. Served at `https://storage.googleapis.com/YOUR-BUCKET/index.html`.
+
+## Which host to use
+
+| | GitHub Pages (live now) | Firebase Hosting | Cloud Storage |
 |---|---|---|---|
-| Cost | Free | Free | Free-ish; HTTPS custom domain ~$18/mo |
-| Setup effort | Done | ~15 min once | ~30 min |
-| Custom domain + HTTPS | Yes, free | Yes, free | Needs load balancer |
-| Auto-deploy from GitHub | Yes | Possible (extra setup) | No |
+| Cost | Free | Free (Spark plan) | Free-ish; HTTPS custom domain ~$18/mo |
+| Setup | Already done | ~3 min via Cloud Shell | ~30 min |
+| Custom domain + HTTPS | Yes, free | Yes, free | Needs a load balancer |
+| Rollback | Git revert | One click in console | None |
+| Inside Google Cloud | No | Yes | Yes |
 
-Recommendation: stay on GitHub Pages until the school needs a custom domain
-or Google-account-based access control; then move to Firebase Hosting.
+Both can run at once — GitHub Pages as the always-on copy, Firebase as the
+school's official address.
