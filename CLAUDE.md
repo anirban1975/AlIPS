@@ -19,6 +19,8 @@ department's request (v0.4). Do not re-introduce bilingual strings.
 - `data.js` — curriculum dataset (`CURRICULUM`) and UI strings (`UI_STRINGS`)
 - `letterhead.png` — the official school letterhead, extracted from the
   department's Word templates and printed at the top of every sheet
+- `letterhead-data.js` — the same image as a base64 data URI, so exported
+  Word files are self-contained (regenerate with `base64 letterhead.png`)
 
 ## Print format — follow the department templates
 
@@ -31,8 +33,16 @@ in `sheet.js` / `learn.js`, applied through the `--sheet-size` / `--q-size` CSS
 variables. `Comic Neue` (Google Fonts) is the fallback for devices without
 Comic Sans MS; the page still works offline, just with the fallback face.
 
-**Worksheet layout:** letterhead → `Grade: <n><section>` + `Subject: Mathematics`
-→ `Topic: …` + `Date: ____` → `Name: ____` → `Q1.` `Q2.` … with working space.
+**Page border:** every printed page carries a single-line border. On screen it
+is the `.sheet` border; in print a fixed-position `.page-frame` element repeats
+it on each page (fixed elements repeat per page in Chrome). In Word it comes
+from `border: 1pt solid windowtext` on `@page WordSection1`.
+
+**Worksheet layout:** letterhead → `Grade: <n><section>` + `Subject: …`
+→ `Topic: …` + `Date: ____` → `Name: ____` → `Q1.` `Q2.` … with working space →
+footer table: `Score ___ / n` + `Teacher's Remarks`, the reward chart
+(Gold ≥90% / Silver 75–89% / Bronze 60–74% / Keep Practising <60%, teacher ticks
+one; toggleable), and `Teacher's Signature` + `Parent's Signature` boxes.
 
 **Exam layout:** letterhead → centred examination title → info table
 (Subject / Grade / Section, Duration / Date / Marks) → signature block
@@ -42,6 +52,14 @@ Check 1 | Check 2 | HOD, plus Total and Name & Sign rows) → Instructions →
 questions as `Qn)` with `[N Marks]` and parts `(a) (b) (c)` each marked `[n]`.
 Part marks ramp 2 / 3 / 4 / 4 at difficulty 1 / 2 / 3 / 3; each question draws
 all its parts from one topic so the question reads coherently.
+
+## Word export
+
+`Download as Word` builds a `.doc` (Word-flavoured HTML) client-side and saves
+it with a Blob — no server. Word ignores flexbox, so the Word renderer lays out
+every aligned row (question + marks, grade + subject) as a **borderless table**
+via the `layRow()` helper. Screen and Word output are generated from the *same*
+model object, so a given paper number produces identical questions in both.
 
 ## Conventions
 
@@ -68,7 +86,11 @@ No test suite. Verify visually with headless Chromium:
 ```
 
 URL params: `grade` (1–12), `mode` (worksheet/exam), `seed`, `auto=1`,
+`count`, `space`, `questions`, `parts`, `reward=0`, `answers=0`,
 `view` (student/teacher), `topic`, `tab` (practice).
+Check the printed border by exporting a PDF and looking for one full-page
+stroked rectangle per page:
+`chromium --headless --print-to-pdf=out.pdf --no-pdf-header-footer "<url>"`.
 Comic Sans MS is not installed in this container, so screenshots show the
 fallback face — that is expected; check sizes, not the letterforms.
 
@@ -91,5 +113,6 @@ Deploy by fast-forwarding `gh-pages` to the feature branch and force-pushing.
 2. ~~v0.2 Worksheet + exam generator~~ — done
 3. ~~v0.3 Practice & Learn with mark schemes~~ — done
 4. ~~v0.4 English-only + department print templates + Comic Sans sizing~~ — done
-5. More generators (statistics tables, geometry with diagrams, word problems)
-6. Progress tracking
+5. ~~v0.5 Page borders, Word export, worksheet score/reward/signature block~~ — done
+6. More generators (statistics tables, geometry with diagrams, word problems)
+7. Progress tracking

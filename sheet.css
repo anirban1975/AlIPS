@@ -89,6 +89,7 @@
 }
 
 .primary-btn.secondary { background: var(--accent); }
+.primary-btn.word { background: #2b579a; }  /* Word blue */
 
 .panel-note { font-size: 0.75rem; color: var(--ink-soft); line-height: 1.4; }
 
@@ -96,15 +97,18 @@
 
 .sheet {
   background: #fff;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 30px 34px;
+  /* Single-line page border, as on the department's printed papers. */
+  border: 1px solid #000;
+  padding: 26px 30px;
   min-height: 400px;
   color: #000;
   font-family: "Comic Sans MS", "Comic Neue", "Chalkboard SE", cursive;
   font-size: var(--sheet-size, 12pt);
   line-height: 1.45;
 }
+
+/* In print, a fixed frame repeats the single-line border on every page. */
+.page-frame { display: none; }
 
 .sheet .letterhead-img {
   display: block;
@@ -227,6 +231,51 @@
   font-size: 0.85em;
 }
 
+/* Score, teacher signature and reward chart (worksheets) */
+.sheet .foot-block {
+  margin-top: 18px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.sheet table.foot-tbl {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+}
+
+.sheet table.foot-tbl td {
+  border: 1px solid #000;
+  padding: 6px 8px;
+  vertical-align: middle;
+}
+
+.sheet table.foot-tbl td.k { font-weight: 700; white-space: nowrap; width: 1%; }
+.sheet table.foot-tbl td.sign { height: 42px; }
+
+.sheet .reward-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sheet .reward {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.sheet .reward .tickbox {
+  display: inline-block;
+  width: 0.95em;
+  height: 0.95em;
+  border: 1px solid #000;
+}
+
+.sheet .reward .star { font-size: 1.15em; }
+
 .sheet-foot { margin-top: 18px; font-size: 0.8em; text-align: center; color: #444; }
 
 .placeholder-hint {
@@ -244,6 +293,16 @@
   .no-print { display: none !important; }
   body { background: #fff; }
   .gen-layout { display: block; margin: 0; padding: 0; max-width: none; }
-  .sheet { border: none; border-radius: 0; padding: 0; min-height: 0; }
+  .sheet { border: none; border-radius: 0; padding: 4mm 5mm; min-height: 0; }
   a[href]:after { content: none !important; }
+
+  /* Fixed elements repeat on every printed page, giving each page its border. */
+  .page-frame {
+    display: block;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    border: 1px solid #000;
+    pointer-events: none;
+    z-index: 0;
+  }
 }
