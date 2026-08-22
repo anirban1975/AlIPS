@@ -1,11 +1,10 @@
 // AlIPS Math Curriculum Browser — app logic.
-// State: current language (en/ar), view (student/teacher), grade, search query.
+// State: view (student/teacher), grade, search query.
 
 (function () {
   const params = new URLSearchParams(location.search);
 
   const state = {
-    lang: params.get("lang") || safeGet("alips-lang") || "en",
     view: params.get("view") || safeGet("alips-view") || "student",
     grade: parseInt(params.get("grade"), 10) || 1,
     query: ""
@@ -18,21 +17,15 @@
     try { localStorage.setItem(key, value); } catch { /* private mode */ }
   }
 
-  const t = (obj) => (obj && obj[state.lang]) || (obj && obj.en) || "";
-
   // ---------- Rendering ----------
 
-  function applyLanguage() {
-    document.documentElement.lang = state.lang;
-    document.documentElement.dir = state.lang === "ar" ? "rtl" : "ltr";
-
+  function applyStrings() {
     document.querySelectorAll("[data-i18n]").forEach((el) => {
-      el.textContent = t(UI_STRINGS[el.dataset.i18n]);
+      el.textContent = UI_STRINGS[el.dataset.i18n];
     });
     document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
-      el.placeholder = t(UI_STRINGS[el.dataset.i18nPlaceholder]);
+      el.placeholder = UI_STRINGS[el.dataset.i18nPlaceholder];
     });
-    document.getElementById("lang-toggle").textContent = t(UI_STRINGS.langButton);
   }
 
   function renderGradeNav() {
@@ -54,28 +47,23 @@
 
   function badgeFor(tag) {
     const span = document.createElement("span");
-    span.className = "badge badge-" + (tag === "both" ? "both" : tag);
-    span.textContent = t(
+    span.className = "badge badge-" + tag;
+    span.textContent =
       tag === "cambridge" ? UI_STRINGS.cambridge :
-      tag === "oman" ? UI_STRINGS.oman : UI_STRINGS.bothCurricula
-    );
+      tag === "oman" ? UI_STRINGS.oman : UI_STRINGS.bothCurricula;
     return span;
   }
 
   function topicMatches(topic) {
     if (!state.query) return true;
-    const q = state.query.toLowerCase();
-    return ["en", "ar"].some((lang) =>
-      (topic.n[lang] || "").toLowerCase().includes(q)
-    );
+    return topic.n.toLowerCase().includes(state.query.toLowerCase());
   }
 
   function renderContent() {
     const grade = CURRICULUM.find((g) => g.id === state.grade) || CURRICULUM[0];
 
-    document.getElementById("grade-title").textContent =
-      t(UI_STRINGS.gradePrefix) + " " + grade.id;
-    document.getElementById("grade-stage").textContent = t(grade.stage);
+    document.getElementById("grade-title").textContent = UI_STRINGS.gradePrefix + " " + grade.id;
+    document.getElementById("grade-stage").textContent = grade.stage;
 
     const container = document.getElementById("strands");
     container.innerHTML = "";
@@ -89,7 +77,7 @@
       section.className = "strand";
 
       const h3 = document.createElement("h3");
-      h3.textContent = t(strand.name);
+      h3.textContent = strand.name;
       section.appendChild(h3);
 
       const grid = document.createElement("div");
@@ -103,28 +91,21 @@
         const head = document.createElement("div");
         head.className = "topic-head";
         const h4 = document.createElement("h4");
-        h4.textContent = t(topic.n);
+        h4.textContent = topic.n;
         head.appendChild(h4);
         head.appendChild(badgeFor(topic.c));
         card.appendChild(head);
 
-        if (state.view === "student" && topic.s) {
+        if (topic.s) {
           const p = document.createElement("p");
-          p.textContent = t(topic.s);
+          p.textContent = topic.s;
           card.appendChild(p);
         }
-        if (state.view === "teacher") {
-          if (topic.s) {
-            const p = document.createElement("p");
-            p.textContent = t(topic.s);
-            card.appendChild(p);
-          }
-          if (topic.t) {
-            const note = document.createElement("p");
-            note.className = "teacher-note";
-            note.textContent = t(UI_STRINGS.teacherNoteLabel) + ": " + t(topic.t);
-            card.appendChild(note);
-          }
+        if (state.view === "teacher" && topic.t) {
+          const note = document.createElement("p");
+          note.className = "teacher-note";
+          note.textContent = UI_STRINGS.teacherNoteLabel + ": " + topic.t;
+          card.appendChild(note);
         }
 
         grid.appendChild(card);
@@ -137,7 +118,7 @@
     if (shown === 0) {
       const empty = document.createElement("p");
       empty.className = "no-results";
-      empty.textContent = t(UI_STRINGS.noResults);
+      empty.textContent = UI_STRINGS.noResults;
       container.appendChild(empty);
     }
   }
@@ -148,19 +129,13 @@
   }
 
   function render() {
-    applyLanguage();
+    applyStrings();
     renderGradeNav();
     renderViewToggle();
     renderContent();
   }
 
   // ---------- Events ----------
-
-  document.getElementById("lang-toggle").addEventListener("click", () => {
-    state.lang = state.lang === "en" ? "ar" : "en";
-    safeSet("alips-lang", state.lang);
-    render();
-  });
 
   document.getElementById("view-student").addEventListener("click", () => {
     state.view = "student";

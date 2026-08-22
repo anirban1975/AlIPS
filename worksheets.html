@@ -1,86 +1,106 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AlIPS Worksheet Generator</title>
+  <title>AlIPS Worksheet &amp; Exam Generator</title>
+  <!-- Comic Sans MS is used when installed (school Windows machines);
+       Comic Neue is a close web fallback for other devices. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="sheet.css">
 </head>
 <body>
   <header class="topbar no-print">
     <div class="brand">
-      <div class="brand-mark">∑</div>
-      <div class="brand-text">
-        <h1 data-i18n="schoolName"></h1>
-        <p data-i18n="genSubtitle"></p>
-      </div>
+      <img src="letterhead.png" alt="Al Injaz International Private School" class="letterhead">
+      <p class="brand-sub">Mathematics Department — Worksheet &amp; Exam Generator</p>
     </div>
     <div class="controls">
-      <a href="index.html" class="lang-btn" data-i18n="backToCurriculum"></a>
-      <button id="lang-toggle" class="lang-btn"></button>
+      <a href="index.html" class="nav-btn">Curriculum</a>
+      <a href="learn.html" class="nav-btn">Practice &amp; Learn</a>
     </div>
   </header>
 
   <div class="gen-layout">
     <aside class="gen-panel no-print">
       <div class="panel-group">
-        <label data-i18n="mode"></label>
+        <label>Document type</label>
         <div class="view-toggle">
-          <button id="mode-worksheet" class="toggle-btn active" data-i18n="modeWorksheet"></button>
-          <button id="mode-exam" class="toggle-btn" data-i18n="modeExam"></button>
+          <button id="mode-worksheet" class="toggle-btn active">Worksheet</button>
+          <button id="mode-exam" class="toggle-btn">Exam paper</button>
         </div>
       </div>
 
       <div class="panel-group">
-        <label for="grade-select" data-i18n="gradeLabel"></label>
+        <label for="grade-select">Grade</label>
         <select id="grade-select"></select>
+        <label for="section-input">Section / class</label>
+        <input id="section-input" type="text" value="A" maxlength="6">
       </div>
 
       <div class="panel-group">
-        <label data-i18n="topicsLabel"></label>
+        <label>Topics</label>
         <div id="topic-list" class="topic-checks"></div>
+        <button id="topic-all" class="mini-btn">Select all</button>
       </div>
 
+      <!-- Worksheet options -->
       <div class="panel-group" id="worksheet-opts">
-        <label for="q-count" data-i18n="questionsPerTopic"></label>
-        <input id="q-count" type="number" min="1" max="30" value="6">
-        <label for="difficulty" data-i18n="difficultyLabel"></label>
+        <label for="topic-title-input">Topic title (printed)</label>
+        <input id="topic-title-input" type="text" placeholder="auto from topics">
+        <label for="q-count">Questions per topic</label>
+        <input id="q-count" type="number" min="1" max="30" value="5">
+        <label for="difficulty">Difficulty</label>
         <select id="difficulty">
-          <option value="1" data-i18n="diffEasy"></option>
-          <option value="2" selected data-i18n="diffMedium"></option>
-          <option value="3" data-i18n="diffHard"></option>
+          <option value="1">Easy</option>
+          <option value="2" selected>Medium</option>
+          <option value="3">Challenging</option>
+          <option value="mixed">Mixed (easy → challenging)</option>
+        </select>
+        <label for="ws-space">Working space per question</label>
+        <select id="ws-space">
+          <option value="0">None (compact)</option>
+          <option value="1" selected>Small</option>
+          <option value="2">Medium</option>
+          <option value="3">Large</option>
         </select>
       </div>
 
+      <!-- Exam options -->
       <div class="panel-group hidden" id="exam-opts">
-        <label data-i18n="examStructure"></label>
-        <div class="exam-counts">
-          <span data-i18n="sectionA"></span><input id="count-a" type="number" min="0" max="20" value="8">
-          <span data-i18n="sectionB"></span><input id="count-b" type="number" min="0" max="20" value="6">
-          <span data-i18n="sectionC"></span><input id="count-c" type="number" min="0" max="20" value="4">
-        </div>
-        <label for="exam-term" data-i18n="termLabel"></label>
-        <select id="exam-term">
-          <option value="1" data-i18n="term1"></option>
-          <option value="2" data-i18n="term2"></option>
-          <option value="3" data-i18n="term3"></option>
+        <label for="exam-title">Examination title</label>
+        <input id="exam-title" type="text" value="SEMESTER – 1 EXAMINATION: DECEMBER 2025">
+        <label for="exam-subject">Subject</label>
+        <input id="exam-subject" type="text" value="Mathematics">
+        <label for="exam-duration">Duration</label>
+        <input id="exam-duration" type="text" value="2 hours">
+        <label for="exam-date">Date (printed)</label>
+        <input id="exam-date" type="text" value="___ / 12 / 25">
+        <label for="exam-questions">Number of questions</label>
+        <input id="exam-questions" type="number" min="1" max="12" value="5">
+        <label for="exam-parts">Parts per question</label>
+        <select id="exam-parts">
+          <option value="2">2 — (a) (b)</option>
+          <option value="3" selected>3 — (a) (b) (c)</option>
+          <option value="4">4 — (a) (b) (c) (d)</option>
         </select>
-        <label for="exam-minutes" data-i18n="timeAllowed"></label>
-        <input id="exam-minutes" type="number" min="15" max="180" step="5" value="60">
       </div>
 
       <div class="panel-group">
-        <label for="seed" data-i18n="seedLabel"></label>
+        <label for="seed">Paper number (seed)</label>
         <div class="seed-row">
           <input id="seed" type="number" min="1" max="999999">
-          <button id="new-seed" class="lang-btn" title="New random seed">🎲</button>
+          <button id="new-seed" class="mini-btn" title="New random paper">🎲</button>
         </div>
-        <label class="check-inline"><input id="show-answers" type="checkbox" checked> <span data-i18n="includeAnswers"></span></label>
+        <label class="check-inline"><input id="show-answers" type="checkbox" checked> Include mark scheme</label>
       </div>
 
-      <button id="generate" class="primary-btn" data-i18n="generateBtn"></button>
-      <button id="print" class="primary-btn secondary" data-i18n="printBtn"></button>
+      <button id="generate" class="primary-btn">Generate</button>
+      <button id="print" class="primary-btn secondary">Print / Save as PDF</button>
+      <p class="panel-note">Font: Comic Sans MS — 14 pt for Grades 1–4, 12 pt for Grades 5–12.</p>
     </aside>
 
     <main id="sheet" class="sheet"></main>

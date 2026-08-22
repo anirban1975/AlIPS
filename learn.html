@@ -1,42 +1,42 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AlIPS Practice &amp; Learn</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="learn.css">
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
-      <div class="brand-mark">∑</div>
-      <div class="brand-text">
-        <h1 data-i18n="schoolName"></h1>
-        <p data-i18n="learnSubtitle"></p>
-      </div>
+      <img src="letterhead.png" alt="Al Injaz International Private School" class="letterhead">
+      <p class="brand-sub">Mathematics Department — Practice &amp; Learn</p>
     </div>
     <div class="controls">
-      <a href="index.html" class="lang-btn" data-i18n="backToCurriculum"></a>
-      <button id="lang-toggle" class="lang-btn"></button>
+      <a href="index.html" class="nav-btn">Curriculum</a>
+      <a href="worksheets.html" class="nav-btn">Worksheets &amp; Exams</a>
     </div>
   </header>
 
   <div class="learn-layout">
     <aside class="learn-side">
       <div class="panel-group">
-        <label for="grade-select" data-i18n="gradeLabel"></label>
+        <label for="grade-select">Grade</label>
         <select id="grade-select"></select>
       </div>
       <div class="panel-group">
-        <label data-i18n="topicsLabel"></label>
+        <label>Topics</label>
         <div id="topic-menu" class="topic-menu"></div>
       </div>
       <div class="score-card">
-        <h3 data-i18n="scoreTitle"></h3>
-        <div class="score-row"><span data-i18n="scoreCorrect"></span><strong id="score-right">0</strong></div>
-        <div class="score-row"><span data-i18n="scoreTried"></span><strong id="score-total">0</strong></div>
-        <div class="score-row"><span data-i18n="scoreStreak"></span><strong id="score-streak">0</strong></div>
+        <h3>Session score</h3>
+        <div class="score-row"><span>Correct</span><strong id="score-right">0</strong></div>
+        <div class="score-row"><span>Attempted</span><strong id="score-total">0</strong></div>
+        <div class="score-row"><span>Streak</span><strong id="score-streak">0</strong></div>
       </div>
     </aside>
 
@@ -44,67 +44,67 @@
       <h2 id="topic-title"></h2>
 
       <div class="tabs">
-        <button id="tab-learn" class="tab active" data-i18n="tabLearn"></button>
-        <button id="tab-practice" class="tab" data-i18n="tabPractice"></button>
+        <button id="tab-learn" class="tab active">📖 Guided learning</button>
+        <button id="tab-practice" class="tab">✏️ Practice</button>
       </div>
 
       <section id="pane-learn" class="pane">
         <div class="lesson-card">
-          <h3 data-i18n="conceptTitle"></h3>
+          <h3>The idea</h3>
           <p id="lesson-concept"></p>
         </div>
         <div class="lesson-card">
-          <h3 data-i18n="exampleTitle"></h3>
+          <h3>Worked example</h3>
           <pre id="lesson-example" class="example-block"></pre>
         </div>
         <div class="lesson-card">
-          <h3 data-i18n="tipsTitle"></h3>
+          <h3>Key points</h3>
           <ul id="lesson-tips"></ul>
         </div>
         <div class="lesson-card">
-          <h3 data-i18n="researchTitle"></h3>
-          <p class="research-note" data-i18n="researchNote"></p>
+          <h3>Videos &amp; deeper study</h3>
+          <p class="research-note">These open curated searches on trusted maths sites — pick a video that suits you. Your teacher may pin a specific video here later.</p>
           <div id="research-links" class="research-links"></div>
           <div id="video-embed"></div>
         </div>
-        <p class="draft-note" data-i18n="lessonDraftNote"></p>
+        <p class="draft-note">Draft lesson content — to be reviewed by the Mathematics Department.</p>
       </section>
 
       <section id="pane-practice" class="pane hidden">
         <div class="diff-row">
-          <span data-i18n="difficultyLabel"></span>
-          <button class="diff-chip active" data-diff="1" data-i18n="diffEasy"></button>
-          <button class="diff-chip" data-diff="2" data-i18n="diffMedium"></button>
-          <button class="diff-chip" data-diff="3" data-i18n="diffChallenging"></button>
+          <span>Difficulty:</span>
+          <button class="diff-chip active" data-diff="1">Easy</button>
+          <button class="diff-chip" data-diff="2">Medium</button>
+          <button class="diff-chip" data-diff="3">Challenging</button>
         </div>
 
         <div class="q-card">
           <p id="q-text" class="q-text"></p>
 
           <div id="answer-numeric" class="answer-row hidden">
-            <input id="answer-input" type="text" inputmode="numeric" autocomplete="off">
-            <button id="check-btn" class="primary-btn" data-i18n="checkBtn"></button>
+            <input id="answer-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Your answer">
+            <button id="check-btn" class="primary-btn">Check</button>
           </div>
 
           <div id="answer-reveal" class="answer-row hidden">
-            <button id="reveal-btn" class="primary-btn" data-i18n="revealBtn"></button>
+            <button id="reveal-btn" class="primary-btn">Show answer</button>
           </div>
 
           <div id="feedback" class="feedback hidden"></div>
 
           <div id="self-mark" class="answer-row hidden">
-            <span data-i18n="selfMarkPrompt"></span>
-            <button id="self-right" class="primary-btn small" data-i18n="selfRight"></button>
-            <button id="self-wrong" class="primary-btn small secondary" data-i18n="selfWrong"></button>
+            <span>Did you get it right?</span>
+            <button id="self-right" class="primary-btn small">✓ Yes</button>
+            <button id="self-wrong" class="primary-btn small secondary">✗ No</button>
           </div>
 
           <details id="solution-box" class="solution hidden">
-            <summary data-i18n="solutionTitle"></summary>
+            <summary>Detailed solution (mark scheme)</summary>
             <ol id="solution-steps"></ol>
           </details>
 
           <div class="next-row">
-            <button id="next-btn" class="primary-btn secondary" data-i18n="nextBtn"></button>
+            <button id="next-btn" class="primary-btn secondary">Next question →</button>
           </div>
         </div>
       </section>

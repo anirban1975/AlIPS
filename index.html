@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,20 +9,16 @@
 <body>
   <header class="topbar">
     <div class="brand">
-      <div class="brand-mark">∑</div>
-      <div class="brand-text">
-        <h1 data-i18n="schoolName"></h1>
-        <p data-i18n="appSubtitle"></p>
-      </div>
+      <img src="letterhead.png" alt="Al Injaz International Private School" class="letterhead">
+      <p class="brand-sub" data-i18n="appSubtitle"></p>
     </div>
     <div class="controls">
-      <a href="learn.html" class="lang-btn" data-i18n="practiceLink"></a>
-      <a href="worksheets.html" class="lang-btn" data-i18n="worksheetLink"></a>
+      <a href="learn.html" class="nav-btn" data-i18n="practiceLink"></a>
+      <a href="worksheets.html" class="nav-btn" data-i18n="worksheetLink"></a>
       <div class="view-toggle" role="group" aria-label="View mode">
         <button id="view-student" class="toggle-btn active" data-i18n="studentView"></button>
         <button id="view-teacher" class="toggle-btn" data-i18n="teacherView"></button>
       </div>
-      <button id="lang-toggle" class="lang-btn" aria-label="Switch language"></button>
     </div>
   </header>
 

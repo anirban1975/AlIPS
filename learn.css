@@ -68,9 +68,10 @@
 .lesson-card li { margin-bottom: 4px; }
 
 .example-block {
-  font-family: inherit; font-size: 1.05rem; line-height: 1.8;
+  font-family: "Comic Sans MS", "Comic Neue", "Chalkboard SE", cursive;
+  font-size: var(--q-size, 12pt); line-height: 1.8;
   background: var(--primary-soft); border-radius: 8px;
-  padding: 12px 16px; white-space: pre-line; direction: ltr; text-align: left;
+  padding: 12px 16px; white-space: pre-line; text-align: left;
 }
 
 .research-note { font-size: 0.85rem; color: var(--ink-soft); margin-bottom: 10px; }
@@ -98,12 +99,17 @@
   background: var(--card); border: 1px solid var(--line);
   border-radius: var(--radius); padding: 22px;
 }
-.q-text { font-size: 1.25rem; white-space: pre-line; margin-bottom: 16px; }
+.q-text {
+  font-family: "Comic Sans MS", "Comic Neue", "Chalkboard SE", cursive;
+  font-size: calc(var(--q-size, 12pt) * 1.35);
+  white-space: pre-line;
+  margin-bottom: 16px;
+}
 
 .answer-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
 #answer-input {
   padding: 10px 14px; border: 2px solid var(--line); border-radius: var(--radius);
-  font-size: 1.1rem; width: 160px; direction: ltr; text-align: center;
+  font-size: 1.1rem; width: 180px; text-align: center; font-family: inherit;
 }
 
 .primary-btn {

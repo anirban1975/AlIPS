@@ -1,431 +1,431 @@
-// AlIPS Math Curriculum — DRAFT starter dataset.
+// AlIPS Math Curriculum — DRAFT starter dataset (English).
 // Structure: grade -> strands -> topics.
 // Each topic: n = name, s = student-facing description, t = teacher note,
 // c = curriculum tag: "cambridge" | "oman" | "both".
 // Content is a draft to be verified and expanded by the math department
 // against the official Cambridge frameworks and the Oman bilingual syllabus.
 
-const T = (en, ar) => ({ en, ar });
-
 const CURRICULUM = [
   {
     id: 1,
-    stage: T("Cambridge Primary — Stage 1", "كامبريدج الابتدائية — المرحلة 1"),
+    stage: "Cambridge Primary — Stage 1",
     strands: [
       {
-        name: T("Number", "الأعداد"),
+        name: "Number",
         topics: [
-          { n: T("Counting to 100", "العد حتى 100"), c: "both",
-            s: T("Count objects, read and write numbers up to 100.", "عدّ الأشياء وقراءة وكتابة الأعداد حتى 100."),
-            t: T("Emphasise one-to-one correspondence and conservation of number.", "التركيز على التناظر الأحادي وثبات العدد.") },
-          { n: T("Addition and subtraction within 20", "الجمع والطرح ضمن 20"), c: "both",
-            s: T("Add and take away small numbers using objects and number lines.", "الجمع والطرح باستخدام الأشياء وخط الأعداد."),
-            t: T("Build number bonds to 10 before formal symbols.", "بناء مكونات العدد 10 قبل الرموز الرسمية.") },
-          { n: T("Place value: tens and ones", "القيمة المكانية: العشرات والآحاد"), c: "both",
-            s: T("Split two-digit numbers into tens and ones.", "تحليل الأعداد المكونة من رقمين إلى عشرات وآحاد."),
-            t: T("Use base-ten blocks; link to counting in tens.", "استخدام مكعبات الأساس عشرة وربطها بالعد بالعشرات.") }
+          { n: "Counting to 100", c: "both",
+            s: "Count objects, read and write numbers up to 100.",
+            t: "Emphasise one-to-one correspondence and conservation of number." },
+          { n: "Addition and subtraction within 20", c: "both",
+            s: "Add and take away small numbers using objects and number lines.",
+            t: "Build number bonds to 10 before formal symbols." },
+          { n: "Place value: tens and ones", c: "both",
+            s: "Split two-digit numbers into tens and ones.",
+            t: "Use base-ten blocks; link to counting in tens." }
         ]
       },
       {
-        name: T("Geometry and Measure", "الهندسة والقياس"),
+        name: "Geometry and Measure",
         topics: [
-          { n: T("2D and 3D shapes", "الأشكال المستوية والمجسمات"), c: "both",
-            s: T("Name circles, squares, triangles, cubes and spheres.", "تسمية الدوائر والمربعات والمثلثات والمكعبات والكرات."),
-            t: T("Sort shapes by properties, not appearance only.", "تصنيف الأشكال حسب الخصائص لا الشكل الظاهري فقط.") },
-          { n: T("Comparing length and mass", "مقارنة الطول والكتلة"), c: "both",
-            s: T("Say which object is longer, shorter, heavier or lighter.", "تحديد الأطول والأقصر والأثقل والأخف."),
-            t: T("Non-standard units first (hand spans, cubes).", "وحدات غير قياسية أولاً (شبر اليد، المكعبات).") },
-          { n: T("Time: days of the week, o'clock", "الزمن: أيام الأسبوع والساعات الكاملة"), c: "both",
-            s: T("Order the days and read times like 3 o'clock.", "ترتيب أيام الأسبوع وقراءة الساعات الكاملة.") }
+          { n: "2D and 3D shapes", c: "both",
+            s: "Name circles, squares, triangles, cubes and spheres.",
+            t: "Sort shapes by properties, not appearance only." },
+          { n: "Comparing length and mass", c: "both",
+            s: "Say which object is longer, shorter, heavier or lighter.",
+            t: "Non-standard units first (hand spans, cubes)." },
+          { n: "Time: days of the week, o'clock", c: "both",
+            s: "Order the days and read times like 3 o'clock." }
         ]
       },
       {
-        name: T("Statistics", "الإحصاء"),
+        name: "Statistics",
         topics: [
-          { n: T("Pictograms and simple lists", "التمثيل بالصور والقوائم البسيطة"), c: "both",
-            s: T("Collect information and show it with pictures.", "جمع المعلومات وعرضها بالصور."),
-            t: T("Data drawn from the children's own classroom surveys.", "بيانات مأخوذة من استطلاعات الصف نفسه.") }
+          { n: "Pictograms and simple lists", c: "both",
+            s: "Collect information and show it with pictures.",
+            t: "Data drawn from the children's own classroom surveys." }
         ]
       }
     ]
   },
   {
     id: 2,
-    stage: T("Cambridge Primary — Stage 2", "كامبريدج الابتدائية — المرحلة 2"),
+    stage: "Cambridge Primary — Stage 2",
     strands: [
       {
-        name: T("Number", "الأعداد"),
+        name: "Number",
         topics: [
-          { n: T("Numbers to 100 and beyond", "الأعداد حتى 100 وما بعدها"), c: "both" },
-          { n: T("Two-digit addition and subtraction", "جمع وطرح الأعداد من رقمين"), c: "both" },
-          { n: T("Multiplication tables: 2, 5, 10", "جداول الضرب: 2 و5 و10"), c: "both" }
+          { n: "Numbers to 100 and beyond", c: "both" },
+          { n: "Two-digit addition and subtraction", c: "both" },
+          { n: "Multiplication tables: 2, 5, 10", c: "both" }
         ]
       },
       {
-        name: T("Geometry and Measure", "الهندسة والقياس"),
+        name: "Geometry and Measure",
         topics: [
-          { n: T("Symmetry in shapes", "التماثل في الأشكال"), c: "both" },
-          { n: T("Money: rials and baisa", "النقود: الريال والبيسة"), c: "oman",
-            s: T("Count Omani money and make simple totals.", "عدّ النقود العُمانية وحساب مجاميع بسيطة.") },
-          { n: T("Time: half past", "الزمن: الساعة والنصف"), c: "both" }
+          { n: "Symmetry in shapes", c: "both" },
+          { n: "Money: rials and baisa", c: "oman",
+            s: "Count Omani money and make simple totals." },
+          { n: "Time: half past", c: "both" }
         ]
       },
       {
-        name: T("Statistics", "الإحصاء"),
+        name: "Statistics",
         topics: [
-          { n: T("Block graphs", "الرسوم البيانية بالمكعبات"), c: "both" }
+          { n: "Block graphs", c: "both" }
         ]
       }
     ]
   },
   {
     id: 3,
-    stage: T("Cambridge Primary — Stage 3", "كامبريدج الابتدائية — المرحلة 3"),
+    stage: "Cambridge Primary — Stage 3",
     strands: [
       {
-        name: T("Number", "الأعداد"),
+        name: "Number",
         topics: [
-          { n: T("Numbers to 1000", "الأعداد حتى 1000"), c: "both" },
-          { n: T("Three-digit addition and subtraction", "جمع وطرح الأعداد من ثلاثة أرقام"), c: "both" },
-          { n: T("Multiplication tables: 3, 4, 8", "جداول الضرب: 3 و4 و8"), c: "both" },
-          { n: T("Fractions: halves, thirds, quarters", "الكسور: الأنصاف والأثلاث والأرباع"), c: "both" }
+          { n: "Numbers to 1000", c: "both" },
+          { n: "Three-digit addition and subtraction", c: "both" },
+          { n: "Multiplication tables: 3, 4, 8", c: "both" },
+          { n: "Fractions: halves, thirds, quarters", c: "both" }
         ]
       },
       {
-        name: T("Geometry and Measure", "الهندسة والقياس"),
+        name: "Geometry and Measure",
         topics: [
-          { n: T("Right angles and turns", "الزوايا القائمة والدورات"), c: "both" },
-          { n: T("Perimeter of simple shapes", "محيط الأشكال البسيطة"), c: "both" },
-          { n: T("Time to the nearest minute", "قراءة الزمن لأقرب دقيقة"), c: "both" }
+          { n: "Right angles and turns", c: "both" },
+          { n: "Perimeter of simple shapes", c: "both" },
+          { n: "Time to the nearest minute", c: "both" }
         ]
       },
       {
-        name: T("Statistics", "الإحصاء"),
+        name: "Statistics",
         topics: [
-          { n: T("Venn and Carroll diagrams", "مخططات فن وكارول"), c: "cambridge" },
-          { n: T("Tally charts and frequency tables", "جداول التكرار وعلامات العد"), c: "both" }
+          { n: "Venn and Carroll diagrams", c: "cambridge" },
+          { n: "Tally charts and frequency tables", c: "both" }
         ]
       }
     ]
   },
   {
     id: 4,
-    stage: T("Cambridge Primary — Stage 4", "كامبريدج الابتدائية — المرحلة 4"),
+    stage: "Cambridge Primary — Stage 4",
     strands: [
       {
-        name: T("Number", "الأعداد"),
+        name: "Number",
         topics: [
-          { n: T("Numbers to 10 000", "الأعداد حتى 10000"), c: "both" },
-          { n: T("Decimals: tenths and hundredths", "الأعشار وأجزاء المئة العشرية"), c: "both" },
-          { n: T("Written multiplication methods", "طرق الضرب الكتابية"), c: "both" },
-          { n: T("Fraction and decimal equivalence", "التكافؤ بين الكسور والأعداد العشرية"), c: "both" }
+          { n: "Numbers to 10 000", c: "both" },
+          { n: "Decimals: tenths and hundredths", c: "both" },
+          { n: "Written multiplication methods", c: "both" },
+          { n: "Fraction and decimal equivalence", c: "both" }
         ]
       },
       {
-        name: T("Geometry and Measure", "الهندسة والقياس"),
+        name: "Geometry and Measure",
         topics: [
-          { n: T("Area and perimeter of rectangles", "مساحة ومحيط المستطيلات"), c: "both" },
-          { n: T("Lines of symmetry", "محاور التماثل"), c: "both" },
-          { n: T("Coordinates: first quadrant", "الإحداثيات: الربع الأول"), c: "both" }
+          { n: "Area and perimeter of rectangles", c: "both" },
+          { n: "Lines of symmetry", c: "both" },
+          { n: "Coordinates: first quadrant", c: "both" }
         ]
       },
       {
-        name: T("Statistics", "الإحصاء"),
+        name: "Statistics",
         topics: [
-          { n: T("Bar charts", "الأعمدة البيانية"), c: "both" }
+          { n: "Bar charts", c: "both" }
         ]
       }
     ]
   },
   {
     id: 5,
-    stage: T("Cambridge Primary — Stage 5", "كامبريدج الابتدائية — المرحلة 5"),
+    stage: "Cambridge Primary — Stage 5",
     strands: [
       {
-        name: T("Number", "الأعداد"),
+        name: "Number",
         topics: [
-          { n: T("Place value to 1 000 000 and decimals", "القيمة المكانية حتى المليون والأعداد العشرية"), c: "both",
-            s: T("Read, write and compare large numbers and decimals.", "قراءة وكتابة ومقارنة الأعداد الكبيرة والعشرية."),
-            t: T("Link decimal place value to measures (m, cm; rial, baisa).", "ربط القيمة المكانية العشرية بالقياسات (المتر والسنتيمتر؛ الريال والبيسة).") },
-          { n: T("Multiplying and dividing by 2-digit numbers", "الضرب والقسمة على أعداد من رقمين"), c: "both",
-            s: T("Use written methods for harder multiplications and divisions.", "استخدام الطرق الكتابية لعمليات الضرب والقسمة الأصعب."),
-            t: T("Secure times-table fluency before long methods.", "إتقان جداول الضرب قبل الطرق المطوّلة.") },
-          { n: T("Equivalent fractions and adding fractions", "الكسور المتكافئة وجمع الكسور"), c: "both",
-            s: T("Find fractions that mean the same and add simple fractions.", "إيجاد الكسور المتكافئة وجمع الكسور البسيطة."),
-            t: T("Use fraction walls and number lines, not rules alone.", "استخدام جدار الكسور وخط الأعداد لا القواعد المجردة فقط.") },
-          { n: T("Percentages: meaning and simple cases", "النسبة المئوية: المعنى وحالات بسيطة"), c: "both",
-            s: T("Understand % as 'out of 100' and find 50%, 25%, 10%.", "فهم النسبة المئوية على أنها من 100 وإيجاد 50% و25% و10%.") }
+          { n: "Place value to 1 000 000 and decimals", c: "both",
+            s: "Read, write and compare large numbers and decimals.",
+            t: "Link decimal place value to measures (m, cm; rial, baisa)." },
+          { n: "Multiplying and dividing by 2-digit numbers", c: "both",
+            s: "Use written methods for harder multiplications and divisions.",
+            t: "Secure times-table fluency before long methods." },
+          { n: "Equivalent fractions and adding fractions", c: "both",
+            s: "Find fractions that mean the same and add simple fractions.",
+            t: "Use fraction walls and number lines, not rules alone." },
+          { n: "Percentages: meaning and simple cases", c: "both",
+            s: "Understand % as 'out of 100' and find 50%, 25%, 10%." }
         ]
       },
       {
-        name: T("Algebra foundations", "أسس الجبر"),
+        name: "Algebra foundations",
         topics: [
-          { n: T("Number sequences and patterns", "المتتاليات والأنماط العددية"), c: "both",
-            s: T("Continue patterns and describe the rule.", "إكمال الأنماط ووصف القاعدة."),
-            t: T("Ask for the rule in words first; term-to-term thinking.", "التعبير عن القاعدة لفظياً أولاً؛ التفكير من حد إلى حد.") }
+          { n: "Number sequences and patterns", c: "both",
+            s: "Continue patterns and describe the rule.",
+            t: "Ask for the rule in words first; term-to-term thinking." }
         ]
       },
       {
-        name: T("Geometry and Measure", "الهندسة والقياس"),
+        name: "Geometry and Measure",
         topics: [
-          { n: T("Measuring and drawing angles", "قياس الزوايا ورسمها"), c: "both",
-            s: T("Use a protractor to measure and draw angles.", "استخدام المنقلة لقياس الزوايا ورسمها.") },
-          { n: T("Triangles and their properties", "المثلثات وخصائصها"), c: "both",
-            s: T("Sort triangles: equilateral, isosceles, scalene.", "تصنيف المثلثات: متساوي الأضلاع، متساوي الساقين، مختلف الأضلاع.") },
-          { n: T("Perimeter and area of compound shapes", "محيط ومساحة الأشكال المركبة"), c: "both",
-            t: T("Decompose shapes into rectangles; estimate before calculating.", "تجزئة الأشكال إلى مستطيلات؛ التقدير قبل الحساب.") },
-          { n: T("Coordinates and translation", "الإحداثيات والانسحاب"), c: "both" }
+          { n: "Measuring and drawing angles", c: "both",
+            s: "Use a protractor to measure and draw angles." },
+          { n: "Triangles and their properties", c: "both",
+            s: "Sort triangles: equilateral, isosceles, scalene." },
+          { n: "Perimeter and area of compound shapes", c: "both",
+            t: "Decompose shapes into rectangles; estimate before calculating." },
+          { n: "Coordinates and translation", c: "both" }
         ]
       },
       {
-        name: T("Statistics and Probability", "الإحصاء والاحتمالات"),
+        name: "Statistics and Probability",
         topics: [
-          { n: T("Bar and line graphs", "الأعمدة البيانية والتمثيل بالخطوط"), c: "both",
-            s: T("Draw graphs and answer questions from them.", "رسم التمثيلات البيانية والإجابة عن أسئلة منها.") },
-          { n: T("Mode and median", "المنوال والوسيط"), c: "both" },
-          { n: T("The language of chance", "لغة الاحتمال"), c: "both",
-            s: T("Use words like certain, likely, impossible.", "استخدام كلمات مثل مؤكد، محتمل، مستحيل.") }
+          { n: "Bar and line graphs", c: "both",
+            s: "Draw graphs and answer questions from them." },
+          { n: "Mode and median", c: "both" },
+          { n: "The language of chance", c: "both",
+            s: "Use words like certain, likely, impossible." }
         ]
       }
     ]
   },
   {
     id: 6,
-    stage: T("Cambridge Primary — Stage 6", "كامبريدج الابتدائية — المرحلة 6"),
+    stage: "Cambridge Primary — Stage 6",
     strands: [
       {
-        name: T("Number", "الأعداد"),
+        name: "Number",
         topics: [
-          { n: T("Order of operations", "أولويات العمليات"), c: "both" },
-          { n: T("Multiplying and dividing fractions", "ضرب الكسور وقسمتها"), c: "both" },
-          { n: T("Ratio: introduction", "مقدمة في النسبة"), c: "both" }
+          { n: "Order of operations", c: "both" },
+          { n: "Multiplying and dividing fractions", c: "both" },
+          { n: "Ratio: introduction", c: "both" }
         ]
       },
       {
-        name: T("Algebra foundations", "أسس الجبر"),
+        name: "Algebra foundations",
         topics: [
-          { n: T("Expressions and simple formulae", "التعابير والصيغ البسيطة"), c: "both" }
+          { n: "Expressions and simple formulae", c: "both" }
         ]
       },
       {
-        name: T("Geometry and Measure", "الهندسة والقياس"),
+        name: "Geometry and Measure",
         topics: [
-          { n: T("Angles in triangles and on a line", "الزوايا في المثلث وعلى المستقيم"), c: "both" },
-          { n: T("Volume of cuboids", "حجم متوازيات المستطيلات"), c: "both" }
+          { n: "Angles in triangles and on a line", c: "both" },
+          { n: "Volume of cuboids", c: "both" }
         ]
       },
       {
-        name: T("Statistics and Probability", "الإحصاء والاحتمالات"),
+        name: "Statistics and Probability",
         topics: [
-          { n: T("Pie charts: reading and interpreting", "قراءة وتفسير القطاعات الدائرية"), c: "both" },
-          { n: T("The mean", "الوسط الحسابي"), c: "both" }
+          { n: "Pie charts: reading and interpreting", c: "both" },
+          { n: "The mean", c: "both" }
         ]
       }
     ]
   },
   {
     id: 7,
-    stage: T("Cambridge Lower Secondary — Stage 7", "كامبريدج للمرحلة الإعدادية — المرحلة 7"),
+    stage: "Cambridge Lower Secondary — Stage 7",
     strands: [
       {
-        name: T("Number", "الأعداد"),
+        name: "Number",
         topics: [
-          { n: T("Negative numbers and integers", "الأعداد السالبة والأعداد الصحيحة"), c: "both" },
-          { n: T("Fractions, decimals and percentages", "الكسور والأعداد العشرية والنسب المئوية"), c: "both" }
+          { n: "Negative numbers and integers", c: "both" },
+          { n: "Fractions, decimals and percentages", c: "both" }
         ]
       },
       {
-        name: T("Algebra", "الجبر"),
+        name: "Algebra",
         topics: [
-          { n: T("Expressions and formulae", "التعابير والصيغ"), c: "both" },
-          { n: T("Solving simple equations", "حل المعادلات البسيطة"), c: "both" }
+          { n: "Expressions and formulae", c: "both" },
+          { n: "Solving simple equations", c: "both" }
         ]
       },
       {
-        name: T("Geometry and Measure", "الهندسة والقياس"),
+        name: "Geometry and Measure",
         topics: [
-          { n: T("Angles and parallel lines", "الزوايا والمستقيمات المتوازية"), c: "both" },
-          { n: T("Area of triangles and compound shapes", "مساحة المثلثات والأشكال المركبة"), c: "both" }
+          { n: "Angles and parallel lines", c: "both" },
+          { n: "Area of triangles and compound shapes", c: "both" }
         ]
       },
       {
-        name: T("Statistics and Probability", "الإحصاء والاحتمالات"),
+        name: "Statistics and Probability",
         topics: [
-          { n: T("Averages and range", "المتوسطات والمدى"), c: "both" },
-          { n: T("The probability scale 0 to 1", "مقياس الاحتمال من 0 إلى 1"), c: "both" }
+          { n: "Averages and range", c: "both" },
+          { n: "The probability scale 0 to 1", c: "both" }
         ]
       }
     ]
   },
   {
     id: 8,
-    stage: T("Cambridge Lower Secondary — Stage 8", "كامبريدج للمرحلة الإعدادية — المرحلة 8"),
+    stage: "Cambridge Lower Secondary — Stage 8",
     strands: [
       {
-        name: T("Number", "الأعداد"),
+        name: "Number",
         topics: [
-          { n: T("Powers and roots", "القوى والجذور"), c: "both" },
-          { n: T("Ratio and rates", "النسبة والمعدلات"), c: "both" }
+          { n: "Powers and roots", c: "both" },
+          { n: "Ratio and rates", c: "both" }
         ]
       },
       {
-        name: T("Algebra", "الجبر"),
+        name: "Algebra",
         topics: [
-          { n: T("Linear functions and graphs", "الدوال الخطية وتمثيلها البياني"), c: "both" },
-          { n: T("Equations with brackets", "المعادلات ذات الأقواس"), c: "both" }
+          { n: "Linear functions and graphs", c: "both" },
+          { n: "Equations with brackets", c: "both" }
         ]
       },
       {
-        name: T("Geometry and Measure", "الهندسة والقياس"),
+        name: "Geometry and Measure",
         topics: [
-          { n: T("Circumference and area of circles", "محيط الدائرة ومساحتها"), c: "both" },
-          { n: T("Transformations: reflection, rotation, translation", "التحويلات الهندسية: الانعكاس والدوران والانسحاب"), c: "both" }
+          { n: "Circumference and area of circles", c: "both" },
+          { n: "Transformations: reflection, rotation, translation", c: "both" }
         ]
       },
       {
-        name: T("Statistics and Probability", "الإحصاء والاحتمالات"),
+        name: "Statistics and Probability",
         topics: [
-          { n: T("Collecting and organising data", "جمع البيانات وتنظيمها"), c: "both" },
-          { n: T("Relative frequency", "التكرار النسبي"), c: "both" }
+          { n: "Collecting and organising data", c: "both" },
+          { n: "Relative frequency", c: "both" }
         ]
       }
     ]
   },
   {
     id: 9,
-    stage: T("Cambridge Lower Secondary — Stage 9", "كامبريدج للمرحلة الإعدادية — المرحلة 9"),
+    stage: "Cambridge Lower Secondary — Stage 9",
     strands: [
       {
-        name: T("Number", "الأعداد"),
+        name: "Number",
         topics: [
-          { n: T("Standard form", "الصيغة العلمية"), c: "both",
-            s: T("Write very large and very small numbers as a × 10ⁿ.", "كتابة الأعداد الكبيرة جداً والصغيرة جداً بصورة أ × 10^ن."),
-            t: T("Link to science contexts (distances, cell sizes).", "الربط بسياقات علمية (المسافات، أحجام الخلايا).") },
-          { n: T("Rounding, estimation and bounds", "التقريب والتقدير وحدود الدقة"), c: "both",
-            s: T("Round sensibly and estimate answers before calculating.", "التقريب المنطقي وتقدير النواتج قبل الحساب.") },
-          { n: T("Direct and inverse proportion", "التناسب الطردي والعكسي"), c: "both",
-            t: T("Contrast multiplicative with additive reasoning explicitly.", "التمييز الصريح بين التفكير الضربي والتفكير الجمعي.") }
+          { n: "Standard form", c: "both",
+            s: "Write very large and very small numbers as a × 10ⁿ.",
+            t: "Link to science contexts (distances, cell sizes)." },
+          { n: "Rounding, estimation and bounds", c: "both",
+            s: "Round sensibly and estimate answers before calculating." },
+          { n: "Direct and inverse proportion", c: "both",
+            t: "Contrast multiplicative with additive reasoning explicitly." }
         ]
       },
       {
-        name: T("Algebra", "الجبر"),
+        name: "Algebra",
         topics: [
-          { n: T("Expanding and factorising", "فك الأقواس والتحليل إلى عوامل"), c: "both",
-            s: T("Multiply out brackets and reverse the process.", "فك الأقواس وعكس العملية بالتحليل."),
-            t: T("Use area models to make expansion visible.", "استخدام نماذج المساحة لتوضيح فك الأقواس.") },
-          { n: T("Linear equations and inequalities", "المعادلات والمتباينات الخطية"), c: "both",
-            s: T("Solve equations with unknowns on both sides.", "حل معادلات فيها المجهول في الطرفين.") },
-          { n: T("Simultaneous linear equations", "المعادلات الخطية الآنية"), c: "both",
-            t: T("Connect the algebraic solution to the graphical intersection.", "ربط الحل الجبري بنقطة التقاطع بيانياً.") },
-          { n: T("Straight-line graphs: y = mx + c", "المستقيمات: ص = م س + ج"), c: "both",
-            s: T("Understand gradient and intercept.", "فهم الميل والمقطع الصادي.") }
+          { n: "Expanding and factorising", c: "both",
+            s: "Multiply out brackets and reverse the process.",
+            t: "Use area models to make expansion visible." },
+          { n: "Linear equations and inequalities", c: "both",
+            s: "Solve equations with unknowns on both sides." },
+          { n: "Simultaneous linear equations", c: "both",
+            t: "Connect the algebraic solution to the graphical intersection." },
+          { n: "Straight-line graphs: y = mx + c", c: "both",
+            s: "Understand gradient and intercept." }
         ]
       },
       {
-        name: T("Geometry and Measure", "الهندسة والقياس"),
+        name: "Geometry and Measure",
         topics: [
-          { n: T("Pythagoras' theorem", "نظرية فيثاغورس"), c: "both",
-            s: T("Find missing sides in right-angled triangles.", "إيجاد الأضلاع المجهولة في المثلثات القائمة."),
-            t: T("Derive it with area proofs before applying the formula.", "استنتاجها ببراهين المساحة قبل تطبيق القاعدة.") },
-          { n: T("Constructions and bearings", "الإنشاءات الهندسية والاتجاهات"), c: "both" },
-          { n: T("Enlargement and scale factors", "التكبير ومعامل القياس"), c: "both" }
+          { n: "Pythagoras' theorem", c: "both",
+            s: "Find missing sides in right-angled triangles.",
+            t: "Derive it with area proofs before applying the formula." },
+          { n: "Constructions and bearings", c: "both" },
+          { n: "Enlargement and scale factors", c: "both" }
         ]
       },
       {
-        name: T("Statistics and Probability", "الإحصاء والاحتمالات"),
+        name: "Statistics and Probability",
         topics: [
-          { n: T("Scatter graphs and correlation", "الانتشار والارتباط"), c: "both",
-            s: T("Plot two variables and describe the relationship.", "تمثيل متغيرين ووصف العلاقة بينهما.") },
-          { n: T("Probability of combined events", "احتمال الحوادث المركبة"), c: "both",
-            t: T("Sample-space diagrams before tree diagrams.", "مخططات فضاء العينة قبل مخططات الشجرة.") }
+          { n: "Scatter graphs and correlation", c: "both",
+            s: "Plot two variables and describe the relationship." },
+          { n: "Probability of combined events", c: "both",
+            t: "Sample-space diagrams before tree diagrams." }
         ]
       }
     ]
   },
   {
     id: 10,
-    stage: T("Cambridge IGCSE — Year 1", "كامبريدج IGCSE — السنة الأولى"),
+    stage: "Cambridge IGCSE — Year 1",
     strands: [
       {
-        name: T("Number", "الأعداد"),
+        name: "Number",
         topics: [
-          { n: T("Indices and surds", "الأسس والجذور الصماء"), c: "cambridge" },
-          { n: T("Percentages: compound interest and reverse", "النسب المئوية: الفائدة المركبة والعكسية"), c: "both" }
+          { n: "Indices and surds", c: "cambridge" },
+          { n: "Percentages: compound interest and reverse", c: "both" }
         ]
       },
       {
-        name: T("Algebra", "الجبر"),
+        name: "Algebra",
         topics: [
-          { n: T("Quadratic equations: factorising and formula", "المعادلات التربيعية: التحليل والقانون العام"), c: "cambridge" },
-          { n: T("Functions and function notation", "الدوال ورموزها"), c: "cambridge" }
+          { n: "Quadratic equations: factorising and formula", c: "cambridge" },
+          { n: "Functions and function notation", c: "cambridge" }
         ]
       },
       {
-        name: T("Geometry and Trigonometry", "الهندسة وحساب المثلثات"),
+        name: "Geometry and Trigonometry",
         topics: [
-          { n: T("Right-angled trigonometry (sin, cos, tan)", "حساب المثلثات في المثلث القائم (جا، جتا، ظا)"), c: "both" },
-          { n: T("Circle theorems", "نظريات الدائرة"), c: "cambridge" },
-          { n: T("Similarity and congruence", "التشابه والتطابق"), c: "both" }
+          { n: "Right-angled trigonometry (sin, cos, tan)", c: "both" },
+          { n: "Circle theorems", c: "cambridge" },
+          { n: "Similarity and congruence", c: "both" }
         ]
       },
       {
-        name: T("Statistics and Probability", "الإحصاء والاحتمالات"),
+        name: "Statistics and Probability",
         topics: [
-          { n: T("Cumulative frequency and quartiles", "التكرار التراكمي والربيعيات"), c: "cambridge" },
-          { n: T("Tree diagrams", "مخططات الشجرة"), c: "both" }
+          { n: "Cumulative frequency and quartiles", c: "cambridge" },
+          { n: "Tree diagrams", c: "both" }
         ]
       }
     ]
   },
   {
     id: 11,
-    stage: T("Cambridge IGCSE — Year 2", "كامبريدج IGCSE — السنة الثانية"),
+    stage: "Cambridge IGCSE / AS — Year 2",
     strands: [
       {
-        name: T("Algebra", "الجبر"),
+        name: "Algebra",
         topics: [
-          { n: T("Composite and inverse functions", "الدوال المركبة والعكسية"), c: "cambridge" },
-          { n: T("Graphs of functions and their transformations", "منحنيات الدوال وتحويلاتها"), c: "cambridge" }
+          { n: "Composite and inverse functions", c: "cambridge" },
+          { n: "Graphs of functions and their transformations", c: "cambridge" }
         ]
       },
       {
-        name: T("Geometry and Trigonometry", "الهندسة وحساب المثلثات"),
+        name: "Geometry and Trigonometry",
         topics: [
-          { n: T("Sine and cosine rules", "قانونا الجيب وجيب التمام"), c: "cambridge" },
-          { n: T("Vectors", "المتجهات"), c: "cambridge" },
-          { n: T("Mensuration: spheres, cones, pyramids", "القياس: الكرات والمخاريط والأهرامات"), c: "both" }
+          { n: "Sine and cosine rules", c: "cambridge" },
+          { n: "Vectors", c: "cambridge" },
+          { n: "Mensuration: spheres, cones, pyramids", c: "both" }
         ]
       },
       {
-        name: T("Statistics and Probability", "الإحصاء والاحتمالات"),
+        name: "Probability and Statistics",
         topics: [
-          { n: T("Histograms with unequal intervals", "المدرجات التكرارية بفئات غير متساوية"), c: "cambridge" },
-          { n: T("Conditional probability", "الاحتمال المشروط"), c: "cambridge" }
+          { n: "Histograms with unequal intervals", c: "cambridge" },
+          { n: "Conditional probability", c: "cambridge" },
+          { n: "Permutations and combinations", c: "cambridge" },
+          { n: "Mean and standard deviation", c: "cambridge" }
         ]
       }
     ]
   },
   {
     id: 12,
-    stage: T("Cambridge International AS Level", "كامبريدج الدولية — المستوى AS"),
+    stage: "Cambridge International AS Level",
     strands: [
       {
-        name: T("Pure Mathematics", "الرياضيات البحتة"),
+        name: "Pure Mathematics",
         topics: [
-          { n: T("Quadratics and polynomials", "الدوال التربيعية وكثيرات الحدود"), c: "cambridge" },
-          { n: T("Coordinate geometry of the line and circle", "الهندسة الإحداثية للمستقيم والدائرة"), c: "cambridge" },
-          { n: T("Differentiation and its applications", "التفاضل وتطبيقاته"), c: "cambridge" },
-          { n: T("Integration", "التكامل"), c: "cambridge" },
-          { n: T("Trigonometry: identities and equations", "حساب المثلثات: المتطابقات والمعادلات"), c: "cambridge" },
-          { n: T("Binomial expansion and series", "مفكوك ذي الحدين والمتسلسلات"), c: "cambridge" }
+          { n: "Quadratics and polynomials", c: "cambridge" },
+          { n: "Coordinate geometry of the line and circle", c: "cambridge" },
+          { n: "Differentiation and its applications", c: "cambridge" },
+          { n: "Integration", c: "cambridge" },
+          { n: "Trigonometry: identities and equations", c: "cambridge" },
+          { n: "Binomial expansion and series", c: "cambridge" }
         ]
       },
       {
-        name: T("Probability and Statistics", "الاحتمالات والإحصاء"),
+        name: "Probability and Statistics",
         topics: [
-          { n: T("Representation of data", "تمثيل البيانات"), c: "cambridge" },
-          { n: T("Permutations and combinations", "التباديل والتوافيق"), c: "cambridge" },
-          { n: T("Discrete random variables", "المتغيرات العشوائية المنفصلة"), c: "cambridge" }
+          { n: "Representation of data", c: "cambridge" },
+          { n: "Permutations and combinations", c: "cambridge" },
+          { n: "Discrete random variables", c: "cambridge" }
         ]
       }
     ]
@@ -433,21 +433,20 @@ const CURRICULUM = [
 ];
 
 const UI_STRINGS = {
-  schoolName: T("Al Injaz International Private School", "مدرسة الإنجاز الدولية الخاصة"),
-  appSubtitle: T("Mathematics Department — Curriculum Browser (Draft)", "قسم الرياضيات — متصفح المنهج (مسودة)"),
-  grades: T("Grades", "الصفوف"),
-  gradePrefix: T("Grade", "الصف"),
-  studentView: T("Student", "طالب"),
-  teacherView: T("Teacher", "معلم"),
-  cambridge: T("Cambridge", "كامبريدج"),
-  oman: T("Oman Bilingual", "المنهج العُماني ثنائي اللغة"),
-  bothCurricula: T("Both curricula", "المنهجان معاً"),
-  searchPlaceholder: T("Search topics…", "ابحث عن المواضيع…"),
-  teacherNoteLabel: T("Teaching note", "ملاحظة تدريسية"),
-  noResults: T("No topics match your search in this grade.", "لا توجد مواضيع مطابقة لبحثك في هذا الصف."),
-  langButton: T("العربية", "English"),
-  worksheetLink: T("Worksheets & Exams", "أوراق العمل والاختبارات"),
-  practiceLink: T("Practice & Learn", "تدرّب وتعلّم"),
-  draftNote: T("Draft content — to be verified by the Mathematics Department against the official Cambridge and Oman bilingual frameworks.",
-               "محتوى أولي — يُراجع من قِبل قسم الرياضيات وفق أطر كامبريدج والمنهج العُماني ثنائي اللغة الرسمية.")
+  schoolName: "Al Injaz International Private School",
+  schoolSub: "Under the Supervision of Ministry of Education",
+  appSubtitle: "Mathematics Department — Curriculum Browser (Draft)",
+  grades: "Grades",
+  gradePrefix: "Grade",
+  studentView: "Student",
+  teacherView: "Teacher",
+  cambridge: "Cambridge",
+  oman: "Oman Bilingual",
+  bothCurricula: "Both curricula",
+  searchPlaceholder: "Search topics…",
+  teacherNoteLabel: "Teaching note",
+  noResults: "No topics match your search in this grade.",
+  worksheetLink: "Worksheets & Exams",
+  practiceLink: "Practice & Learn",
+  draftNote: "Draft content — to be verified by the Mathematics Department against the official Cambridge and Oman bilingual frameworks."
 };
