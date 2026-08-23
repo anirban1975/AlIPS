@@ -93,6 +93,59 @@
 
 .panel-note { font-size: 0.75rem; color: var(--ink-soft); line-height: 1.4; }
 
+.hint { font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 0.72rem; color: var(--ink-soft); }
+
+.row-btns { display: flex; gap: 8px; align-items: center; }
+.row-btns .mini-btn { flex: 0 0 auto; }
+.row-btns select { flex: 1; min-width: 0; }
+
+/* Difficulty selector beside each topic */
+.topic-checks label { justify-content: space-between; }
+.topic-checks .tname { flex: 1; }
+.topic-checks .tdiff {
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  padding: 1px 4px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  font-family: inherit;
+}
+.topic-checks label.off .tdiff { opacity: 0.35; }
+
+/* Rubric editors in the side panel */
+table.rubric-edit { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+table.rubric-edit th {
+  text-align: start;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  padding: 2px 4px;
+  font-weight: 700;
+}
+table.rubric-edit td { padding: 2px; }
+table.rubric-edit input, table.rubric-edit select {
+  width: 100%;
+  padding: 5px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-family: inherit;
+  background: var(--paper);
+}
+table.rubric-edit td.narrow { width: 62px; }
+table.rubric-edit td.kill { width: 26px; }
+table.rubric-edit button.x {
+  border: none;
+  background: transparent;
+  color: #b3261e;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 2px 4px;
+}
+
 /* ---------- The generated sheet (mirrors the Word templates) ---------- */
 
 .sheet {
@@ -231,6 +284,10 @@
   font-size: 0.85em;
 }
 
+/* Grading rubric printed on the paper */
+.sheet .rubric-print { margin-top: 10px; break-inside: avoid; page-break-inside: avoid; }
+.sheet .rubric-print .cap { font-weight: 700; margin-bottom: 2px; }
+
 /* Score, teacher signature and reward chart (worksheets) */
 .sheet .foot-block {
   margin-top: 18px;
@@ -306,3 +363,5 @@
     z-index: 0;
   }
 }
+
+.topic-checks.diff-muted .tdiff { opacity: 0.3; pointer-events: none; }

@@ -50,8 +50,28 @@ one; toggleable), and `Teacher's Signature` + `Parent's Signature` boxes.
 Parent) → marks-tally table (Question No. | Maximum Marks | Marks Obtained |
 Check 1 | Check 2 | HOD, plus Total and Name & Sign rows) → Instructions →
 questions as `Qn)` with `[N Marks]` and parts `(a) (b) (c)` each marked `[n]`.
-Part marks ramp 2 / 3 / 4 / 4 at difficulty 1 / 2 / 3 / 3; each question draws
-all its parts from one topic so the question reads coherently.
+Each question draws all its parts from one topic so the question reads
+coherently.
+
+## Teacher-configurable rubrics (v0.6)
+
+Nothing about marks or difficulty is hardcoded any more — `DEFAULT_PART_RUBRIC`
+and `DEFAULT_BANDS` in `sheet.js` are only starting values.
+
+- **Question rubric (exams):** a table in the panel sets marks *and* difficulty
+  for each part (a)(b)(c)(d). Question totals, the info table and the
+  marks-tally table are all derived from it.
+- **Per-topic difficulty (worksheets):** every topic row carries its own
+  Easy / Medium / Challenging / Mixed selector; "Set all to…" bulk-sets them.
+  In exam mode these are muted, since difficulty comes from the part rubric.
+- **Marks per question (worksheets):** 0 prints no marks; any other value
+  prints `[n]` per question and sets the paper total.
+- **Grading rubric:** editable score bands (min % + label), add/remove rows.
+  Printed as a Grading Rubric table with the mark range computed from the
+  paper total, and reused for the worksheet reward tick-boxes so the two can
+  never disagree.
+- **"Save these settings as my default"** persists rubrics and options to
+  `localStorage` under `alips-teacher-defaults`, per teacher, per browser.
 
 ## Word export
 

@@ -1,6 +1,12 @@
 // AlIPS worksheet & exam generator — follows the department's Word templates.
 // One model is built per paper and rendered two ways: to the page (screen and
 // print) and to a Word (.doc) file, so both always contain the same questions.
+//
+// Teachers control two rubrics:
+//   • the question rubric — marks and difficulty for each part of an exam
+//     question, and the difficulty of each worksheet topic;
+//   • the grading rubric — the score bands (grade / reward) printed on the paper.
+// Both can be saved as that teacher's default (localStorage).
 
 (function () {
   const $ = (id) => document.getElementById(id);
@@ -15,10 +21,22 @@
     .replace(/"/g, "&quot;");
   const nl2br = (s) => esc(s).replace(/\n/g, "<br>");
 
-  // Marks awarded to each part of an exam question, by position.
-  const PART_MARKS = [2, 3, 4, 4];
-  const PART_DIFF = [1, 2, 3, 3];
   const LETTERS = ["a", "b", "c", "d"];
+  const DIFF_NAMES = { 1: "Easy", 2: "Medium", 3: "Challenging", mixed: "Mixed" };
+
+  // Department defaults — teachers can change every one of these in the panel.
+  const DEFAULT_PART_RUBRIC = [
+    { marks: 2, diff: 1 },
+    { marks: 3, diff: 2 },
+    { marks: 4, diff: 3 },
+    { marks: 4, diff: 3 }
+  ];
+  const DEFAULT_BANDS = [
+    { min: 90, label: "Gold Star" },
+    { min: 75, label: "Silver Star" },
+    { min: 60, label: "Bronze Star" },
+    { min: 0, label: "Keep Practising" }
+  ];
 
   const INSTRUCTIONS = [
     "Answer all questions",
@@ -28,18 +46,23 @@
     "Numbers in the [] brackets indicate marks"
   ];
 
-  // Reward bands printed on worksheets — the teacher ticks one.
-  const REWARDS = [
-    { star: "★", label: "Gold Star", band: "90% and above" },
-    { star: "★", label: "Silver Star", band: "75% – 89%" },
-    { star: "★", label: "Bronze Star", band: "60% – 74%" },
-    { star: "✎", label: "Keep Practising", band: "below 60%" }
-  ];
+  const STORE_KEY = "alips-teacher-defaults";
 
   const state = { mode: "worksheet", grade: 5, spec: null, model: null };
 
   // Grades 1–4 print at 14 pt, all other grades at 12 pt.
   const fontFor = (grade) => (grade <= 4 ? 14 : 12);
+
+  const load = () => {
+    try { return JSON.parse(localStorage.getItem(STORE_KEY) || "null"); }
+    catch { return null; }
+  };
+  const save = (obj) => {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(obj)); return true; }
+    catch { return false; }
+  };
+
+  // ---------- Panel builders ----------
 
   function buildGradeSelect() {
     const sel = $("grade-select");
@@ -52,43 +75,174 @@
     }
   }
 
-  function buildTopicList() {
+  // Each topic carries its own difficulty selector.
+  function buildTopicList(preset) {
     const box = $("topic-list");
-    const prev = new Set([...box.querySelectorAll("input:checked")].map((i) => i.value));
+    const prevChecked = new Set([...box.querySelectorAll("input:checked")].map((i) => i.value));
+    const prevDiff = {};
+    box.querySelectorAll(".tdiff").forEach((s) => { prevDiff[s.dataset.topic] = s.value; });
+
     box.innerHTML = "";
     (GRADE_GENS[state.grade] || []).forEach((id, idx) => {
       const label = el("label");
       const cb = el("input");
       cb.type = "checkbox";
       cb.value = id;
-      cb.checked = prev.size ? prev.has(id) : idx < 4;
+      cb.checked = prevChecked.size ? prevChecked.has(id) : idx < 4;
+
+      const name = el("span", "tname", GENERATORS[id].name);
+
+      const diff = el("select", "tdiff");
+      diff.dataset.topic = id;
+      [["1", "Easy"], ["2", "Medium"], ["3", "Challenging"], ["mixed", "Mixed"]]
+        .forEach(([v, t]) => {
+          const o = el("option", "", t);
+          o.value = v;
+          diff.appendChild(o);
+        });
+      diff.value = prevDiff[id] || (preset && preset.defaultDiff) || "2";
+
+      const sync = () => label.classList.toggle("off", !cb.checked);
+      cb.addEventListener("change", sync);
+      sync();
+
       label.appendChild(cb);
-      label.appendChild(el("span", "", GENERATORS[id].name));
+      label.appendChild(name);
+      label.appendChild(diff);
       box.appendChild(label);
     });
   }
 
+  function buildPartRubric(preset) {
+    const tbody = $("part-rubric").querySelector("tbody");
+    const prev = readPartRubric();
+    const n = +$("exam-parts").value || 3;
+    tbody.innerHTML = "";
+    for (let i = 0; i < n; i++) {
+      const base = (preset && preset.partRubric && preset.partRubric[i]) ||
+                   prev[i] || DEFAULT_PART_RUBRIC[i] || { marks: 3, diff: 2 };
+      const tr = el("tr");
+      tr.appendChild(el("td", "", `(${LETTERS[i]})`));
+
+      const mtd = el("td", "narrow");
+      const m = el("input");
+      m.type = "number";
+      m.min = "1";
+      m.max = "30";
+      m.value = base.marks;
+      m.className = "pmark";
+      mtd.appendChild(m);
+      tr.appendChild(mtd);
+
+      const dtd = el("td");
+      const d = el("select", "pdiff");
+      [["1", "Easy"], ["2", "Medium"], ["3", "Challenging"]].forEach(([v, t]) => {
+        const o = el("option", "", t);
+        o.value = v;
+        d.appendChild(o);
+      });
+      d.value = String(base.diff);
+      dtd.appendChild(d);
+      tr.appendChild(dtd);
+
+      tbody.appendChild(tr);
+    }
+  }
+
+  const readPartRubric = () =>
+    [...$("part-rubric").querySelectorAll("tbody tr")].map((tr) => ({
+      marks: Math.max(1, +tr.querySelector(".pmark").value || 1),
+      diff: +tr.querySelector(".pdiff").value || 2
+    }));
+
+  function bandRow(band) {
+    const tr = el("tr");
+
+    const mtd = el("td", "narrow");
+    const m = el("input");
+    m.type = "number";
+    m.min = "0";
+    m.max = "100";
+    m.value = band.min;
+    m.className = "bmin";
+    mtd.appendChild(m);
+    tr.appendChild(mtd);
+
+    const ltd = el("td");
+    const l = el("input");
+    l.type = "text";
+    l.value = band.label;
+    l.className = "blabel";
+    ltd.appendChild(l);
+    tr.appendChild(ltd);
+
+    const ktd = el("td", "kill");
+    const x = el("button", "x", "×");
+    x.title = "Remove this band";
+    x.addEventListener("click", () => tr.remove());
+    ktd.appendChild(x);
+    tr.appendChild(ktd);
+
+    return tr;
+  }
+
+  function buildBandRubric(bands) {
+    const tbody = $("band-rubric").querySelector("tbody");
+    tbody.innerHTML = "";
+    (bands || DEFAULT_BANDS).forEach((b) => tbody.appendChild(bandRow(b)));
+  }
+
+  const readBands = () =>
+    [...$("band-rubric").querySelectorAll("tbody tr")]
+      .map((tr) => ({
+        min: Math.min(100, Math.max(0, +tr.querySelector(".bmin").value || 0)),
+        label: tr.querySelector(".blabel").value.trim() || "—"
+      }))
+      .sort((a, b) => b.min - a.min);
+
   const selectedTopics = () =>
     [...$("topic-list").querySelectorAll("input:checked")].map((i) => i.value);
 
-  // ---------- Models (questions only — no presentation) ----------
+  const topicDiffs = () => {
+    const out = {};
+    $("topic-list").querySelectorAll(".tdiff").forEach((s) => { out[s.dataset.topic] = s.value; });
+    return out;
+  };
+
+  // Mark range for each band, given a paper total.
+  function bandRanges(bands, total) {
+    const out = [];
+    let upper = total;
+    bands.forEach((b) => {
+      const lower = Math.ceil((b.min / 100) * total);
+      out.push({ ...b, lower: Math.min(lower, upper), upper });
+      upper = Math.max(0, Math.min(lower, upper) - 1);
+    });
+    return out;
+  }
+
+  // ---------- Models ----------
 
   function worksheetModel(spec) {
     const rng = mulberry32(spec.seed);
     const questions = [], seen = new Set();
-    const wanted = spec.count * spec.topics.length;
-    let i = 0, guard = 0;
-    while (questions.length < wanted && guard < wanted * 25) {
-      guard++;
-      const id = spec.topics[i % spec.topics.length];
-      i++;
-      const d = spec.diff === "mixed" ? (questions.length % 3) + 1 : +spec.diff;
-      const item = GENERATORS[id].gen(rng, d);
-      if (seen.has(item.q)) continue;
-      seen.add(item.q);
-      questions.push(item);
-    }
-    return { questions };
+    const perTopic = spec.count;
+    // Each topic contributes `count` questions at the difficulty set for it.
+    spec.topics.forEach((id) => {
+      const setting = spec.topicDiffs[id] || "2";
+      let made = 0, guard = 0;
+      while (made < perTopic && guard < perTopic * 25) {
+        guard++;
+        const d = setting === "mixed" ? (made % 3) + 1 : +setting;
+        const item = GENERATORS[id].gen(rng, d);
+        if (seen.has(item.q)) continue;
+        seen.add(item.q);
+        questions.push({ ...item, topic: id, diff: d });
+        made++;
+      }
+    });
+    const total = spec.marksEach > 0 ? questions.length * spec.marksEach : questions.length;
+    return { questions, total };
   }
 
   function examModel(spec) {
@@ -97,30 +251,33 @@
     for (let qi = 0; qi < spec.questions; qi++) {
       const topic = spec.topics[qi % spec.topics.length];
       const parts = [], seen = new Set();
-      for (let pi = 0; pi < spec.parts; pi++) {
+      spec.partRubric.forEach((rule, pi) => {
         let item = null;
         for (let tries = 0; tries < 20; tries++) {
-          const c = GENERATORS[topic].gen(rng, PART_DIFF[pi]);
+          const c = GENERATORS[topic].gen(rng, rule.diff);
           if (!seen.has(c.q)) { item = c; break; }
         }
-        if (!item) item = GENERATORS[topic].gen(rng, PART_DIFF[pi]);
+        if (!item) item = GENERATORS[topic].gen(rng, rule.diff);
         seen.add(item.q);
-        parts.push({ letter: LETTERS[pi], marks: PART_MARKS[pi], item });
-      }
+        parts.push({ letter: LETTERS[pi], marks: rule.marks, diff: rule.diff, item });
+      });
       questions.push({ topic, parts, total: parts.reduce((t, p) => t + p.marks, 0) });
     }
-    return { questions, grandTotal: questions.reduce((t, q) => t + q.total, 0) };
+    const grandTotal = questions.reduce((t, q) => t + q.total, 0);
+    return { questions, grandTotal, total: grandTotal };
   }
 
-  // Flat list of {label, marks, item} for the mark scheme.
   function markSchemeEntries(spec, model) {
     if (spec.mode === "exam") {
       const out = [];
       model.questions.forEach((q, qi) =>
-        q.parts.forEach((p) => out.push({ label: `Q${qi + 1} (${p.letter})`, marks: p.marks, item: p.item })));
+        q.parts.forEach((p) =>
+          out.push({ label: `Q${qi + 1} (${p.letter})`, marks: p.marks, item: p.item })));
       return out;
     }
-    return model.questions.map((item, i) => ({ label: `Q${i + 1}`, marks: 0, item }));
+    return model.questions.map((item, i) => ({
+      label: `Q${i + 1}`, marks: spec.marksEach, item
+    }));
   }
 
   // ---------- Page rendering ----------
@@ -130,6 +287,28 @@
     img.src = "letterhead.png";
     img.alt = "Al Injaz International Private School";
     return img;
+  }
+
+  // Grade-band table printed on the paper.
+  function rubricTable(spec, model) {
+    const wrap = el("div", "rubric-print");
+    wrap.appendChild(el("div", "cap", "Grading Rubric"));
+    const t = el("table", "tpl");
+    const head = el("tr");
+    ["Grade / Reward", "Percentage", "Marks"].forEach((h) => head.appendChild(el("th", "", h)));
+    t.appendChild(head);
+    bandRanges(spec.bands, model.total).forEach((b, i, arr) => {
+      const tr = el("tr");
+      tr.appendChild(el("td", "", b.label));
+      const pct = i === 0 ? `${b.min}% and above`
+        : b.min === 0 ? `below ${arr[i - 1].min}%`
+        : `${b.min}% – ${arr[i - 1].min - 1}%`;
+      tr.appendChild(el("td", "", pct));
+      tr.appendChild(el("td", "", b.lower === b.upper ? String(b.lower) : `${b.lower} – ${b.upper}`));
+      t.appendChild(tr);
+    });
+    wrap.appendChild(t);
+    return wrap;
   }
 
   function renderWorksheet(spec, model, sheet) {
@@ -157,23 +336,35 @@
 
     model.questions.forEach((item, i) => {
       const box = el("div", "ws-q");
-      box.appendChild(el("span", "num", `Q${i + 1}. `));
-      box.appendChild(document.createTextNode(item.q));
+      if (spec.marksEach > 0) {
+        const row = el("div", "part");
+        row.style.paddingInlineStart = "0";
+        row.style.marginTop = "0";
+        const txt = el("span", "ptext");
+        txt.appendChild(el("b", "", `Q${i + 1}. `));
+        txt.appendChild(document.createTextNode(item.q));
+        row.appendChild(txt);
+        row.appendChild(el("span", "pmarks", `[${spec.marksEach}]`));
+        box.appendChild(row);
+      } else {
+        box.appendChild(el("span", "num", `Q${i + 1}. `));
+        box.appendChild(document.createTextNode(item.q));
+      }
       sheet.appendChild(box);
       if (spec.space > 0) sheet.appendChild(el("div", "space-" + spec.space));
     });
 
+    if (spec.rubric) sheet.appendChild(rubricTable(spec, model));
     sheet.appendChild(worksheetFooter(spec, model));
   }
 
-  // Score, reward chart and signature spaces at the foot of a worksheet.
   function worksheetFooter(spec, model) {
     const wrap = el("div", "foot-block");
     const tbl = el("table", "foot-tbl");
 
     const scoreRow = el("tr");
     scoreRow.appendChild(el("td", "k", "Score"));
-    scoreRow.appendChild(el("td", "", `________ / ${model.questions.length}`));
+    scoreRow.appendChild(el("td", "", `________ / ${model.total}`));
     scoreRow.appendChild(el("td", "k", "Teacher's Remarks"));
     scoreRow.appendChild(el("td", "", ""));
     tbl.appendChild(scoreRow);
@@ -184,11 +375,10 @@
       const cell = el("td");
       cell.colSpan = 3;
       const row = el("div", "reward-row");
-      REWARDS.forEach((r) => {
+      bandRanges(spec.bands, model.total).forEach((b) => {
         const item = el("span", "reward");
         item.appendChild(el("span", "tickbox"));
-        item.appendChild(el("span", "star", r.star));
-        item.appendChild(el("span", "", `${r.label} (${r.band})`));
+        item.appendChild(el("span", "", `${b.label} (${b.lower}–${b.upper})`));
         row.appendChild(item);
       });
       cell.appendChild(row);
@@ -251,6 +441,8 @@
     marks.appendChild(signRow);
     sheet.appendChild(marks);
 
+    if (spec.rubric) sheet.appendChild(rubricTable(spec, model));
+
     const ins = el("div", "instructions");
     ins.appendChild(el("h4", "", "Instructions:"));
     const ul = el("ul");
@@ -266,7 +458,8 @@
       box.appendChild(qh);
       q.parts.forEach((p) => {
         const row = el("div", "part");
-        row.appendChild(el("span", "ptext", `(${p.letter})  ${p.item.q}`));
+        const label = q.parts.length > 1 ? `(${p.letter})  ` : "";
+        row.appendChild(el("span", "ptext", `${label}${p.item.q}`));
         row.appendChild(el("span", "pmarks", `[${p.marks}]`));
         box.appendChild(row);
         box.appendChild(el("div", "space-" + (p.marks >= 4 ? 3 : p.marks >= 3 ? 2 : 1)));
@@ -312,7 +505,6 @@
   }
 
   // ---------- Word (.doc) export ----------
-  // Word ignores flexbox, so every aligned row is built as a borderless table.
 
   function wordStyles(pt) {
     return `
@@ -342,11 +534,24 @@ td.right { text-align: right; }
 `;
   }
 
-  // Two-column row: left text, right text (used for marks, dates, headers).
   const layRow = (left, right) =>
     `<table class="lay"><tr><td>${left}</td><td class="right">${right}</td></tr></table>`;
 
   const spacer = (h) => `<p style="margin:0;line-height:${h}pt">&nbsp;</p>`;
+
+  function wordRubric(spec, model) {
+    if (!spec.rubric) return "";
+    let h = `<p style="margin-top:8pt"><b>Grading Rubric</b></p><table class="tpl">`;
+    h += `<tr><th>Grade / Reward</th><th>Percentage</th><th>Marks</th></tr>`;
+    bandRanges(spec.bands, model.total).forEach((b, i, arr) => {
+      const pct = i === 0 ? `${b.min}% and above`
+        : b.min === 0 ? `below ${arr[i - 1].min}%`
+        : `${b.min}% – ${arr[i - 1].min - 1}%`;
+      const mk = b.lower === b.upper ? String(b.lower) : `${b.lower} – ${b.upper}`;
+      h += `<tr><td>${esc(b.label)}</td><td>${esc(pct)}</td><td>${esc(mk)}</td></tr>`;
+    });
+    return h + `</table>`;
+  }
 
   function wordWorksheet(spec, model) {
     let h = `<p><img src="${LETTERHEAD_DATA_URI}" width="640" alt="Al Injaz International Private School"></p>`;
@@ -355,16 +560,22 @@ td.right { text-align: right; }
     h += `<p>Name: ______________________________________________________________</p>`;
 
     model.questions.forEach((item, i) => {
-      h += `<p><b>Q${i + 1}.</b> ${nl2br(item.q)}</p>`;
+      if (spec.marksEach > 0) {
+        h += layRow(`<b>Q${i + 1}.</b> ${nl2br(item.q)}`, `[${spec.marksEach}]`);
+      } else {
+        h += `<p><b>Q${i + 1}.</b> ${nl2br(item.q)}</p>`;
+      }
       if (spec.space > 0) h += spacer(spec.space === 1 ? 26 : spec.space === 2 ? 56 : 96);
     });
 
-    // Score / reward / signatures
+    h += wordRubric(spec, model);
+
     h += `<table class="tpl" style="margin-top:10pt">`;
-    h += `<tr><td class="lbl" style="width:18%">Score</td><td class="val" style="width:32%">________ / ${model.questions.length}</td>`;
+    h += `<tr><td class="lbl" style="width:18%">Score</td><td class="val" style="width:32%">________ / ${model.total}</td>`;
     h += `<td class="lbl" style="width:20%">Teacher's Remarks</td><td class="val" style="width:30%">&nbsp;</td></tr>`;
     if (spec.reward) {
-      const cells = REWARDS.map((r) => `&#9744; ${r.star} ${esc(r.label)} (${esc(r.band)})`).join("&nbsp;&nbsp; ");
+      const cells = bandRanges(spec.bands, model.total)
+        .map((b) => `&#9744; ${esc(b.label)} (${b.lower}–${b.upper})`).join("&nbsp;&nbsp; ");
       h += `<tr><td class="lbl">Reward</td><td class="val" colspan="3">${cells}</td></tr>`;
     }
     h += `<tr><td class="lbl">Teacher's Signature</td><td class="val" style="height:34pt">&nbsp;</td>`;
@@ -400,6 +611,8 @@ td.right { text-align: right; }
     h += `<tr><td>Name &amp; Sign</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>`;
     h += `</table>`;
 
+    h += wordRubric(spec, model);
+
     h += `<p style="margin-top:8pt"><b>Instructions:</b></p><ul>`;
     INSTRUCTIONS.forEach((t) => { h += `<li>${esc(t)}</li>`; });
     h += `</ul>`;
@@ -407,7 +620,8 @@ td.right { text-align: right; }
     model.questions.forEach((q, qi) => {
       h += layRow(`<span class="qhead">Q${qi + 1})</span>`, `<b>[${q.total} Marks]</b>`);
       q.parts.forEach((p) => {
-        h += layRow(`&nbsp;&nbsp;&nbsp;(${p.letter})&nbsp; ${nl2br(p.item.q)}`, `[${p.marks}]`);
+        const label = q.parts.length > 1 ? `(${p.letter})&nbsp; ` : "";
+        h += layRow(`&nbsp;&nbsp;&nbsp;${label}${nl2br(p.item.q)}`, `[${p.marks}]`);
         h += spacer(p.marks >= 4 ? 90 : p.marks >= 3 ? 56 : 28);
       });
     });
@@ -444,7 +658,7 @@ td.right { text-align: right; }
   }
 
   function downloadWord() {
-    if (!state.spec) { generate(); }
+    if (!state.spec) generate();
     if (!state.spec) return;
     const spec = state.spec;
     const html = buildWordDoc(spec, state.model);
@@ -474,19 +688,22 @@ td.right { text-align: right; }
       grade: state.grade,
       section: $("section-input").value.trim(),
       topics,
+      topicDiffs: topicDiffs(),
       seed: +$("seed").value || 1,
       answers: $("show-answers").checked,
+      rubric: $("show-rubric").checked,
       reward: $("show-reward").checked,
+      bands: readBands(),
       subject: $("exam-subject").value.trim() || "Mathematics",
       topicTitle: typed || autoTopicTitle(topics),
       count: Math.max(1, +$("q-count").value || 5),
-      diff: $("difficulty").value,
+      marksEach: Math.max(0, +$("ws-marks").value || 0),
       space: +$("ws-space").value,
       title: $("exam-title").value.trim(),
       duration: $("exam-duration").value.trim(),
       date: $("exam-date").value.trim(),
       questions: Math.max(1, +$("exam-questions").value || 5),
-      parts: +$("exam-parts").value
+      partRubric: readPartRubric()
     };
     state.spec = spec;
     state.model = spec.mode === "exam" ? examModel(spec) : worksheetModel(spec);
@@ -500,6 +717,10 @@ td.right { text-align: right; }
     $("worksheet-opts").classList.toggle("hidden", mode !== "worksheet");
     $("exam-opts").classList.toggle("hidden", mode !== "exam");
     $("reward-opt").classList.toggle("hidden", mode !== "worksheet");
+    $("topic-hint").textContent = mode === "exam"
+      ? "— difficulty comes from the question rubric below"
+      : "— tick a topic, then set its difficulty";
+    $("topic-list").classList.toggle("diff-muted", mode === "exam");
   }
 
   $("mode-worksheet").addEventListener("click", () => setMode("worksheet"));
@@ -509,10 +730,20 @@ td.right { text-align: right; }
     buildTopicList();
   });
   $("topic-all").addEventListener("click", () => {
-    const boxes = $("topic-list").querySelectorAll("input");
+    const boxes = $("topic-list").querySelectorAll("input[type=checkbox]");
     const allOn = [...boxes].every((b) => b.checked);
-    boxes.forEach((b) => { b.checked = !allOn; });
+    boxes.forEach((b) => { b.checked = !allOn; b.dispatchEvent(new Event("change")); });
   });
+  $("difficulty").addEventListener("change", (e) => {
+    const v = e.target.value;
+    if (!v) return;
+    $("topic-list").querySelectorAll(".tdiff").forEach((s) => { s.value = v; });
+    e.target.value = "";
+  });
+  $("exam-parts").addEventListener("change", () => buildPartRubric());
+  $("band-add").addEventListener("click", () =>
+    $("band-rubric").querySelector("tbody").appendChild(bandRow({ min: 50, label: "New band" })));
+  $("band-reset").addEventListener("click", () => buildBandRubric(DEFAULT_BANDS));
   $("new-seed").addEventListener("click", () => {
     $("seed").value = Math.floor(Math.random() * 899999) + 100000;
     generate();
@@ -520,20 +751,57 @@ td.right { text-align: right; }
   $("generate").addEventListener("click", generate);
   $("print").addEventListener("click", () => window.print());
   $("download-word").addEventListener("click", downloadWord);
+  $("save-settings").addEventListener("click", (e) => {
+    const okSaved = save({
+      partRubric: readPartRubric(),
+      bands: readBands(),
+      marksEach: +$("ws-marks").value || 0,
+      space: +$("ws-space").value,
+      rubric: $("show-rubric").checked,
+      reward: $("show-reward").checked,
+      answers: $("show-answers").checked,
+      subject: $("exam-subject").value.trim(),
+      examTitle: $("exam-title").value.trim(),
+      duration: $("exam-duration").value.trim()
+    });
+    e.target.textContent = okSaved ? "✓ Saved as your default" : "Could not save (private browsing?)";
+    setTimeout(() => { e.target.textContent = "Save these settings as my default"; }, 2500);
+  });
 
   // ---------- Init ----------
   const params = new URLSearchParams(location.search);
+  const saved = load();
+
   if (params.get("grade")) state.grade = +params.get("grade");
   buildGradeSelect();
-  buildTopicList();
+  buildTopicList(saved);
+
+  if (saved) {
+    if (saved.subject) $("exam-subject").value = saved.subject;
+    if (saved.examTitle) $("exam-title").value = saved.examTitle;
+    if (saved.duration) $("exam-duration").value = saved.duration;
+    if (typeof saved.marksEach === "number") $("ws-marks").value = saved.marksEach;
+    if (typeof saved.space === "number") $("ws-space").value = saved.space;
+    if (typeof saved.rubric === "boolean") $("show-rubric").checked = saved.rubric;
+    if (typeof saved.reward === "boolean") $("show-reward").checked = saved.reward;
+    if (typeof saved.answers === "boolean") $("show-answers").checked = saved.answers;
+  }
+  buildBandRubric(saved && saved.bands);
+  if (params.get("parts")) $("exam-parts").value = params.get("parts");
+  buildPartRubric(saved);
+
   setMode(params.get("mode") === "exam" ? "exam" : "worksheet");
   $("seed").value = params.get("seed") || Math.floor(Math.random() * 899999) + 100000;
-  // Optional overrides so a teacher can bookmark a ready-made configuration.
   if (params.get("count")) $("q-count").value = params.get("count");
   if (params.get("space")) $("ws-space").value = params.get("space");
+  if (params.get("marks")) $("ws-marks").value = params.get("marks");
   if (params.get("questions")) $("exam-questions").value = params.get("questions");
-  if (params.get("parts")) $("exam-parts").value = params.get("parts");
   if (params.get("reward") === "0") $("show-reward").checked = false;
+  if (params.get("rubric") === "0") $("show-rubric").checked = false;
   if (params.get("answers") === "0") $("show-answers").checked = false;
+  if (params.get("diff")) {
+    $("topic-list").querySelectorAll(".tdiff").forEach((s) => { s.value = params.get("diff"); });
+  }
+
   if (params.get("auto")) generate(); else render();
 })();

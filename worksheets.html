@@ -47,9 +47,18 @@
       </div>
 
       <div class="panel-group">
-        <label>Topics</label>
+        <label>Topics <span class="hint" id="topic-hint">— tick a topic, then set its difficulty</span></label>
         <div id="topic-list" class="topic-checks"></div>
-        <button id="topic-all" class="mini-btn">Select all</button>
+        <div class="row-btns">
+          <button id="topic-all" class="mini-btn">Select all</button>
+          <select id="difficulty" title="Set the difficulty of every ticked topic">
+            <option value="">Set all to…</option>
+            <option value="1">Easy</option>
+            <option value="2">Medium</option>
+            <option value="3">Challenging</option>
+            <option value="mixed">Mixed</option>
+          </select>
+        </div>
       </div>
 
       <!-- Worksheet options -->
@@ -58,13 +67,9 @@
         <input id="topic-title-input" type="text" placeholder="auto from topics">
         <label for="q-count">Questions per topic</label>
         <input id="q-count" type="number" min="1" max="30" value="5">
-        <label for="difficulty">Difficulty</label>
-        <select id="difficulty">
-          <option value="1">Easy</option>
-          <option value="2" selected>Medium</option>
-          <option value="3">Challenging</option>
-          <option value="mixed">Mixed (easy → challenging)</option>
-        </select>
+        <label for="ws-marks">Marks per question</label>
+        <input id="ws-marks" type="number" min="0" max="20" value="1"
+               title="0 = do not print marks on the worksheet">
         <label for="ws-space">Working space per question</label>
         <select id="ws-space">
           <option value="0">None (compact)</option>
@@ -86,10 +91,32 @@
         <input id="exam-questions" type="number" min="1" max="12" value="5">
         <label for="exam-parts">Parts per question</label>
         <select id="exam-parts">
+          <option value="1">1 — no parts</option>
           <option value="2">2 — (a) (b)</option>
           <option value="3" selected>3 — (a) (b) (c)</option>
           <option value="4">4 — (a) (b) (c) (d)</option>
         </select>
+
+        <label>Question rubric — marks &amp; level per part</label>
+        <table class="rubric-edit" id="part-rubric">
+          <thead><tr><th>Part</th><th>Marks</th><th>Difficulty</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <p class="hint">Each question's total is the sum of its parts, and feeds
+          the marks table automatically.</p>
+      </div>
+
+      <!-- Grading rubric (both modes) -->
+      <div class="panel-group">
+        <label>Grading rubric</label>
+        <table class="rubric-edit" id="band-rubric">
+          <thead><tr><th>From %</th><th>Grade / reward</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="row-btns">
+          <button id="band-add" class="mini-btn">+ Add band</button>
+          <button id="band-reset" class="mini-btn">Reset</button>
+        </div>
       </div>
 
       <div class="panel-group">
@@ -99,14 +126,16 @@
           <button id="new-seed" class="mini-btn" title="New random paper">🎲</button>
         </div>
         <label class="check-inline"><input id="show-answers" type="checkbox" checked> Include mark scheme</label>
+        <label class="check-inline"><input id="show-rubric" type="checkbox" checked> Print grading rubric on the paper</label>
         <span id="reward-opt">
-          <label class="check-inline"><input id="show-reward" type="checkbox" checked> Include reward chart</label>
+          <label class="check-inline"><input id="show-reward" type="checkbox" checked> Reward chart (tick boxes)</label>
         </span>
       </div>
 
       <button id="generate" class="primary-btn">Generate</button>
       <button id="print" class="primary-btn secondary">Print / Save as PDF</button>
       <button id="download-word" class="primary-btn word">⬇ Download as Word</button>
+      <button id="save-settings" class="mini-btn">Save these settings as my default</button>
       <p class="panel-note">Font: Comic Sans MS — 14 pt for Grades 1–4, 12 pt for Grades 5–12.
         Every page prints with a single-line border.</p>
     </aside>
