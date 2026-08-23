@@ -56,6 +56,17 @@
       </div>
 
       <div class="panel-group">
+        <label>Learning objectives <span class="hint">one per line</span></label>
+        <textarea id="objectives" class="field-area" rows="3"></textarea>
+        <label>Success criteria <span class="hint">one per line — “I can …”</span></label>
+        <textarea id="criteria" class="field-area" rows="3"></textarea>
+        <div class="row-btns">
+          <button id="fields-reset" class="mini-btn">Reset to draft</button>
+          <span class="hint" id="fields-msg"></span>
+        </div>
+      </div>
+
+      <div class="panel-group">
         <label>Lesson content</label>
         <label class="sub" for="n-examples">Worked examples</label>
         <input id="n-examples" type="number" min="0" max="6" value="2">

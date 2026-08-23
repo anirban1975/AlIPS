@@ -182,3 +182,17 @@
   .stage { display: none !important; }
   .slide-card { page-break-inside: avoid; }
 }
+
+/* Editable objective / criteria fields */
+.field-area {
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+  font-family: inherit;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  resize: vertical;
+}
+#fields-msg { flex: 1; text-align: end; }

@@ -103,6 +103,12 @@ model, so the printed plan and the presented slides always match:
   examples with mark-scheme steps, differentiated practice (Support / Core /
   Challenge), plenary, homework, resources, signature line. Prints, or exports
   to Word.
+**Objectives and success criteria are editable** in the panel (one per line) and
+are saved **per topic** under `alips-lesson-fields`, so a teacher writes their
+own wording once and it returns every time they open that topic. `Reset to
+draft` restores the generic wording. Teacher name / section / duration persist
+under `alips-planner-prefs`. Saving happens on Generate.
+
 - **Slides** — the same content as 16:9 cards. **Present full screen** gives a
   classroom projector view (← → to move, Space to reveal answers, Esc to exit).
   **Slides as PowerPoint** writes a real `.pptx`.
@@ -187,4 +193,4 @@ user and git-ignored.
 6. ~~v0.8 Lesson planner + slides (present mode, .pptx), proper maths notation,
    guided-learning/practice page removed~~ — done
 7. More generators (statistics tables, geometry with diagrams, word problems)
-8. Editable lesson-plan fields saved per teacher
+8. Editable starter/plenary text and per-topic keyword lists

@@ -35,6 +35,49 @@
 
   const state = { view: "plan", grade: 5, topic: null, model: null, spec: null, slide: 0, revealed: false };
 
+  // ---------- Teacher's own wording, remembered per topic ----------
+  const FIELD_KEY = "alips-lesson-fields";     // { [topicId]: {objectives, criteria} }
+  const PREF_KEY = "alips-planner-prefs";      // teacher, section, duration
+
+  const draftObjectives = (title) => [
+    `Understand ${title}.`,
+    "Apply the method accurately to routine questions.",
+    "Explain each step of the reasoning."
+  ];
+  const DRAFT_CRITERIA = [
+    "I can state the rule in my own words.",
+    "I can work through an example without help.",
+    "I can spot and correct a mistake in someone else's work."
+  ];
+
+  const readStore = (k) => {
+    try { return JSON.parse(localStorage.getItem(k) || "null") || {}; }
+    catch { return {}; }
+  };
+  const writeStore = (k, v) => {
+    try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; }
+  };
+
+  const linesOf = (id) => $(id).value.split("\n").map((t) => t.trim()).filter(Boolean);
+
+  // Load the saved wording for a topic, or fall back to the generic draft.
+  function loadFields(topic, title) {
+    const saved = readStore(FIELD_KEY)[topic];
+    const objectives = saved && saved.objectives && saved.objectives.length
+      ? saved.objectives : draftObjectives(title);
+    const criteria = saved && saved.criteria && saved.criteria.length
+      ? saved.criteria : DRAFT_CRITERIA;
+    $("objectives").value = objectives.join("\n");
+    $("criteria").value = criteria.join("\n");
+    $("fields-msg").textContent = saved ? "your saved wording" : "draft wording";
+  }
+
+  function saveFields(topic) {
+    const all = readStore(FIELD_KEY);
+    all[topic] = { objectives: linesOf("objectives"), criteria: linesOf("criteria") };
+    if (writeStore(FIELD_KEY, all)) $("fields-msg").textContent = "saved for this topic";
+  }
+
   const fontFor = (grade) => (grade <= 4 ? 14 : 12);
 
   // ---------- Panel ----------
@@ -136,18 +179,16 @@
     // Objectives
     let s = section("Learning objectives");
     const ul = el("ul", "plan-list");
-    [`Understand ${spec.title}.`,
-     "Apply the method accurately to routine questions.",
-     "Explain each step of the reasoning."].forEach((t) => ul.appendChild(el("li", "", t)));
+    (spec.objectives.length ? spec.objectives : draftObjectives(spec.title))
+      .forEach((t) => ul.appendChild(el("li", "", t)));
     s.appendChild(ul);
     sheet.appendChild(s);
 
     // Success criteria
     s = section("Success criteria");
     const sc = el("ul", "plan-list");
-    ["I can state the rule in my own words.",
-     "I can work through an example without help.",
-     "I can spot and correct a mistake in someone else's work."].forEach((t) => sc.appendChild(el("li", "", t)));
+    (spec.criteria.length ? spec.criteria : DRAFT_CRITERIA)
+      .forEach((t) => sc.appendChild(el("li", "", t)));
     s.appendChild(sc);
     sheet.appendChild(s);
 
@@ -249,11 +290,10 @@
   function buildSlides(spec, model) {
     const s = [];
     s.push({ kind: "title", title: spec.title, sub: `Grade ${spec.grade}${spec.section || ""} · Mathematics` });
-    s.push({ kind: "bullets", title: "Learning objectives", items: [
-      `Understand ${spec.title}.`,
-      "Apply the method accurately.",
-      "Explain each step of the reasoning."
-    ] });
+    s.push({ kind: "bullets", title: "Learning objectives",
+             items: spec.objectives.length ? spec.objectives : draftObjectives(spec.title) });
+    if (spec.criteria.length)
+      s.push({ kind: "bullets", title: "Success criteria", items: spec.criteria });
     if (model.starter.length)
       s.push({ kind: "questions", title: "Starter", items: model.starter });
     if (model.concept)
@@ -369,12 +409,10 @@
         .map(([k, v]) => `<td class="lbl">${esc(k)}</td><td class="val">${esc(v)}</td>`).join("") +
       `</tr></table>`;
 
-    b += `<p><b>Learning objectives</b></p><ul><li>Understand ${esc(spec.title)}.</li>` +
-      `<li>Apply the method accurately to routine questions.</li>` +
-      `<li>Explain each step of the reasoning.</li></ul>`;
-    b += `<p><b>Success criteria</b></p><ul><li>I can state the rule in my own words.</li>` +
-      `<li>I can work through an example without help.</li>` +
-      `<li>I can spot and correct a mistake in someone else's work.</li></ul>`;
+    const bul = (items) => "<ul>" + items.map((t) => `<li>${esc(t)}</li>`).join("") + "</ul>";
+    b += `<p><b>Learning objectives</b></p>` +
+      bul(spec.objectives.length ? spec.objectives : draftObjectives(spec.title));
+    b += `<p><b>Success criteria</b></p>` + bul(spec.criteria.length ? spec.criteria : DRAFT_CRITERIA);
 
     if (model.concept) {
       b += `<p><b>Key idea</b></p><p>${esc(model.concept)}</p>`;
@@ -608,6 +646,12 @@
 
   // ---------- Wiring ----------
 
+  const currentTitle = () => {
+    const typed = $("lesson-title").value.trim();
+    const t = $("topic-select").value;
+    return typed || (GENERATORS[t] ? GENERATORS[t].name : "Lesson");
+  };
+
   function readSpec() {
     const topic = $("topic-select").value;
     const typed = $("lesson-title").value.trim();
@@ -619,6 +663,8 @@
       teacher: $("teacher-input").value.trim(),
       date: $("date-input").value.trim(),
       duration: $("duration-input").value.trim(),
+      objectives: linesOf("objectives"),
+      criteria: linesOf("criteria"),
       nExamples: Math.max(0, +$("n-examples").value || 0),
       nStarter: Math.max(0, +$("n-starter").value || 0),
       nPractice: Math.max(0, +$("n-practice").value || 0),
@@ -645,6 +691,12 @@
   function generate() {
     state.topic = $("topic-select").value;
     if (!state.topic) return;
+    saveFields(state.topic);                    // keep the teacher's wording for next time
+    writeStore(PREF_KEY, {
+      teacher: $("teacher-input").value.trim(),
+      section: $("section-input").value.trim(),
+      duration: $("duration-input").value.trim()
+    });
     state.spec = readSpec();
     state.model = buildModel(state.spec);
     render();
@@ -662,6 +714,16 @@
   $("grade-select").addEventListener("change", (e) => {
     state.grade = +e.target.value;
     buildTopicSelect();
+    loadFields($("topic-select").value, currentTitle());
+  });
+  $("topic-select").addEventListener("change", (e) => {
+    state.topic = e.target.value;
+    loadFields(state.topic, currentTitle());
+  });
+  $("fields-reset").addEventListener("click", () => {
+    $("objectives").value = draftObjectives(currentTitle()).join("\n");
+    $("criteria").value = DRAFT_CRITERIA.join("\n");
+    $("fields-msg").textContent = "draft wording";
   });
   $("new-seed").addEventListener("click", () => {
     $("seed").value = Math.floor(Math.random() * 899999) + 100000;
@@ -701,6 +763,11 @@
   buildGradeSelect();
   if (params.get("topic") && GENERATORS[params.get("topic")]) state.topic = params.get("topic");
   buildTopicSelect();
+  const prefs = readStore(PREF_KEY);
+  if (prefs.teacher) $("teacher-input").value = prefs.teacher;
+  if (prefs.section) $("section-input").value = prefs.section;
+  if (prefs.duration) $("duration-input").value = prefs.duration;
+  loadFields($("topic-select").value, currentTitle());
   $("seed").value = params.get("seed") || Math.floor(Math.random() * 899999) + 100000;
   if (params.get("view") === "deck") setView("deck");
   if (params.get("auto")) generate(); else render();
