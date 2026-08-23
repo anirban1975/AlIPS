@@ -61,6 +61,41 @@
         </div>
       </div>
 
+      <div class="panel-group">
+        <label>Paper plan</label>
+        <div class="view-toggle">
+          <button id="plan-quick" class="toggle-btn active">Quick setup</button>
+          <button id="plan-blueprint" class="toggle-btn">Blueprint</button>
+        </div>
+      </div>
+
+      <!-- Blueprint: one row per question (or per part, for exams) -->
+      <div class="panel-group hidden" id="blueprint-opts">
+        <label>Blueprint <span class="hint" id="bp-hint"></span></label>
+        <table class="rubric-edit bp" id="blueprint">
+          <thead>
+            <tr><th>Q</th><th>Topic</th><th>Level</th><th>Mk</th><th></th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="row-btns">
+          <button id="bp-add" class="mini-btn">+ Row</button>
+          <button id="bp-fill" class="mini-btn" title="Create rows from the topics ticked above">Fill from topics</button>
+          <button id="bp-clear" class="mini-btn">Clear</button>
+        </div>
+        <p class="hint" id="bp-total"></p>
+        <details class="bp-paste">
+          <summary>Paste from a spreadsheet</summary>
+          <p class="hint">One row per line: <code>Q, Topic, Level, Marks</code> —
+            commas or tabs. Level: Easy / Medium / Challenging.</p>
+          <textarea id="bp-text" rows="5" placeholder="1, Factorising, Easy, 2
+1, Factorising, Medium, 3
+2, Pythagoras' theorem, Challenging, 5"></textarea>
+          <button id="bp-import" class="mini-btn">Load these rows</button>
+          <p class="hint" id="bp-import-msg"></p>
+        </details>
+      </div>
+
       <!-- Worksheet options -->
       <div class="panel-group" id="worksheet-opts">
         <label for="topic-title-input">Topic title (printed)</label>
@@ -97,13 +132,15 @@
           <option value="4">4 — (a) (b) (c) (d)</option>
         </select>
 
-        <label>Question rubric — marks &amp; level per part</label>
-        <table class="rubric-edit" id="part-rubric">
-          <thead><tr><th>Part</th><th>Marks</th><th>Difficulty</th></tr></thead>
-          <tbody></tbody>
-        </table>
-        <p class="hint">Each question's total is the sum of its parts, and feeds
-          the marks table automatically.</p>
+        <span id="part-rubric-group">
+          <label>Question rubric — marks &amp; level per part</label>
+          <table class="rubric-edit" id="part-rubric">
+            <thead><tr><th>Part</th><th>Marks</th><th>Difficulty</th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <p class="hint">Each question's total is the sum of its parts, and feeds
+            the marks table automatically.</p>
+        </span>
       </div>
 
       <!-- Grading rubric (both modes) -->

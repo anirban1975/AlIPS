@@ -53,6 +53,24 @@ questions as `Qn)` with `[N Marks]` and parts `(a) (b) (c)` each marked `[n]`.
 Each question draws all its parts from one topic so the question reads
 coherently.
 
+## Paper plan: Quick setup vs Blueprint (v0.7)
+
+`Paper plan` switches how a paper is specified.
+
+- **Quick setup** — topics × questions-per-topic, difficulty per topic
+  (worksheets) or the part rubric (exams). Fast for routine sheets.
+- **Blueprint** — an explicit table, one row per question (worksheets) or per
+  part (exams): `Q | Topic | Level | Marks`. Rows sharing a Q number become
+  the parts (a)(b)(c) of that question, so a single exam question can even
+  draw its parts from **different topics**. Marks are per row, so question
+  totals, the marks-tally table and the grading rubric all follow the plan.
+  `Fill from topics` seeds rows from the quick settings; `Paste from a
+  spreadsheet` accepts comma- or tab-separated lines (header row ignored,
+  topic names matched case-insensitively with a substring fallback, level
+  by name or 1–3) and reports which lines it skipped.
+
+Blueprint rows are part of the saved teacher defaults.
+
 ## Teacher-configurable rubrics (v0.6)
 
 Nothing about marks or difficulty is hardcoded any more — `DEFAULT_PART_RUBRIC`

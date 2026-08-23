@@ -48,7 +48,7 @@
 
   const STORE_KEY = "alips-teacher-defaults";
 
-  const state = { mode: "worksheet", grade: 5, spec: null, model: null };
+  const state = { mode: "worksheet", plan: "quick", grade: 5, spec: null, model: null };
 
   // Grades 1–4 print at 14 pt, all other grades at 12 pt.
   const fontFor = (grade) => (grade <= 4 ? 14 : 12);
@@ -200,6 +200,173 @@
       }))
       .sort((a, b) => b.min - a.min);
 
+  // ---------- Blueprint ----------
+  // One row per question (worksheets) or per part (exams, grouped by Q number).
+
+  function bpTopicSelect(selected) {
+    const sel = el("select", "btopic");
+    const here = new Set(GRADE_GENS[state.grade] || []);
+    const mine = el("optgroup");
+    mine.label = "Grade " + state.grade;
+    const other = el("optgroup");
+    other.label = "Other grades";
+    Object.keys(GENERATORS).forEach((id) => {
+      const o = el("option", "", GENERATORS[id].name);
+      o.value = id;
+      (here.has(id) ? mine : other).appendChild(o);
+    });
+    sel.appendChild(mine);
+    if (other.children.length) sel.appendChild(other);
+    if (selected && GENERATORS[selected]) sel.value = selected;
+    else sel.value = (GRADE_GENS[state.grade] || Object.keys(GENERATORS))[0];
+    const tip = () => { sel.title = GENERATORS[sel.value] ? GENERATORS[sel.value].name : ""; };
+    sel.addEventListener("change", tip);
+    tip();
+    return sel;
+  }
+
+  function blueprintRow(row) {
+    const tr = el("tr");
+
+    const qtd = el("td", "bqc");
+    const q = el("input");
+    q.type = "number";
+    q.min = "1";
+    q.max = "40";
+    q.value = row.q;
+    q.className = "bq";
+    qtd.appendChild(q);
+    tr.appendChild(qtd);
+
+    const ttd = el("td", "topic");
+    ttd.appendChild(bpTopicSelect(row.topic));
+    tr.appendChild(ttd);
+
+    const ltd = el("td", "lvl");
+    const l = el("select", "bdiff");
+    [["1", "Easy"], ["2", "Medium"], ["3", "Chall."]].forEach(([v, t]) => {
+      const o = el("option", "", t);
+      o.value = v;
+      l.appendChild(o);
+    });
+    l.value = String(row.diff || 2);
+    ltd.appendChild(l);
+    tr.appendChild(ltd);
+
+    const mtd = el("td", "mk");
+    const m = el("input");
+    m.type = "number";
+    m.min = "0";
+    m.max = "50";
+    m.value = row.marks;
+    m.className = "bmarks";
+    mtd.appendChild(m);
+    tr.appendChild(mtd);
+
+    const ktd = el("td", "kill");
+    const x = el("button", "x", "×");
+    x.title = "Remove this row";
+    x.addEventListener("click", () => { tr.remove(); updateBpTotal(); });
+    ktd.appendChild(x);
+    tr.appendChild(ktd);
+
+    tr.addEventListener("input", updateBpTotal);
+    return tr;
+  }
+
+  function buildBlueprint(rows) {
+    const tbody = $("blueprint").querySelector("tbody");
+    tbody.innerHTML = "";
+    (rows || []).forEach((r) => tbody.appendChild(blueprintRow(r)));
+    updateBpTotal();
+  }
+
+  const readBlueprint = () =>
+    [...$("blueprint").querySelectorAll("tbody tr")].map((tr) => ({
+      q: Math.max(1, +tr.querySelector(".bq").value || 1),
+      topic: tr.querySelector(".btopic").value,
+      diff: +tr.querySelector(".bdiff").value || 2,
+      marks: Math.max(0, +tr.querySelector(".bmarks").value || 0)
+    }));
+
+  function updateBpTotal() {
+    const rows = readBlueprint();
+    const marks = rows.reduce((t, r) => t + r.marks, 0);
+    const qs = new Set(rows.map((r) => r.q)).size;
+    $("bp-total").textContent = rows.length
+      ? `${rows.length} row(s) · ${qs} question(s) · ${marks} marks`
+      : "No rows yet — add rows, fill from topics, or paste from a spreadsheet.";
+  }
+
+  // Build blueprint rows from the ticked topics and the current quick settings.
+  function fillFromTopics() {
+    const topics = selectedTopics();
+    if (!topics.length) return;
+    const diffs = topicDiffs();
+    const rows = [];
+    if (state.mode === "exam") {
+      const parts = readPartRubric();
+      topics.forEach((id, qi) => {
+        parts.forEach((p) => rows.push({ q: qi + 1, topic: id, diff: p.diff, marks: p.marks }));
+      });
+    } else {
+      const per = Math.max(1, +$("q-count").value || 5);
+      const marks = Math.max(0, +$("ws-marks").value || 0);
+      let n = 1;
+      topics.forEach((id) => {
+        const setting = diffs[id] || "2";
+        for (let i = 0; i < per; i++) {
+          rows.push({
+            q: n++,
+            topic: id,
+            diff: setting === "mixed" ? (i % 3) + 1 : +setting,
+            marks
+          });
+        }
+      });
+    }
+    buildBlueprint(rows);
+  }
+
+  // Accept "1, Factorising, Easy, 2" — commas or tabs, level by name or number.
+  function parseBlueprint(text) {
+    const byName = {};
+    Object.keys(GENERATORS).forEach((id) => {
+      byName[GENERATORS[id].name.toLowerCase()] = id;
+      byName[id.toLowerCase()] = id;
+    });
+    const levelOf = (s) => {
+      const t = String(s).trim().toLowerCase();
+      if (/^[1-3]$/.test(t)) return +t;
+      if (t.startsWith("e")) return 1;
+      if (t.startsWith("m")) return 2;
+      if (t.startsWith("c") || t.startsWith("h") || t.startsWith("d")) return 3;
+      return 2;
+    };
+    const rows = [], bad = [];
+    text.split(/\r?\n/).forEach((line, i) => {
+      const raw = line.trim();
+      if (!raw) return;
+      const cells = raw.split(/\t|,(?![^(]*\))/).map((c) => c.trim());
+      if (cells.length < 2) { bad.push(i + 1); return; }
+      const [qc, tc, lc, mc] = cells;
+      if (/^q/i.test(qc) && isNaN(parseInt(qc, 10))) return;   // header line
+      const key = String(tc || "").toLowerCase().replace(/^["']|["']$/g, "");
+      const topic = byName[key] ||
+        Object.keys(byName).find((n) => n.includes(key) && key.length > 3);
+      if (!topic) { bad.push(i + 1); return; }
+      rows.push({
+        q: Math.max(1, parseInt(qc, 10) || rows.length + 1),
+        topic: byName[topic] || topic,
+        diff: levelOf(lc),
+        marks: Math.max(0, parseInt(mc, 10) || 0)
+      });
+    });
+    return { rows, bad };
+  }
+
+  // ---------- end blueprint ----------
+
   const selectedTopics = () =>
     [...$("topic-list").querySelectorAll("input:checked")].map((i) => i.value);
 
@@ -223,6 +390,15 @@
 
   // ---------- Models ----------
 
+  // Draw one question for a topic at a difficulty, avoiding repeats.
+  function draw(rng, topic, diff, seen) {
+    for (let tries = 0; tries < 25; tries++) {
+      const item = GENERATORS[topic].gen(rng, diff);
+      if (!seen.has(item.q)) { seen.add(item.q); return item; }
+    }
+    return GENERATORS[topic].gen(rng, diff);
+  }
+
   function worksheetModel(spec) {
     const rng = mulberry32(spec.seed);
     const questions = [], seen = new Set();
@@ -230,19 +406,53 @@
     // Each topic contributes `count` questions at the difficulty set for it.
     spec.topics.forEach((id) => {
       const setting = spec.topicDiffs[id] || "2";
-      let made = 0, guard = 0;
-      while (made < perTopic && guard < perTopic * 25) {
-        guard++;
-        const d = setting === "mixed" ? (made % 3) + 1 : +setting;
-        const item = GENERATORS[id].gen(rng, d);
-        if (seen.has(item.q)) continue;
-        seen.add(item.q);
-        questions.push({ ...item, topic: id, diff: d });
-        made++;
+      for (let i = 0; i < perTopic; i++) {
+        const d = setting === "mixed" ? (i % 3) + 1 : +setting;
+        questions.push({ ...draw(rng, id, d, seen), topic: id, diff: d, marks: spec.marksEach });
       }
     });
-    const total = spec.marksEach > 0 ? questions.length * spec.marksEach : questions.length;
-    return { questions, total };
+    return { questions, total: paperTotal(questions) };
+  }
+
+  const paperTotal = (questions) => {
+    const sum = questions.reduce((t, q) => t + (q.marks || 0), 0);
+    return sum > 0 ? sum : questions.length;
+  };
+
+  // Blueprint → worksheet: one row is one question.
+  function blueprintWorksheetModel(spec) {
+    const rng = mulberry32(spec.seed);
+    const seen = new Set();
+    const questions = spec.blueprint.map((r) => ({
+      ...draw(rng, r.topic, r.diff, seen), topic: r.topic, diff: r.diff, marks: r.marks
+    }));
+    return { questions, total: paperTotal(questions) };
+  }
+
+  // Blueprint → exam: rows sharing a Q number become the parts of that question.
+  function blueprintExamModel(spec) {
+    const rng = mulberry32(spec.seed);
+    const seen = new Set();
+    const groups = new Map();
+    spec.blueprint.forEach((r) => {
+      if (!groups.has(r.q)) groups.set(r.q, []);
+      groups.get(r.q).push(r);
+    });
+    const questions = [...groups.keys()].sort((a, b) => a - b).map((qn) => {
+      const parts = groups.get(qn).map((r, pi) => ({
+        letter: LETTERS[pi] || String(pi + 1),
+        marks: r.marks,
+        diff: r.diff,
+        item: draw(rng, r.topic, r.diff, seen)
+      }));
+      return {
+        topic: groups.get(qn)[0].topic,
+        parts,
+        total: parts.reduce((t, p) => t + p.marks, 0)
+      };
+    });
+    const grandTotal = questions.reduce((t, q) => t + q.total, 0);
+    return { questions, grandTotal, total: grandTotal };
   }
 
   function examModel(spec) {
@@ -276,7 +486,7 @@
       return out;
     }
     return model.questions.map((item, i) => ({
-      label: `Q${i + 1}`, marks: spec.marksEach, item
+      label: `Q${i + 1}`, marks: item.marks || 0, item
     }));
   }
 
@@ -336,7 +546,7 @@
 
     model.questions.forEach((item, i) => {
       const box = el("div", "ws-q");
-      if (spec.marksEach > 0) {
+      if (item.marks > 0) {
         const row = el("div", "part");
         row.style.paddingInlineStart = "0";
         row.style.marginTop = "0";
@@ -344,7 +554,7 @@
         txt.appendChild(el("b", "", `Q${i + 1}. `));
         txt.appendChild(document.createTextNode(item.q));
         row.appendChild(txt);
-        row.appendChild(el("span", "pmarks", `[${spec.marksEach}]`));
+        row.appendChild(el("span", "pmarks", `[${item.marks}]`));
         box.appendChild(row);
       } else {
         box.appendChild(el("span", "num", `Q${i + 1}. `));
@@ -560,8 +770,8 @@ td.right { text-align: right; }
     h += `<p>Name: ______________________________________________________________</p>`;
 
     model.questions.forEach((item, i) => {
-      if (spec.marksEach > 0) {
-        h += layRow(`<b>Q${i + 1}.</b> ${nl2br(item.q)}`, `[${spec.marksEach}]`);
+      if (item.marks > 0) {
+        h += layRow(`<b>Q${i + 1}.</b> ${nl2br(item.q)}`, `[${item.marks}]`);
       } else {
         h += `<p><b>Q${i + 1}.</b> ${nl2br(item.q)}</p>`;
       }
@@ -681,7 +891,9 @@ td.right { text-align: right; }
 
   function generate() {
     const topics = selectedTopics();
-    if (!topics.length) { state.spec = null; state.model = null; render(); return; }
+    if (!topics.length && state.plan !== "blueprint") {
+      state.spec = null; state.model = null; render(); return;
+    }
     const typed = $("topic-title-input").value.trim();
     const spec = {
       mode: state.mode,
@@ -703,11 +915,47 @@ td.right { text-align: right; }
       duration: $("exam-duration").value.trim(),
       date: $("exam-date").value.trim(),
       questions: Math.max(1, +$("exam-questions").value || 5),
-      partRubric: readPartRubric()
+      partRubric: readPartRubric(),
+      plan: state.plan,
+      blueprint: readBlueprint()
     };
+
+    if (spec.plan === "blueprint") {
+      if (!spec.blueprint.length) {
+        state.spec = null; state.model = null;
+        $("sheet").innerHTML = "";
+        $("sheet").appendChild(el("p", "placeholder-hint",
+          "Your blueprint is empty. Add rows, press \u201cFill from topics\u201d, or paste from a spreadsheet."));
+        return;
+      }
+      if (!spec.topicTitle || !typed) {
+        const uniq = [...new Set(spec.blueprint.map((r) => r.topic))];
+        spec.topicTitle = uniq.map((id) => GENERATORS[id].name).join(", ");
+      }
+      state.model = spec.mode === "exam" ? blueprintExamModel(spec) : blueprintWorksheetModel(spec);
+    } else {
+      state.model = spec.mode === "exam" ? examModel(spec) : worksheetModel(spec);
+    }
     state.spec = spec;
-    state.model = spec.mode === "exam" ? examModel(spec) : worksheetModel(spec);
     render();
+  }
+
+  function setPlan(plan) {
+    state.plan = plan;
+    $("plan-quick").classList.toggle("active", plan === "quick");
+    $("plan-blueprint").classList.toggle("active", plan === "blueprint");
+    $("blueprint-opts").classList.toggle("hidden", plan !== "blueprint");
+    // In blueprint mode the quick controls no longer drive the paper.
+    $("worksheet-opts").classList.toggle("hidden",
+      plan === "blueprint" || state.mode !== "worksheet");
+    $("part-rubric-group").classList.toggle("hidden", plan === "blueprint");
+    updateBpHint();
+  }
+
+  function updateBpHint() {
+    $("bp-hint").textContent = state.mode === "exam"
+      ? "— rows with the same Q number become parts (a) (b) (c)"
+      : "— one row per question";
   }
 
   function setMode(mode) {
@@ -721,7 +969,35 @@ td.right { text-align: right; }
       ? "— difficulty comes from the question rubric below"
       : "— tick a topic, then set its difficulty";
     $("topic-list").classList.toggle("diff-muted", mode === "exam");
+    setPlan(state.plan);
   }
+
+  $("plan-quick").addEventListener("click", () => setPlan("quick"));
+  $("plan-blueprint").addEventListener("click", () => {
+    setPlan("blueprint");
+    if (!readBlueprint().length) fillFromTopics();
+  });
+  $("bp-add").addEventListener("click", () => {
+    const rows = readBlueprint();
+    const last = rows[rows.length - 1];
+    const nextQ = state.mode === "exam" ? (last ? last.q : 1) : (last ? last.q + 1 : 1);
+    $("blueprint").querySelector("tbody").appendChild(blueprintRow({
+      q: nextQ,
+      topic: last ? last.topic : (selectedTopics()[0] || (GRADE_GENS[state.grade] || [])[0]),
+      diff: last ? last.diff : 2,
+      marks: last ? last.marks : (state.mode === "exam" ? 3 : 1)
+    }));
+    updateBpTotal();
+  });
+  $("bp-fill").addEventListener("click", fillFromTopics);
+  $("bp-clear").addEventListener("click", () => buildBlueprint([]));
+  $("bp-import").addEventListener("click", () => {
+    const { rows, bad } = parseBlueprint($("bp-text").value);
+    if (rows.length) buildBlueprint(rows);
+    $("bp-import-msg").textContent = rows.length
+      ? `Loaded ${rows.length} row(s)` + (bad.length ? ` · skipped line(s) ${bad.join(", ")}` : "")
+      : "Could not read any rows — check the topic names match the list above.";
+  });
 
   $("mode-worksheet").addEventListener("click", () => setMode("worksheet"));
   $("mode-exam").addEventListener("click", () => setMode("exam"));
@@ -755,6 +1031,8 @@ td.right { text-align: right; }
     const okSaved = save({
       partRubric: readPartRubric(),
       bands: readBands(),
+      blueprint: readBlueprint(),
+      plan: state.plan,
       marksEach: +$("ws-marks").value || 0,
       space: +$("ws-space").value,
       rubric: $("show-rubric").checked,
@@ -787,9 +1065,12 @@ td.right { text-align: right; }
     if (typeof saved.answers === "boolean") $("show-answers").checked = saved.answers;
   }
   buildBandRubric(saved && saved.bands);
+  buildBlueprint((saved && saved.blueprint) || []);
   if (params.get("parts")) $("exam-parts").value = params.get("parts");
   buildPartRubric(saved);
 
+  if (saved && saved.plan) state.plan = saved.plan;
+  if (params.get("plan")) state.plan = params.get("plan");
   setMode(params.get("mode") === "exam" ? "exam" : "worksheet");
   $("seed").value = params.get("seed") || Math.floor(Math.random() * 899999) + 100000;
   if (params.get("count")) $("q-count").value = params.get("count");

@@ -3,7 +3,7 @@
 
 .gen-layout {
   display: grid;
-  grid-template-columns: 290px 1fr;
+  grid-template-columns: 352px 1fr;
   gap: 24px;
   max-width: 1240px;
   margin: 24px auto;
@@ -135,6 +135,38 @@ table.rubric-edit input, table.rubric-edit select {
   background: var(--paper);
 }
 table.rubric-edit td.narrow { width: 62px; }
+
+/* Blueprint table — widths must be on the header row for table-layout: fixed */
+table.bp { table-layout: fixed; }
+table.bp th:nth-child(1), table.bp td:nth-child(1) { width: 42px; }
+table.bp th:nth-child(3), table.bp td:nth-child(3) { width: 76px; }
+table.bp th:nth-child(4), table.bp td:nth-child(4) { width: 46px; }
+table.bp th:nth-child(5), table.bp td:nth-child(5) { width: 22px; }
+table.bp input, table.bp select { padding: 4px 3px; font-size: 0.78rem; }
+/* Hide number spinners so the digits themselves have room */
+table.bp input[type="number"] { -moz-appearance: textfield; text-align: center; }
+table.bp input[type="number"]::-webkit-outer-spin-button,
+table.bp input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+table.bp td.topic select { text-overflow: ellipsis; max-width: 100%; }
+
+.bp-paste { margin-top: 4px; }
+.bp-paste summary {
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+.bp-paste textarea {
+  width: 100%;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--paper);
+  margin-bottom: 6px;
+}
+.bp-paste code { font-size: 0.72rem; }
 table.rubric-edit td.kill { width: 26px; }
 table.rubric-edit button.x {
   border: none;
