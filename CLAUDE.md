@@ -19,7 +19,9 @@ department's request (v0.4). Do not re-introduce bilingual strings.
   `GENERATORS`, mapped to grades via `GRADE_GENS`
 - `lessons.js` — topic content library (concept, worked example, key points,
   resource links) used to draft lesson plans and slides
-- `data.js` — curriculum dataset (`CURRICULUM`) and UI strings (`UI_STRINGS`)
+- `data.js` — curriculum dataset and UI strings (`UI_STRINGS`). `STAGES` holds
+  each Cambridge stage once, `GRADE_STAGES` says which stage each school grade
+  sits in, and `CURRICULUM` (what `app.js` reads) is built from the two
 - `letterhead.png` — the official school letterhead, extracted from the
   department's Word templates and printed at the top of every sheet
 - `letterhead-data.js` — the same image as a base64 data URI, so exported
@@ -180,6 +182,14 @@ fallback face — that is expected; check sizes, not the letterforms.
 - Curriculum content in `data.js` and lessons in `lessons.js` are AI-drafted.
   The math department must verify them against the official Cambridge
   frameworks (Primary, Lower Secondary, IGCSE, AS) and the Oman syllabus.
+- **The pathway is an assumption, not a fact.** `GRADE_STAGES` in `data.js`
+  assumes Grades 1–6 = Primary Stages 1–6, Grades 7–9 = Lower Secondary
+  Stages 7–9, Grade 10 = IGCSE 0580, Grade 11 = AS 9709, Grade 12 = A Level
+  9709. Only Grades 11–12 are confirmed (by the department's own Grade 11
+  Probability & Statistics 1 paper). A school running IGCSE over Grades 9–10
+  shifts everything below by one year — the header comment in `data.js` gives
+  the replacement table. Generator years live in the `grades` array on each
+  generator in `gen.js` and must be shifted to match.
 - No hard-coded YouTube video IDs — research links are searches. A teacher can
   pin a vetted video by setting `yt: "<videoId>"` on a lesson; it then embeds.
 

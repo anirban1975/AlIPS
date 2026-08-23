@@ -314,7 +314,7 @@ const GENERATORS = {
     }
   },
   sequenceNth: {
-    name: "nth term of a sequence", grades: [7, 8, 9],
+    name: "nth term of a sequence", grades: [8, 9, 10],
     gen(r, d) {
       const m = ri(r, 2, 3 + d * 2), c = ri(r, -5, 9);
       const terms = [1, 2, 3, 4].map((n) => m * n + c);
@@ -414,7 +414,7 @@ const GENERATORS = {
     }
   },
   inequality: {
-    name: "Inequalities", grades: [9, 10],
+    name: "Inequalities", grades: [8, 9, 10],
     gen(r, d) {
       const a = ri(r, 2, 2 + d), b = ri(r, 1, 9), x = ri(r, 1, 8);
       const c = a * x + b;
