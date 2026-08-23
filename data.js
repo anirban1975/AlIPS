@@ -377,55 +377,87 @@ const CURRICULUM = [
   },
   {
     id: 11,
-    stage: "Cambridge IGCSE / AS — Year 2",
+    stage: "Cambridge International AS Level (9709) — Pure Mathematics 1 & Probability and Statistics 1",
     strands: [
       {
-        name: "Algebra",
+        name: "Pure Mathematics 1",
         topics: [
-          { n: "Composite and inverse functions", c: "cambridge" },
-          { n: "Graphs of functions and their transformations", c: "cambridge" }
+          { n: "Quadratics", c: "cambridge",
+            s: "Complete the square, use the discriminant, solve quadratic equations and inequalities." },
+          { n: "Functions", c: "cambridge",
+            s: "Domain and range, composite and inverse functions, transformations of graphs." },
+          { n: "Coordinate geometry", c: "cambridge",
+            s: "Equation of a straight line, mid-point, and the equation of a circle." },
+          { n: "Circular measure", c: "cambridge",
+            s: "Radians, arc length and area of a sector." },
+          { n: "Trigonometry", c: "cambridge",
+            s: "Graphs of sine, cosine and tangent; identities and equations." },
+          { n: "Series", c: "cambridge",
+            s: "Binomial expansion; arithmetic and geometric progressions." },
+          { n: "Differentiation", c: "cambridge",
+            s: "Gradients, tangents and normals, stationary points, rates of change." },
+          { n: "Integration", c: "cambridge",
+            s: "Indefinite and definite integrals, area under a curve, volume of revolution." }
         ]
       },
       {
-        name: "Geometry and Trigonometry",
+        name: "Probability and Statistics 1",
         topics: [
-          { n: "Sine and cosine rules", c: "cambridge" },
-          { n: "Vectors", c: "cambridge" },
-          { n: "Mensuration: spheres, cones, pyramids", c: "both" }
-        ]
-      },
-      {
-        name: "Probability and Statistics",
-        topics: [
-          { n: "Histograms with unequal intervals", c: "cambridge" },
-          { n: "Conditional probability", c: "cambridge" },
-          { n: "Permutations and combinations", c: "cambridge" },
-          { n: "Mean and standard deviation", c: "cambridge" }
+          { n: "Representation of data", c: "cambridge",
+            s: "Stem-and-leaf, box-and-whisker, histograms and cumulative frequency." },
+          { n: "Mean and standard deviation", c: "cambridge",
+            s: "Calculate and interpret measures of central tendency and spread." },
+          { n: "Permutations and combinations", c: "cambridge",
+            s: "Count arrangements and selections." },
+          { n: "Probability", c: "cambridge",
+            s: "Conditional probability, independent and mutually exclusive events." },
+          { n: "Discrete random variables", c: "cambridge",
+            s: "Probability distributions, expectation and variance." },
+          { n: "The normal distribution", c: "cambridge",
+            s: "Standardise, use tables, and apply as an approximation to the binomial." }
         ]
       }
     ]
   },
   {
     id: 12,
-    stage: "Cambridge International AS Level",
+    stage: "Cambridge International A Level (9709) — Pure Mathematics 3",
     strands: [
       {
-        name: "Pure Mathematics",
+        name: "Pure Mathematics 3 — Algebra",
         topics: [
-          { n: "Quadratics and polynomials", c: "cambridge" },
-          { n: "Coordinate geometry of the line and circle", c: "cambridge" },
-          { n: "Differentiation and its applications", c: "cambridge" },
-          { n: "Integration", c: "cambridge" },
-          { n: "Trigonometry: identities and equations", c: "cambridge" },
-          { n: "Binomial expansion and series", c: "cambridge" }
+          { n: "Logarithmic and exponential functions", c: "cambridge",
+            s: "Laws of logarithms, solving equations with logs and exponentials, ln and e." },
+          { n: "The modulus function", c: "cambridge",
+            s: "Sketch y = |f(x)|, solve modulus equations and inequalities." },
+          { n: "Polynomials", c: "cambridge",
+            s: "Factor theorem, remainder theorem, division of polynomials." },
+          { n: "Partial fractions", c: "cambridge",
+            s: "Decompose rational expressions, including for use in integration." }
         ]
       },
       {
-        name: "Probability and Statistics",
+        name: "Pure Mathematics 3 — Calculus",
         topics: [
-          { n: "Representation of data", c: "cambridge" },
-          { n: "Permutations and combinations", c: "cambridge" },
-          { n: "Discrete random variables", c: "cambridge" }
+          { n: "Further differentiation", c: "cambridge",
+            s: "Product, quotient and chain rules; implicit and parametric differentiation." },
+          { n: "Further integration", c: "cambridge",
+            s: "Integration by substitution and by parts, and of trigonometric and exponential forms." },
+          { n: "Differential equations", c: "cambridge",
+            s: "Form and solve first-order differential equations by separating variables." },
+          { n: "Numerical solution of equations", c: "cambridge",
+            s: "Locate roots and use iterative methods." }
+        ]
+      },
+      {
+        name: "Pure Mathematics 3 — Trigonometry, Vectors and Complex Numbers",
+        topics: [
+          { n: "Further trigonometry", c: "cambridge",
+            s: "Compound and double angle formulae, R cos(θ ± α) form." },
+          { n: "Vectors", c: "cambridge",
+            s: "Vector equations of lines, scalar product, angles and intersections." },
+          { n: "Complex numbers", c: "cambridge",
+            s: "Arithmetic, Argand diagram, modulus-argument form and loci." }
         ]
       }
     ]

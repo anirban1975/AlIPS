@@ -31,8 +31,15 @@ const mathPlain = (s) => String(s)
   .replace(/⁅([^\/⁆]*)\/([^⁆]*)⁆/g, "$1/$2")
   .replace(/√⟨([^⟩]*)⟩/g, "√$1");
 
-const SUP = "⁰¹²³⁴⁵⁶⁷⁸⁹";
-const sup = (n) => String(n).split("").map((c) => SUP[+c]).join("");
+// Superscript / subscript. Digits and the few symbols that appear in an index
+// have real Unicode forms; anything else is passed through unchanged (mapping by
+// `+c` alone would turn a space into ⁰, since +" " is 0).
+const SUP_MAP = { 0: "⁰", 1: "¹", 2: "²", 3: "³", 4: "⁴", 5: "⁵", 6: "⁶", 7: "⁷", 8: "⁸", 9: "⁹",
+  "+": "⁺", "-": "⁻", "−": "⁻", "(": "⁽", ")": "⁾", x: "ˣ", n: "ⁿ", a: "ᵃ", k: "ᵏ" };
+const SUB_MAP = { 0: "₀", 1: "₁", 2: "₂", 3: "₃", 4: "₄", 5: "₅", 6: "₆", 7: "₇", 8: "₈", 9: "₉",
+  "+": "₊", "-": "₋", "−": "₋", "(": "₍", ")": "₎", n: "ₙ", a: "ₐ", x: "ₓ" };
+const sup = (n) => String(n).split("").map((c) => SUP_MAP[c] || c).join("");
+const sub = (n) => String(n).split("").map((c) => SUB_MAP[c] || c).join("");
 
 function term(c, p, first) {
   if (c === 0) return "";
@@ -311,10 +318,11 @@ const GENERATORS = {
     gen(r, d) {
       const m = ri(r, 2, 3 + d * 2), c = ri(r, -5, 9);
       const terms = [1, 2, 3, 4].map((n) => m * n + c);
+      const shown = terms.map(nf);
       const rule = c === 0 ? `${m}n` : c > 0 ? `${m}n + ${c}` : `${m}n − ${-c}`;
-      return { q: `Find the nth term of the sequence: ${terms.join(", ")}, …`, a: rule,
-        sol: [S(`Common difference: ${terms[1]} − ${terms[0]} = ${m}, so the rule starts ${m}n`, "M1"),
-              S(`Adjust: ${m} × 1 = ${m}, first term is ${terms[0]}, so ${c >= 0 ? "add " + c : "subtract " + -c}`, "M1"),
+      return { q: `Find the nth term of the sequence: ${shown.join(", ")}, …`, a: rule,
+        sol: [S(`Common difference: ${shown[1]} − ${shown[0]} = ${m}, so the rule starts ${m}n`, "M1"),
+              S(`Adjust: ${m} × 1 = ${m}, first term is ${shown[0]}, so ${c >= 0 ? "add " + c : "subtract " + -c}`, "M1"),
               S(`nth term = ${rule}`, "A1")] };
     }
   },
@@ -369,10 +377,10 @@ const GENERATORS = {
     }
   },
   straightLine: {
-    name: "Straight-line graphs", grades: [9, 10],
+    name: "Straight-line graphs", grades: [9, 10, 11],
     gen(r, d) {
       const m = ri(r, 1, 2 + d) * (d === 3 && r() < 0.5 ? -1 : 1), c = ri(r, -6, 8);
-      const line = `y = ${m === 1 ? "" : m === -1 ? "−" : m}x ${c >= 0 ? "+ " + c : "− " + -c}`;
+      const line = `y = ${m === 1 ? "" : m === -1 ? "−" : nf(m)}x ${c >= 0 ? "+ " + c : "− " + -c}`;
       const cmp = S("Compare with y = mx + c: m is the gradient, c the y-intercept", "M1");
       if (r() < 0.5)
         return { q: `Write down the gradient of the line ${line}`, a: nf(m), sol: [cmp, S(`m = ${nf(m)}`, "A1")] };
@@ -380,7 +388,7 @@ const GENERATORS = {
     }
   },
   pythagoras: {
-    name: "Pythagoras' theorem", grades: [9, 10, 11],
+    name: "Pythagoras' theorem", grades: [9, 10],
     gen(r, d) {
       const t = pick(r, [[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25],
                          [6, 8, 10], [9, 12, 15], [20, 21, 29], [9, 40, 41], [12, 35, 37]]);
@@ -417,7 +425,7 @@ const GENERATORS = {
     }
   },
   quadraticSolve: {
-    name: "Solving quadratics", grades: [10, 11, 12],
+    name: "Solving quadratics", grades: [10, 11],
     gen(r, d) {
       const p = ri(r, 1, 5 + d), q0 = ri(r, 1, 5 + d) * (d >= 2 && r() < 0.5 ? -1 : 1);
       if (p === q0) return this.gen(r, d);
@@ -458,7 +466,7 @@ const GENERATORS = {
     }
   },
   permutations: {
-    name: "Permutations and combinations", grades: [11, 12],
+    name: "Permutations and combinations", grades: [11],
     gen(r, d) {
       const n = ri(r, 5, 6 + d), k = ri(r, 2, 4);
       const P = (n_, k_) => { let v = 1; for (let i = 0; i < k_; i++) v *= n_ - i; return v; };
@@ -474,13 +482,18 @@ const GENERATORS = {
     }
   },
   standardDeviation: {
-    name: "Mean and standard deviation", grades: [11, 12],
+    name: "Mean and standard deviation", grades: [11],
     gen(r, d) {
       const n = ri(r, 5, 8), mean = ri(r, 10, 30);
+      // Build the deviations in ± pairs so they sum to exactly zero (the mean is
+      // then a whole number) and every one stays small, keeping the marks positive.
       const devs = [];
-      let s = 0;
-      for (let i = 0; i < n - 1; i++) { const v = ri(r, -4, 4); devs.push(v); s += v; }
-      devs.push(-s);
+      for (let i = 0; i < Math.floor(n / 2); i++) { const v = ri(r, 1, 4); devs.push(v, -v); }
+      if (n % 2) devs.push(0);
+      for (let i = devs.length - 1; i > 0; i--) {   // shuffle so the pairs are not obvious
+        const j = Math.floor(r() * (i + 1));
+        [devs[i], devs[j]] = [devs[j], devs[i]];
+      }
       const vals = devs.map((v) => mean + v);
       const sumsq = devs.reduce((t, v) => t + v * v, 0);
       const sd = Math.sqrt(sumsq / n);
@@ -493,8 +506,59 @@ const GENERATORS = {
       };
     }
   },
+  logarithms: {
+    name: "Logarithms", grades: [12],
+    gen(r, d) {
+      if (d === 1) {
+        const b = pick(r, [2, 3, 5, 10]), n = ri(r, 2, 5);
+        return { q: `Evaluate:  log${sub(b)} ${Math.pow(b, n)}`, a: String(n),
+          sol: [S(`${b}${sup(n)} = ${Math.pow(b, n)}`, "M1"),
+                S(`so log${sub(b)} ${Math.pow(b, n)} = ${n}`, "A1")] };
+      }
+      if (d === 2) {
+        const p = ri(r, 2, 4);
+        return { q: `Write as a single logarithm:  ${p} log x + log y`, a: `log (x${sup(p)}y)`,
+          sol: [S(`${p} log x = log x${sup(p)}`, "M1"),
+                S(`log x${sup(p)} + log y = log (x${sup(p)}y)`, "A1")] };
+      }
+      const b = pick(r, [2, 3, 5]), x = ri(r, 2, 6), k = ri(r, 2, 4);
+      return { q: `Solve:  log${sub(b)} x + log${sub(b)} ${k} = log${sub(b)} ${k * x}`, a: `x = ${x}`,
+        sol: [S(`log${sub(b)} (${k}x) = log${sub(b)} ${k * x}`, "M1"),
+              S(`${k}x = ${k * x}`, "M1"),
+              S(`x = ${x}`, "A1")] };
+    }
+  },
+  expEquations: {
+    name: "Exponential equations", grades: [12],
+    gen(r, d) {
+      const b = pick(r, [2, 3, 5]);
+      if (d === 1) {
+        const n = ri(r, 2, 5);
+        return { q: `Solve:  ${b}${sup("x")} = ${Math.pow(b, n)}`, a: `x = ${n}`,
+          sol: [S(`Write both sides to base ${b}: ${b}${sup("x")} = ${b}${sup(n)}`, "M1"),
+                S(`x = ${n}`, "A1")] };
+      }
+      if (d === 2) {
+        const n = ri(r, 2, 4), c = ri(r, 1, 3);
+        return { q: `Solve:  ${b}${sup("x+" + c)} = ${Math.pow(b, n)}`, a: `x = ${nf(n - c)}`,
+          sol: [S(`Equate the indices: x + ${c} = ${n}`, "M1"),
+                S(`x = ${nf(n - c)}`, "A1")] };
+      }
+      // Skip exact powers of b — those solve by inspection, so "3 significant
+      // figures" would be the wrong instruction and "≈" the wrong sign.
+      let target = ri(r, 2, 40);
+      while (Number.isInteger(Math.round(Math.log(target) / Math.log(b) * 1e9) / 1e9)) target++;
+      const x = Math.log(target) / Math.log(b);
+      const x3 = String(Number(x.toPrecision(3)));
+      return { q: `Solve:  ${b}${sup("x")} = ${target}, giving your answer correct to 3 significant figures.`,
+        a: `x ≈ ${x3}`,
+        sol: [S(`Take logarithms of both sides: x log ${b} = log ${target}`, "M1"),
+              S(`x = ${frac("log " + target, "log " + b)}`, "M1"),
+              S(`x ≈ ${x3}`, "A1")] };
+    }
+  },
   differentiation: {
-    name: "Differentiation", grades: [12],
+    name: "Differentiation", grades: [11, 12],
     gen(r, d) {
       const a = ri(r, 1, 3 + d), n = ri(r, 2, 2 + d), b = ri(r, 1, 9), c = ri(r, 1, 9);
       const f = poly([[a, n], [b, 1], [c, 0]]);
@@ -506,7 +570,7 @@ const GENERATORS = {
     }
   },
   integration: {
-    name: "Integration", grades: [12],
+    name: "Integration", grades: [11, 12],
     gen(r, d) {
       const n = ri(r, 1, 2 + d);
       const a = (n + 1) * ri(r, 1, 3);
@@ -520,7 +584,7 @@ const GENERATORS = {
     }
   },
   binomial: {
-    name: "Binomial expansion", grades: [12],
+    name: "Binomial expansion", grades: [11, 12],
     gen(r, d) {
       const n = ri(r, 4, 5 + d), k = ri(r, 2, 3), a = ri(r, 2, 2 + d);
       const C = (n_, k_) => { let c = 1; for (let i = 0; i < k_; i++) c = (c * (n_ - i)) / (i + 1); return c; };

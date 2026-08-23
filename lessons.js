@@ -217,6 +217,18 @@ const LESSONS = {
     tips: ["Square the deviations before averaging, then take the square root at the end.", "Using Σx and Σx²? sd = √(Σx²/n − mean²)."],
     q: "mean and standard deviation statistics"
   },
+  logarithms: {
+    concept: "A logarithm answers “what power?”. log_b x = y means bʸ = x, so a log undoes an exponential. The laws — log a + log b = log ab, log a − log b = log (a/b), n log a = log aⁿ — turn products and powers into sums, which is why logs solve equations where the unknown is an index.",
+    example: ["log₂ 32 = 5   because 2⁵ = 32", "2 log x + log y = log x² + log y = log (x²y)", "log₃ x + log₃ 4 = log₃ 20 → 4x = 20 → x = 5"],
+    tips: ["Only combine logs that share the same base.", "log a + log b is log (ab), never log (a + b).", "Check the solution: the argument of a log must be positive."],
+    q: "logarithms laws A level pure 3"
+  },
+  expEquations: {
+    concept: "An exponential equation has the unknown in the index. If both sides can be written to the same base, equate the indices. If they cannot, take logs of both sides and use n log a = log aⁿ to bring the index down.",
+    example: ["2ˣ = 32 → 2ˣ = 2⁵ → x = 5", "3ˣ⁺¹ = 81 → 3ˣ⁺¹ = 3⁴ → x + 1 = 4 → x = 3", "5ˣ = 40 → x = log 40 ÷ log 5 = 2.29 (3 s.f.)"],
+    tips: ["Try same-base first — it is exact and quicker.", "log of both sides works for any base; use the calculator's log or ln.", "Round only at the very end, to the accuracy asked for."],
+    q: "solving exponential equations using logarithms"
+  },
   differentiation: {
     concept: "Differentiation finds the gradient function — how fast y changes. For each term axⁿ: multiply by n, reduce the power by 1. Constants disappear.",
     example: ["y = x³ + 5x + 2", "dy/dx = 3x² + 5"],
@@ -399,6 +411,14 @@ const DEPT_FIELDS = {
   standardDeviation: {
     objectives: ["Calculate the mean and standard deviation of a data set.", "Interpret the standard deviation as a measure of spread."],
     criteria: ["I can find the mean accurately.", "I can square the deviations before averaging them.", "I can explain what a large or small standard deviation tells me."]
+  },
+  logarithms: {
+    objectives: ["Convert between exponential and logarithmic form.", "Apply the laws of logarithms to simplify and solve."],
+    criteria: ["I can rewrite bʸ = x as log_b x = y and back again.", "I can combine logs of the same base into a single logarithm.", "I can solve an equation by equating the arguments of two logs.", "I can check that the argument of every logarithm is positive."]
+  },
+  expEquations: {
+    objectives: ["Solve exponential equations by writing both sides to the same base.", "Solve exponential equations by taking logarithms of both sides."],
+    criteria: ["I can recognise when both sides share a base.", "I can equate indices once the bases match.", "I can take logs of both sides and bring the index down.", "I can give my answer to the required degree of accuracy."]
   },
   differentiation: {
     objectives: ["Differentiate polynomial functions.", "Interpret the derivative as a gradient function."],
