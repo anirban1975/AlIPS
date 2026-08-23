@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AlIPS Lesson Planner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="sheet.css">
+  <link rel="stylesheet" href="plan.css">
+</head>
+<body>
+  <div class="page-frame" aria-hidden="true"></div>
+
+  <header class="topbar no-print">
+    <div class="brand">
+      <img src="letterhead.png" alt="Al Injaz International Private School" class="letterhead">
+      <p class="brand-sub">Mathematics Department — Lesson Planner &amp; Slides</p>
+    </div>
+    <div class="controls">
+      <a href="index.html" class="nav-btn">Curriculum</a>
+      <a href="worksheets.html" class="nav-btn">Worksheets &amp; Exams</a>
+    </div>
+  </header>
+
+  <div class="gen-layout">
+    <aside class="gen-panel no-print">
+      <div class="panel-group">
+        <label>Output</label>
+        <div class="view-toggle">
+          <button id="view-plan" class="toggle-btn active">Lesson plan</button>
+          <button id="view-deck" class="toggle-btn">Slides</button>
+        </div>
+      </div>
+
+      <div class="panel-group">
+        <label for="grade-select">Grade</label>
+        <select id="grade-select"></select>
+        <label for="topic-select">Topic</label>
+        <select id="topic-select"></select>
+        <label for="lesson-title">Lesson title</label>
+        <input id="lesson-title" type="text" placeholder="auto from topic">
+      </div>
+
+      <div class="panel-group">
+        <label for="section-input">Section / class</label>
+        <input id="section-input" type="text" value="A" maxlength="6">
+        <label for="teacher-input">Teacher</label>
+        <input id="teacher-input" type="text" placeholder="Name">
+        <label for="date-input">Date</label>
+        <input id="date-input" type="text" value="___ / ___ / 20___">
+        <label for="duration-input">Duration</label>
+        <input id="duration-input" type="text" value="45 minutes">
+      </div>
+
+      <div class="panel-group">
+        <label>Lesson content</label>
+        <label class="sub" for="n-examples">Worked examples</label>
+        <input id="n-examples" type="number" min="0" max="6" value="2">
+        <label class="sub" for="n-starter">Starter questions</label>
+        <input id="n-starter" type="number" min="0" max="8" value="3">
+        <label class="sub" for="n-practice">Practice per level</label>
+        <input id="n-practice" type="number" min="0" max="8" value="3">
+        <label class="sub" for="n-home">Homework questions</label>
+        <input id="n-home" type="number" min="0" max="15" value="5">
+        <label class="check-inline"><input id="show-answers" type="checkbox" checked> Include answers &amp; mark scheme</label>
+      </div>
+
+      <div class="panel-group">
+        <label for="seed">Lesson number (seed)</label>
+        <div class="seed-row">
+          <input id="seed" type="number" min="1" max="999999">
+          <button id="new-seed" class="mini-btn" title="Fresh questions">🎲</button>
+        </div>
+      </div>
+
+      <button id="generate" class="primary-btn">Generate</button>
+      <button id="present" class="primary-btn present-btn">▶ Present full screen</button>
+      <button id="print" class="primary-btn secondary">Print / Save as PDF</button>
+      <button id="download-word" class="primary-btn word">⬇ Lesson plan as Word</button>
+      <button id="download-pptx" class="primary-btn pptx">⬇ Slides as PowerPoint</button>
+      <p class="panel-note" id="panel-note">Drafts are a starting point — review and
+        adapt before teaching.</p>
+    </aside>
+
+    <main id="sheet" class="sheet"></main>
+  </div>
+
+  <!-- Full-screen presentation overlay -->
+  <div id="stage" class="stage hidden no-print" aria-hidden="true">
+    <div id="stage-slide" class="stage-slide"></div>
+    <div class="stage-bar">
+      <button id="stage-prev" class="stage-btn">‹</button>
+      <span id="stage-count"></span>
+      <button id="stage-reveal" class="stage-btn wide">Reveal answers</button>
+      <button id="stage-next" class="stage-btn">›</button>
+      <button id="stage-close" class="stage-btn">✕</button>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="gen.js"></script>
+  <script src="lessons.js"></script>
+  <script src="letterhead-data.js"></script>
+  <script src="zip.js"></script>
+  <script src="plan.js"></script>
+</body>
+</html>

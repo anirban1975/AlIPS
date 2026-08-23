@@ -21,6 +21,16 @@ const gcd = (a, b) => (b ? gcd(b, a % b) : Math.abs(a));
 // Print negatives with a true minus sign, matching the rest of the paper.
 const nf = (v) => String(v).replace("-", "−");
 
+// Math markup used inside question, answer and solution text.
+//   ⁅n/d⁆  a fraction  →  rendered as a proper two-tier fraction
+//   √⟨x⟩   a radical   →  rendered with a vinculum (overline)
+// mathPlain() strips the markup back to flat text for answer checking.
+const frac = (n, d) => `⁅${n}/${d}⁆`;
+const rad = (x) => `√⟨${x}⟩`;
+const mathPlain = (s) => String(s)
+  .replace(/⁅([^\/⁆]*)\/([^⁆]*)⁆/g, "$1/$2")
+  .replace(/√⟨([^⟩]*)⟩/g, "√$1");
+
 const SUP = "⁰¹²³⁴⁵⁶⁷⁸⁹";
 const sup = (n) => String(n).split("").map((c) => SUP[+c]).join("");
 
@@ -138,7 +148,7 @@ const GENERATORS = {
       const num = d === 1 ? 1 : ri(r, 1, den - 1);
       const unit = ri(r, 2, 12);
       const total = den * unit;
-      return { q: `Find ${num}/${den} of ${total}`, a: String(num * unit),
+      return { q: `Find ${frac(num, den)} of ${total}`, a: String(num * unit),
         sol: [S(`${total} ÷ ${den} = ${unit}`, "M1"), S(`${unit} × ${num} = ${num * unit}`, "A1")] };
     }
   },
@@ -146,7 +156,7 @@ const GENERATORS = {
     name: "Equivalent fractions", grades: [4, 5, 6],
     gen(r, d) {
       const den = ri(r, 2, 6 + d), num = ri(r, 1, den - 1), k = ri(r, 2, 3 + d * 2);
-      return { q: `Complete:  ${num}/${den} = ▢/${den * k}`, a: String(num * k),
+      return { q: `Complete:  ${frac(num, den)} = ${frac("▢", den * k)}`, a: String(num * k),
         sol: [S(`${den} × ${k} = ${den * k}`, "M1"), S(`Multiply the numerator by the same number: ${num} × ${k} = ${num * k}`, "A1")] };
     }
   },
@@ -158,13 +168,15 @@ const GENERATORS = {
       let num = n1 * d2 + n2 * d1, den = d1 * d2;
       const rawNum = num, rawDen = den;
       const g = gcd(num, den); num /= g; den /= g;
-      const ans = den === 1 ? String(num) : num > den ? `${num}/${den} = ${Math.floor(num / den)} ${num % den}/${den}` : `${num}/${den}`;
+      const ans = den === 1 ? String(num)
+        : num > den ? `${frac(num, den)} = ${Math.floor(num / den)} ${frac(num % den, den)}`
+        : frac(num, den);
       const sol = d1 === d2
-        ? [S(`${n1}/${d1} + ${n2}/${d1} = ${n1 + n2}/${d1}`, "M1"), S(`= ${ans}`, "A1")]
+        ? [S(`${frac(n1, d1)} + ${frac(n2, d1)} = ${frac(n1 + n2, d1)}`, "M1"), S(`= ${ans}`, "A1")]
         : [S(`Common denominator: ${d1} × ${d2} = ${rawDen}`, "M1"),
-           S(`${n1 * d2}/${rawDen} + ${n2 * d1}/${rawDen} = ${rawNum}/${rawDen}`, "M1"),
+           S(`${frac(n1 * d2, rawDen)} + ${frac(n2 * d1, rawDen)} = ${frac(rawNum, rawDen)}`, "M1"),
            S(`= ${ans}`, "A1")];
-      return { q: `Work out ${n1}/${d1} + ${n2}/${d2}. Give your answer in its simplest form.`, a: ans, sol };
+      return { q: `Work out ${frac(n1, d1)} + ${frac(n2, d2)}. Give your answer in its simplest form.`, a: ans, sol };
     }
   },
   percentOfAmount: {
@@ -173,7 +185,7 @@ const GENERATORS = {
       const p = pick(r, d === 1 ? [10, 25, 50] : d === 2 ? [5, 20, 30, 75] : [15, 35, 45, 65, 85]);
       const base = ri(r, 2, 20) * (d === 3 ? 20 : 10);
       return { q: `Find ${p}% of ${base}`, a: String((p * base) / 100),
-        sol: [S(`${p}% = ${p}/100`, "M1"), S(`${p}/100 × ${base} = ${(p * base) / 100}`, "A1")] };
+        sol: [S(`${p}% = ${frac(p, 100)}`, "M1"), S(`${frac(p, 100)} × ${base} = ${(p * base) / 100}`, "A1")] };
     }
   },
   orderOfOperations: {
@@ -233,7 +245,11 @@ const GENERATORS = {
     name: "Powers and roots", grades: [7, 8, 9],
     gen(r, d) {
       if (d === 1) { const a = ri(r, 2, 12); return { q: `Work out ${a}²`, a: String(a * a), sol: [S(`${a} × ${a} = ${a * a}`, "B1")] }; }
-      if (d === 2) { const a = ri(r, 2, 15); return { q: `Work out √${a * a}`, a: String(a), sol: [S(`${a} × ${a} = ${a * a}, so √${a * a} = ${a}`, "B1")] }; }
+      if (d === 2) {
+        const a = ri(r, 2, 15);
+        return { q: `Work out ${rad(a * a)}`, a: String(a),
+          sol: [S(`${a} × ${a} = ${a * a}, so ${rad(a * a)} = ${a}`, "B1")] };
+      }
       const a = ri(r, 2, 6);
       return { q: `Work out ${a}³`, a: String(a * a * a), sol: [S(`${a} × ${a} = ${a * a}`, "M1"), S(`${a * a} × ${a} = ${a * a * a}`, "A1")] };
     }
@@ -366,14 +382,15 @@ const GENERATORS = {
   pythagoras: {
     name: "Pythagoras' theorem", grades: [9, 10, 11],
     gen(r, d) {
-      const t = pick(r, [[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25]]);
-      const k = d === 1 ? 1 : ri(r, 1, 3);
+      const t = pick(r, [[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25],
+                         [6, 8, 10], [9, 12, 15], [20, 21, 29], [9, 40, 41], [12, 35, 37]]);
+      const k = d === 1 ? ri(r, 1, 2) : ri(r, 1, 3);
       const [a, b, c] = t.map((v) => v * k);
       if (d < 3)
         return { q: `A right-angled triangle has shorter sides ${a} cm and ${b} cm. Find the hypotenuse.`, a: `${c} cm`,
-          sol: [S(`c² = ${a}² + ${b}² = ${a * a} + ${b * b} = ${c * c}`, "M1"), S(`c = √${c * c} = ${c} cm`, "A1")] };
+          sol: [S(`c² = ${a}² + ${b}² = ${a * a} + ${b * b} = ${c * c}`, "M1"), S(`c = ${rad(c * c)} = ${c} cm`, "A1")] };
       return { q: `A right-angled triangle has hypotenuse ${c} cm and one side ${a} cm. Find the other side.`, a: `${b} cm`,
-        sol: [S(`b² = ${c}² − ${a}² = ${c * c} − ${a * a} = ${b * b}`, "M1"), S(`b = √${b * b} = ${b} cm`, "A1")] };
+        sol: [S(`b² = ${c}² − ${a}² = ${c * c} − ${a * a} = ${b * b}`, "M1"), S(`b = ${rad(b * b)} = ${b} cm`, "A1")] };
     }
   },
   standardForm: {
@@ -393,8 +410,10 @@ const GENERATORS = {
     gen(r, d) {
       const a = ri(r, 2, 2 + d), b = ri(r, 1, 9), x = ri(r, 1, 8);
       const c = a * x + b;
-      return { q: `Solve:  ${a}x + ${b} < ${c}`, a: `x < ${x}`,
-        sol: [S(`${a}x < ${c} − ${b} = ${a * x}`, "M1"), S(`Divide by ${a} (positive, so the sign is unchanged): x < ${x}`, "A1")] };
+      const op = d === 3 && r() < 0.5 ? "≤" : "<";
+      return { q: `Solve:  ${a}x + ${b} ${op} ${c}`, a: `x ${op} ${x}`,
+        sol: [S(`${a}x ${op} ${c} − ${b} = ${a * x}`, "M1"),
+              S(`Divide by ${a} (positive, so the inequality is unchanged): x ${op} ${x}`, "A1")] };
     }
   },
   quadraticSolve: {
@@ -421,9 +440,9 @@ const GENERATORS = {
       return {
         q: `In a right-angled triangle, the angle is ${angle}° and the adjacent side is ${adj} cm. Find the opposite side, correct to 1 decimal place.`,
         a: `${opp.toFixed(1)} cm`,
-        sol: [S("Opposite and adjacent → use tan", "M1"),
+        sol: [S("Opposite and adjacent → use tan θ", "M1"),
               S(`opposite = ${adj} × tan ${angle}°`, "M1"),
-              S(`= ${opp.toFixed(1)} cm`, "A1")]
+              S(`≈ ${opp.toFixed(1)} cm`, "A1")]
       };
     }
   },
@@ -467,10 +486,10 @@ const GENERATORS = {
       const sd = Math.sqrt(sumsq / n);
       return {
         q: `The ${n} values below are the marks of a group of students.\n${vals.join(", ")}\nFind the mean and the standard deviation, giving the standard deviation correct to 2 decimal places.`,
-        a: `mean = ${mean}, sd = ${sd.toFixed(2)}`,
-        sol: [S(`Σx = ${vals.reduce((t, v) => t + v, 0)}, so mean = ${vals.reduce((t, v) => t + v, 0)} ÷ ${n} = ${mean}`, "M1"),
+        a: `x̄ = ${mean},  σ = ${sd.toFixed(2)}`,
+        sol: [S(`Σx = ${vals.reduce((t, v) => t + v, 0)}, so x̄ = ${frac(vals.reduce((t, v) => t + v, 0), n)} = ${mean}`, "M1"),
               S(`Σ(x − x̄)² = ${sumsq}`, "M1"),
-              S(`sd = √(${sumsq} ÷ ${n}) = ${sd.toFixed(2)}`, "A1")]
+              S(`σ = ${rad(frac(sumsq, n))} = ${sd.toFixed(2)}`, "A1")]
       };
     }
   },
@@ -480,10 +499,10 @@ const GENERATORS = {
       const a = ri(r, 1, 3 + d), n = ri(r, 2, 2 + d), b = ri(r, 1, 9), c = ri(r, 1, 9);
       const f = poly([[a, n], [b, 1], [c, 0]]);
       const df = poly([[a * n, n - 1], [b, 0]]);
-      return { q: `Differentiate:  y = ${f}`, a: `dy/dx = ${df}`,
+      return { q: `Differentiate:  y = ${f}`, a: `${frac("d" + "y", "dx")} = ${df}`,
         sol: [S("Multiply by the power, then reduce the power by 1; constants vanish", "M1"),
               S(`${a}x${sup(n)} → ${a * n}x${n - 1 === 1 ? "" : sup(n - 1)},  ${b}x → ${b},  ${c} → 0`, "M1"),
-              S(`dy/dx = ${df}`, "A1")] };
+              S(`${frac("dy", "dx")} = ${df}`, "A1")] };
     }
   },
   integration: {
@@ -496,7 +515,7 @@ const GENERATORS = {
       const F = poly([[a / (n + 1), n + 1], [b, 1]]);
       return { q: `Find:  ∫ (${f}) dx`, a: `${F} + c`,
         sol: [S("Raise the power by 1, then divide by the new power", "M1"),
-              S(`${a}x${sup(n)} → ${a}x${sup(n + 1)}/${n + 1} = ${a / (n + 1)}x${sup(n + 1)},  ${b} → ${b}x`, "M1"),
+              S(`${a}x${sup(n)} → ${frac(a + "x" + sup(n + 1), n + 1)} = ${a / (n + 1)}x${sup(n + 1)},  ${b} → ${b}x`, "M1"),
               S(`Add the constant of integration: ${F} + c`, "A1")] };
     }
   },

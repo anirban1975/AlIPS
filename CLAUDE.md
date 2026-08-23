@@ -11,11 +11,14 @@ department's request (v0.4). Do not re-introduce bilingual strings.
   Cambridge / Oman / Both tags, Student & Teacher views, search
 - `worksheets.html` / `sheet.css` / `sheet.js` — teacher tool: worksheet and
   exam-paper generator built to the department's Word templates
-- `learn.html` / `learn.css` / `learn.js` — student page: guided lessons,
-  deep-research links, infinite practice with mark-scheme solutions
+- `plan.html` / `plan.css` / `plan.js` — teacher tool: lesson planner and
+  slide deck (present mode, Word and PowerPoint export)
+- `zip.js` — minimal STORE-method ZIP writer, used to build a real `.pptx`
+  in the browser with no library and no build step
 - `gen.js` — question engine: seeded RNG (`mulberry32`) + ~35 generators in
   `GENERATORS`, mapped to grades via `GRADE_GENS`
-- `lessons.js` — one mini-lesson per generator id + research links
+- `lessons.js` — topic content library (concept, worked example, key points,
+  resource links) used to draft lesson plans and slides
 - `data.js` — curriculum dataset (`CURRICULUM`) and UI strings (`UI_STRINGS`)
 - `letterhead.png` — the official school letterhead, extracted from the
   department's Word templates and printed at the top of every sheet
@@ -91,6 +94,24 @@ and `DEFAULT_BANDS` in `sheet.js` are only starting values.
 - **"Save these settings as my default"** persists rubrics and options to
   `localStorage` under `alips-teacher-defaults`, per teacher, per browser.
 
+## Lesson Planner (v0.8)
+
+`plan.html` drafts a lesson from one topic and renders it two ways from a single
+model, so the printed plan and the presented slides always match:
+
+- **Lesson plan** — objectives, success criteria, key idea, starter, I-do worked
+  examples with mark-scheme steps, differentiated practice (Support / Core /
+  Challenge), plenary, homework, resources, signature line. Prints, or exports
+  to Word.
+- **Slides** — the same content as 16:9 cards. **Present full screen** gives a
+  classroom projector view (← → to move, Space to reveal answers, Esc to exit).
+  **Slides as PowerPoint** writes a real `.pptx`.
+
+The `.pptx` is assembled part by part (content types, rels, presentation,
+slide master, layout, theme, slides) and zipped by `zip.js`. Verified with
+`python-pptx`, which opens the output and reports 16:9 slides with the expected
+text. Text in PowerPoint is plain, so `mathPlainText()` flattens ⁅n/d⁆ to `n/d`.
+
 ## Word export
 
 `Download as Word` builds a `.doc` (Word-flavoured HTML) client-side and saves
@@ -108,8 +129,13 @@ model object, so a given paper number produces identical questions in both.
 - A generator is `{ name, grades: [..], gen(r, d) -> { q, a, sol } }` where
   `sol` is worked steps with Cambridge mark codes (M1 method / A1 accuracy / B1).
 - Use the typographic minus `−` in question and answer text (helper `nf()` in
-  `gen.js`). The practice checker in `learn.js` normalises `−` to `-` before
-  comparing, so keep that normalisation if you touch it.
+  `gen.js`).
+- **Mathematical notation:** generators emit `⁅n/d⁆` for a fraction (helper
+  `frac()`) and `√⟨x⟩` for a radical (helper `rad()`). `mathHTML()` renders a
+  proper two-tier fraction and an overlined radical on screen and in print;
+  `mathWord()` emits `sup⁄sub` and an overline span, which Word renders
+  reliably; `mathPlainText()` flattens both for PowerPoint. Never print a bare
+  `1/2` — use `frac()`.
 - Same seed ⇒ identical paper ("Paper no." printed on every sheet), so teachers
   can reprint or share a paper by its number.
 
@@ -125,7 +151,7 @@ No test suite. Verify visually with headless Chromium:
 
 URL params: `grade` (1–12), `mode` (worksheet/exam), `seed`, `auto=1`,
 `count`, `space`, `questions`, `parts`, `reward=0`, `answers=0`,
-`view` (student/teacher), `topic`, `tab` (practice).
+`view` (student/teacher on the browser; plan/deck on the planner), `topic`.
 Check the printed border by exporting a PDF and looking for one full-page
 stroked rectangle per page:
 `chromium --headless --print-to-pdf=out.pdf --no-pdf-header-footer "<url>"`.
@@ -158,5 +184,7 @@ user and git-ignored.
 3. ~~v0.3 Practice & Learn with mark schemes~~ — done
 4. ~~v0.4 English-only + department print templates + Comic Sans sizing~~ — done
 5. ~~v0.5 Page borders, Word export, worksheet score/reward/signature block~~ — done
-6. More generators (statistics tables, geometry with diagrams, word problems)
-7. Progress tracking
+6. ~~v0.8 Lesson planner + slides (present mode, .pptx), proper maths notation,
+   guided-learning/practice page removed~~ — done
+7. More generators (statistics tables, geometry with diagrams, word problems)
+8. Editable lesson-plan fields saved per teacher

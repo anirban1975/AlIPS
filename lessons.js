@@ -1,4 +1,5 @@
-// AlIPS guided learning content — one mini-lesson per generator id (English).
+// AlIPS topic content library — one entry per generator id (English).
+// Used by the Lesson Planner to draft lesson plans and slide decks.
 // concept: short explanation; example: worked example lines; tips: key points;
 // q: search query used to build "deep research" links (YouTube, Khan Academy,
 // Corbettmaths). yt: optional YouTube video ID pinned by the department — when
@@ -236,7 +237,7 @@ const LESSONS = {
   }
 };
 
-// Deep-research links built from the lesson's search query.
+// Teaching resource links built from the topic's search query.
 function researchLinks(id) {
   const L = LESSONS[id];
   if (!L) return [];

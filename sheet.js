@@ -21,6 +21,31 @@
     .replace(/"/g, "&quot;");
   const nl2br = (s) => esc(s).replace(/\n/g, "<br>");
 
+  // ---------- Mathematical notation ----------
+  // Generators emit ⁅n/d⁆ for a fraction and √⟨x⟩ for a radical. On screen and
+  // in print these become a proper two-tier fraction and an overlined radical;
+  // in Word (no flexbox) a fraction becomes sup⁄sub, which Word renders well.
+  const FRAC_RE = /⁅([^\/⁆]*)\/([^⁆]*)⁆/g;
+  const RAD_RE = /√⟨([^⟩]*)⟩/g;
+
+  function mathHTML(text) {
+    return esc(text)
+      .replace(FRAC_RE, (_, n, d) =>
+        `<span class="frac"><span class="fnum">${n}</span><span class="fden">${d}</span></span>`)
+      .replace(RAD_RE, (_, x) => `<span class="radic">√<span class="vinc">${x}</span></span>`)
+      .replace(/\n/g, "<br>");
+  }
+
+  function mathWord(text) {
+    return esc(text)
+      .replace(FRAC_RE, (_, n, d) => `<sup>${n}</sup>&frasl;<sub>${d}</sub>`)
+      .replace(RAD_RE, (_, x) => `&radic;<span style="text-decoration:overline">${x}</span>`)
+      .replace(/\n/g, "<br>");
+  }
+
+  // Put maths-aware text into an element.
+  const setMath = (node, text) => { node.innerHTML = mathHTML(text); return node; };
+
   const LETTERS = ["a", "b", "c", "d"];
   const DIFF_NAMES = { 1: "Easy", 2: "Medium", 3: "Challenging", mixed: "Mixed" };
 
@@ -551,14 +576,15 @@
         row.style.paddingInlineStart = "0";
         row.style.marginTop = "0";
         const txt = el("span", "ptext");
-        txt.appendChild(el("b", "", `Q${i + 1}. `));
-        txt.appendChild(document.createTextNode(item.q));
+        txt.innerHTML = `<b>Q${i + 1}.</b> ` + mathHTML(item.q);
         row.appendChild(txt);
         row.appendChild(el("span", "pmarks", `[${item.marks}]`));
         box.appendChild(row);
       } else {
         box.appendChild(el("span", "num", `Q${i + 1}. `));
-        box.appendChild(document.createTextNode(item.q));
+        const span = el("span");
+        setMath(span, item.q);
+        box.appendChild(span);
       }
       sheet.appendChild(box);
       if (spec.space > 0) sheet.appendChild(el("div", "space-" + spec.space));
@@ -668,8 +694,10 @@
       box.appendChild(qh);
       q.parts.forEach((p) => {
         const row = el("div", "part");
-        const label = q.parts.length > 1 ? `(${p.letter})  ` : "";
-        row.appendChild(el("span", "ptext", `${label}${p.item.q}`));
+        const label = q.parts.length > 1 ? `(${p.letter})&nbsp; ` : "";
+        const pt = el("span", "ptext");
+        pt.innerHTML = label + mathHTML(p.item.q);
+        row.appendChild(pt);
         row.appendChild(el("span", "pmarks", `[${p.marks}]`));
         box.appendChild(row);
         box.appendChild(el("div", "space-" + (p.marks >= 4 ? 3 : p.marks >= 3 ? 2 : 1)));
@@ -685,9 +713,12 @@
     markSchemeEntries(spec, model).forEach((e) => {
       const item = el("div", "ms-item");
       item.appendChild(el("div", "ms-q", `${e.label}${e.marks ? "  [" + e.marks + "]" : ""}`));
-      item.appendChild(el("div", "ms-ans", "Answer: " + e.item.a));
+      const ansLine = el("div", "ms-ans");
+      ansLine.innerHTML = "Answer: " + mathHTML(e.item.a);
+      item.appendChild(ansLine);
       (e.item.sol || []).forEach((s) => {
-        const line = el("div", "ms-steps", s.t);
+        const line = el("div", "ms-steps");
+        line.innerHTML = mathHTML(s.t);
         line.appendChild(el("span", "code", s.m));
         item.appendChild(line);
       });
@@ -771,9 +802,9 @@ td.right { text-align: right; }
 
     model.questions.forEach((item, i) => {
       if (item.marks > 0) {
-        h += layRow(`<b>Q${i + 1}.</b> ${nl2br(item.q)}`, `[${item.marks}]`);
+        h += layRow(`<b>Q${i + 1}.</b> ${mathWord(item.q)}`, `[${item.marks}]`);
       } else {
-        h += `<p><b>Q${i + 1}.</b> ${nl2br(item.q)}</p>`;
+        h += `<p><b>Q${i + 1}.</b> ${mathWord(item.q)}</p>`;
       }
       if (spec.space > 0) h += spacer(spec.space === 1 ? 26 : spec.space === 2 ? 56 : 96);
     });
@@ -831,7 +862,7 @@ td.right { text-align: right; }
       h += layRow(`<span class="qhead">Q${qi + 1})</span>`, `<b>[${q.total} Marks]</b>`);
       q.parts.forEach((p) => {
         const label = q.parts.length > 1 ? `(${p.letter})&nbsp; ` : "";
-        h += layRow(`&nbsp;&nbsp;&nbsp;${label}${nl2br(p.item.q)}`, `[${p.marks}]`);
+        h += layRow(`&nbsp;&nbsp;&nbsp;${label}${mathWord(p.item.q)}`, `[${p.marks}]`);
         h += spacer(p.marks >= 4 ? 90 : p.marks >= 3 ? 56 : 28);
       });
     });
@@ -843,9 +874,9 @@ td.right { text-align: right; }
     h += `<p class="title">Mark Scheme — ${esc(spec.mode === "exam" ? spec.title : "Worksheet")} (Grade ${esc(spec.grade)}, Paper ${esc(spec.seed)})</p>`;
     markSchemeEntries(spec, model).forEach((e) => {
       h += `<p style="margin-bottom:0"><b>${esc(e.label)}${e.marks ? "  [" + e.marks + "]" : ""}</b></p>`;
-      h += `<p style="margin:0 0 0 14pt">Answer: ${nl2br(e.item.a)}</p>`;
+      h += `<p style="margin:0 0 0 14pt">Answer: ${mathWord(e.item.a)}</p>`;
       (e.item.sol || []).forEach((s) => {
-        h += `<p style="margin:0 0 0 14pt">${nl2br(s.t)} <span class="ms-code">${esc(s.m)}</span></p>`;
+        h += `<p style="margin:0 0 0 14pt">${mathWord(s.t)} <span class="ms-code">${esc(s.m)}</span></p>`;
       });
       h += `<p style="margin:0 0 4pt 0">&nbsp;</p>`;
     });

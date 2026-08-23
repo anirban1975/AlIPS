@@ -447,6 +447,6 @@ const UI_STRINGS = {
   teacherNoteLabel: "Teaching note",
   noResults: "No topics match your search in this grade.",
   worksheetLink: "Worksheets & Exams",
-  practiceLink: "Practice & Learn",
+  plannerLink: "Lesson Planner & Slides",
   draftNote: "Draft content — to be verified by the Mathematics Department against the official Cambridge and Oman bilingual frameworks."
 };
