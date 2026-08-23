@@ -249,3 +249,167 @@ function researchLinks(id) {
     { label: "Save My Exams", url: `https://www.google.com/search?q=${enc("site:savemyexams.com " + L.q)}` }
   ];
 }
+
+// ---------------------------------------------------------------------------
+// DEPARTMENT-APPROVED learning objectives and success criteria.
+// These are what every teacher sees first, on any computer, with no set-up.
+// A teacher may edit them in the Lesson Planner; their version is then kept on
+// their own machine and 'Use department wording' brings these back.
+//
+// TO REVISE: edit the entry below and redeploy. Reviewed by: ______________
+// ---------------------------------------------------------------------------
+
+const DEPT_FIELDS = {
+  addWithin20: {
+    objectives: ["Add two numbers with a total of 20 or less.", "Choose a strategy: counting on, or making 10."],
+    criteria: ["I can add by counting on from the larger number.", "I can make 10 first to make the sum easier.", "I can check my answer using objects or a number line."]
+  },
+  subWithin20: {
+    objectives: ["Subtract numbers within 20.", "Understand subtraction as both taking away and finding a difference."],
+    criteria: ["I can count back to subtract.", "I can count up from the smaller number to find a difference.", "I can check by adding my answer back on."]
+  },
+  missingNumber: {
+    objectives: ["Find a missing number in an addition or subtraction sentence.", "Use the inverse operation to work backwards."],
+    criteria: ["I can say which operation will undo the one in the question.", "I can work backwards to find the missing number.", "I can substitute my answer back to check it fits."]
+  },
+  placeValue: {
+    objectives: ["State the value of any digit in a number.", "Partition numbers into thousands, hundreds, tens and ones."],
+    criteria: ["I can say which column a digit is in.", "I can give the value of a digit, not just the digit itself.", "I can partition a number and recombine it correctly."]
+  },
+  columnAdd: {
+    objectives: ["Add numbers using the column method.", "Carry correctly when a column totals more than 9."],
+    criteria: ["I can line up digits by place value.", "I can carry into the next column and show it clearly.", "I can estimate first to check my answer is sensible."]
+  },
+  columnSub: {
+    objectives: ["Subtract numbers using the column method.", "Regroup (borrow) when the top digit is too small."],
+    criteria: ["I can line up digits by place value.", "I can regroup from the next column and show my working.", "I can check by adding my answer to the number I subtracted."]
+  },
+  timesTables: {
+    objectives: ["Recall multiplication facts up to 12 x 12.", "Use known facts to derive ones I am unsure of."],
+    criteria: ["I can recall a fact quickly and accurately.", "I can use doubling or a related fact to work one out.", "I know that the order of the two numbers does not change the answer."]
+  },
+  divisionRemainder: {
+    objectives: ["Divide a number and interpret the remainder.", "Explain what the remainder means in context."],
+    criteria: ["I can share into equal groups and say what is left over.", "I know the remainder must be smaller than the divisor.", "I can check my answer by multiplying back."]
+  },
+  longMultiplication: {
+    objectives: ["Multiply two- and three-digit numbers using a written method.", "Partition one factor by place value."],
+    criteria: ["I can split a number into tens and ones before multiplying.", "I can set out partial products clearly and add them.", "I can estimate first to spot a serious error."]
+  },
+  fractionOfAmount: {
+    objectives: ["Find a unit and non-unit fraction of a quantity.", "Connect 'of' with dividing and multiplying."],
+    criteria: ["I can divide by the denominator to find one part.", "I can multiply by the numerator to find several parts.", "I can check my answer is smaller than the original amount."]
+  },
+  equivalentFractions: {
+    objectives: ["Generate fractions equivalent to a given fraction.", "Explain why the value does not change."],
+    criteria: ["I can multiply numerator and denominator by the same number.", "I can explain why the fraction is worth the same.", "I can simplify a fraction back to its lowest terms."]
+  },
+  addFractions: {
+    objectives: ["Add fractions with the same and with different denominators.", "Give the answer in its simplest form."],
+    criteria: ["I can find a common denominator.", "I can add the numerators only, never the denominators.", "I can simplify my answer and convert to a mixed number if needed."]
+  },
+  percentOfAmount: {
+    objectives: ["Find a percentage of a quantity.", "Build harder percentages from 10%, 5% and 1%."],
+    criteria: ["I understand per cent as 'out of 100'.", "I can find 10% and use it to build other percentages.", "I can check whether my answer is a sensible size."]
+  },
+  orderOfOperations: {
+    objectives: ["Apply the correct order of operations.", "Explain why the order matters."],
+    criteria: ["I can identify which operation to do first.", "I know multiplication and division rank equally, worked left to right.", "I can show each stage of my working separately."]
+  },
+  areaPerimeterRect: {
+    objectives: ["Calculate the area and perimeter of a rectangle.", "Choose the correct units for each."],
+    criteria: ["I can explain the difference between area and perimeter.", "I can apply the correct formula.", "I can write my answer in cm or cm2 as appropriate."]
+  },
+  meanOfNumbers: {
+    objectives: ["Calculate the mean of a set of values.", "Interpret the mean as a fair share."],
+    criteria: ["I can total the values and divide by how many there are.", "I can explain what the mean tells me about the data.", "I know the mean need not be one of the original values."]
+  },
+  negativeNumbers: {
+    objectives: ["Add, subtract and multiply with negative numbers.", "Apply the sign rules confidently."],
+    criteria: ["I know that subtracting a negative is the same as adding.", "I can give the sign of a product of two numbers.", "I can use a number line to justify my answer."]
+  },
+  powersRoots: {
+    objectives: ["Evaluate squares, cubes and square roots.", "Recognise a root as the inverse of a power."],
+    criteria: ["I can recall square numbers up to 15 squared.", "I can find a square root of a perfect square.", "I can explain how powers and roots undo each other."]
+  },
+  ratioSharing: {
+    objectives: ["Divide a quantity in a given ratio.", "Interpret a ratio as a number of equal parts."],
+    criteria: ["I can find the total number of parts.", "I can find the value of one part.", "I can check that the shares add back to the original total."]
+  },
+  anglesTriangle: {
+    objectives: ["Use the angle sum of a triangle to find a missing angle.", "Justify the answer with a reason."],
+    criteria: ["I know the angles of a triangle total 180 degrees.", "I can set out my subtraction clearly.", "I can state the angle fact I used as a reason."]
+  },
+  circleArea: {
+    objectives: ["Calculate the circumference and area of a circle.", "Select the correct formula for each."],
+    criteria: ["I can identify the radius, halving the diameter if needed.", "I can apply the correct formula for circumference or area.", "I can leave an answer in terms of pi or round it as asked."]
+  },
+  solveLinear: {
+    objectives: ["Solve linear equations, including with unknowns on both sides.", "Keep the equation balanced at every step."],
+    criteria: ["I can perform the same operation on both sides.", "I can collect like terms before solving.", "I can check my solution by substituting it back."]
+  },
+  sequenceNth: {
+    objectives: ["Find the nth term of a linear sequence.", "Use the rule to generate further terms."],
+    criteria: ["I can find the common difference.", "I can adjust with a constant so the first term is correct.", "I can test my rule on a term I have not used."]
+  },
+  expandBrackets: {
+    objectives: ["Expand single and double brackets.", "Simplify by collecting like terms."],
+    criteria: ["I can multiply every term inside by the term outside.", "I can multiply every pair of terms from two brackets.", "I can handle negative signs correctly."]
+  },
+  factorise: {
+    objectives: ["Factorise expressions by taking out a common factor.", "Factorise quadratics of the form x squared plus bx plus c."],
+    criteria: ["I can identify the highest common factor.", "I can find two numbers with the required sum and product.", "I can check by expanding my answer back."]
+  },
+  simultaneous: {
+    objectives: ["Solve a pair of simultaneous linear equations.", "Connect the algebraic solution to the point of intersection."],
+    criteria: ["I can make the coefficients of one unknown match.", "I can eliminate one unknown and solve for the other.", "I can check my values satisfy both equations."]
+  },
+  straightLine: {
+    objectives: ["Identify the gradient and intercept of a straight line.", "Interpret the equation y = mx + c."],
+    criteria: ["I can rearrange an equation into the form y = mx + c.", "I can state the gradient and the y-intercept.", "I know parallel lines share the same gradient."]
+  },
+  pythagoras: {
+    objectives: ["Use Pythagoras' theorem to find a missing side.", "Decide when the theorem applies."],
+    criteria: ["I can identify the hypotenuse.", "I can add the squares to find a hypotenuse, or subtract to find a shorter side.", "I can check my answer is a sensible length."]
+  },
+  standardForm: {
+    objectives: ["Write numbers in standard form.", "Interpret positive and negative indices."],
+    criteria: ["I can write the number with one non-zero digit before the point.", "I can count the decimal places moved to find the index.", "I know a small number has a negative index."]
+  },
+  inequality: {
+    objectives: ["Solve linear inequalities.", "Represent the solution as a range of values."],
+    criteria: ["I can solve an inequality as I would an equation.", "I know the sign flips when I multiply or divide by a negative.", "I can show the solution set on a number line."]
+  },
+  quadraticSolve: {
+    objectives: ["Solve quadratic equations by factorising.", "Recognise that a quadratic usually has two solutions."],
+    criteria: ["I can factorise the quadratic correctly.", "I can set each bracket equal to zero.", "I can state both solutions and check one by substitution."]
+  },
+  trigRightAngle: {
+    objectives: ["Use sine, cosine and tangent to find a missing side.", "Choose the correct ratio for the information given."],
+    criteria: ["I can label the opposite, adjacent and hypotenuse from the angle.", "I can select the ratio that links what I have to what I want.", "I can round my answer as instructed and check the calculator is in degrees."]
+  },
+  indices: {
+    objectives: ["Apply the laws of indices to simplify expressions.", "Explain each law with a worked example."],
+    criteria: ["I can add indices when multiplying powers of the same base.", "I can subtract indices when dividing.", "I can multiply indices for a power of a power."]
+  },
+  permutations: {
+    objectives: ["Distinguish permutations from combinations.", "Calculate the number of arrangements or selections."],
+    criteria: ["I can decide whether order matters in the context.", "I can select and use the correct notation.", "I can explain my choice in words."]
+  },
+  standardDeviation: {
+    objectives: ["Calculate the mean and standard deviation of a data set.", "Interpret the standard deviation as a measure of spread."],
+    criteria: ["I can find the mean accurately.", "I can square the deviations before averaging them.", "I can explain what a large or small standard deviation tells me."]
+  },
+  differentiation: {
+    objectives: ["Differentiate polynomial functions.", "Interpret the derivative as a gradient function."],
+    criteria: ["I can multiply by the power and reduce the power by one.", "I know the derivative of a constant is zero.", "I can explain what dy/dx represents at a point."]
+  },
+  integration: {
+    objectives: ["Integrate polynomial functions.", "Recognise integration as the reverse of differentiation."],
+    criteria: ["I can raise the power by one and divide by the new power.", "I always include the constant of integration.", "I can check my answer by differentiating it."]
+  },
+  binomial: {
+    objectives: ["Expand expressions using the binomial theorem.", "Find a specified term or coefficient."],
+    criteria: ["I can identify the correct binomial coefficient.", "I can raise the whole term to the power, not just the variable.", "I can state the required coefficient clearly."]
+  }
+};

@@ -103,11 +103,22 @@ model, so the printed plan and the presented slides always match:
   examples with mark-scheme steps, differentiated practice (Support / Core /
   Challenge), plenary, homework, resources, signature line. Prints, or exports
   to Word.
-**Objectives and success criteria are editable** in the panel (one per line) and
-are saved **per topic** under `alips-lesson-fields`, so a teacher writes their
-own wording once and it returns every time they open that topic. `Reset to
-draft` restores the generic wording. Teacher name / section / duration persist
-under `alips-planner-prefs`. Saving happens on Generate.
+**Objectives and success criteria come in three layers**, highest first:
+
+1. **This teacher's saved wording** — `localStorage`, key `alips-lesson-fields`,
+   per topic. Written on Generate, but *only when it actually differs from the
+   department wording*, so a teacher who never edits keeps receiving department
+   revisions. `Use department wording` deletes the override.
+2. **Department wording** — `DEPT_FIELDS` in `lessons.js`, covering all 38
+   topics. This is what every teacher sees first, on any machine, with no
+   set-up and no network. **To revise: edit `lessons.js` and redeploy.**
+3. **Generic draft** — `draftObjectives()` / `DRAFT_CRITERIA` in `plan.js`, a
+   fallback for any topic with no department entry.
+
+The status line under the fields says which layer is in use. `Export my wording`
+writes a readable file of everything this teacher has reworded, for the HOD to
+review and possibly fold into `DEPT_FIELDS`. Teacher name / section / duration
+persist under `alips-planner-prefs`.
 
 - **Slides** — the same content as 16:9 cards. **Present full screen** gives a
   classroom projector view (← → to move, Space to reveal answers, Esc to exit).

@@ -60,21 +60,43 @@
 
   const linesOf = (id) => $(id).value.split("\n").map((t) => t.trim()).filter(Boolean);
 
-  // Load the saved wording for a topic, or fall back to the generic draft.
-  function loadFields(topic, title) {
-    const saved = readStore(FIELD_KEY)[topic];
-    const objectives = saved && saved.objectives && saved.objectives.length
-      ? saved.objectives : draftObjectives(title);
-    const criteria = saved && saved.criteria && saved.criteria.length
-      ? saved.criteria : DRAFT_CRITERIA;
-    $("objectives").value = objectives.join("\n");
-    $("criteria").value = criteria.join("\n");
-    $("fields-msg").textContent = saved ? "your saved wording" : "draft wording";
+  // Department-approved wording for a topic, falling back to a generic draft.
+  function deptFields(topic, title) {
+    const d = (typeof DEPT_FIELDS !== "undefined" && DEPT_FIELDS[topic]) || null;
+    return {
+      objectives: d && d.objectives && d.objectives.length ? d.objectives : draftObjectives(title),
+      criteria: d && d.criteria && d.criteria.length ? d.criteria : DRAFT_CRITERIA,
+      isDept: !!d
+    };
   }
 
+  // Three layers: this teacher's saved wording → department wording → generic draft.
+  function loadFields(topic, title) {
+    const saved = readStore(FIELD_KEY)[topic];
+    const dept = deptFields(topic, title);
+    const useSaved = saved && saved.objectives && saved.objectives.length;
+    $("objectives").value = (useSaved ? saved.objectives : dept.objectives).join("\n");
+    $("criteria").value = (useSaved ? saved.criteria : dept.criteria).join("\n");
+    $("fields-msg").textContent = useSaved ? "your saved wording"
+      : dept.isDept ? "department wording" : "draft wording";
+  }
+
+  // Only store an override when the teacher has actually changed the wording.
+  // Saving an untouched copy would silently freeze this teacher on today's
+  // department baseline and hide any later revision from them.
   function saveFields(topic) {
+    const objectives = linesOf("objectives");
+    const criteria = linesOf("criteria");
+    const dept = deptFields(topic, currentTitle());
+    const same = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
     const all = readStore(FIELD_KEY);
-    all[topic] = { objectives: linesOf("objectives"), criteria: linesOf("criteria") };
+
+    if (same(objectives, dept.objectives) && same(criteria, dept.criteria)) {
+      if (all[topic]) { delete all[topic]; writeStore(FIELD_KEY, all); }
+      $("fields-msg").textContent = dept.isDept ? "department wording" : "draft wording";
+      return;
+    }
+    all[topic] = { objectives, criteria };
     if (writeStore(FIELD_KEY, all)) $("fields-msg").textContent = "saved for this topic";
   }
 
@@ -720,10 +742,45 @@
     state.topic = e.target.value;
     loadFields(state.topic, currentTitle());
   });
-  $("fields-reset").addEventListener("click", () => {
-    $("objectives").value = draftObjectives(currentTitle()).join("\n");
-    $("criteria").value = DRAFT_CRITERIA.join("\n");
-    $("fields-msg").textContent = "draft wording";
+  $("fields-dept").addEventListener("click", () => {
+    const topic = $("topic-select").value;
+    const dept = deptFields(topic, currentTitle());
+    $("objectives").value = dept.objectives.join("\n");
+    $("criteria").value = dept.criteria.join("\n");
+    // Forget this teacher's override so the department wording stays next time.
+    const all = readStore(FIELD_KEY);
+    delete all[topic];
+    writeStore(FIELD_KEY, all);
+    $("fields-msg").textContent = dept.isDept ? "department wording" : "draft wording";
+  });
+
+  // Export every topic this teacher has reworded, for the HOD to review.
+  $("fields-export").addEventListener("click", (e) => {
+    const all = readStore(FIELD_KEY);
+    const topics = Object.keys(all);
+    if (!topics.length) {
+      e.target.textContent = "Nothing edited yet";
+      setTimeout(() => { e.target.textContent = "Export my wording"; }, 2500);
+      return;
+    }
+    const who = $("teacher-input").value.trim() || "(teacher name not entered)";
+    let txt = "AlIPS Mathematics — lesson wording\n";
+    txt += "Teacher: " + who + "\n";
+    txt += "Exported: " + new Date().toISOString().slice(0, 10) + "\n";
+    txt += "Topics reworded: " + topics.length + "\n";
+    txt += "\nSend this file to the Head of Department to have any of it adopted\n";
+    txt += "as the department wording for everyone.\n";
+    topics.forEach((t) => {
+      const name = GENERATORS[t] ? GENERATORS[t].name : t;
+      txt += "\n" + "=".repeat(60) + "\n" + name + "\n" + "=".repeat(60) + "\n";
+      txt += "\nLearning objectives\n";
+      (all[t].objectives || []).forEach((o) => { txt += "  - " + o + "\n"; });
+      txt += "\nSuccess criteria\n";
+      (all[t].criteria || []).forEach((c) => { txt += "  - " + c + "\n"; });
+    });
+    txt += "\n\n--- machine-readable copy ---\n" + JSON.stringify(all, null, 1) + "\n";
+    saveBlob(new Blob([txt], { type: "text/plain" }),
+      `AlIPS_lesson_wording_${who.replace(/[^\w]+/g, "_")}.txt`);
   });
   $("new-seed").addEventListener("click", () => {
     $("seed").value = Math.floor(Math.random() * 899999) + 100000;
