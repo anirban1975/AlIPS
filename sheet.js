@@ -765,6 +765,24 @@
     return wrap;
   }
 
+  // A handwriting row: one solid model numeral, then hollow numerals to trace
+  // over, then empty squares to write in unaided.
+  function traceGrid(t) {
+    const cell = (cls, text) => {
+      const c = el("div", "trace-cell " + cls);
+      if (text !== undefined) c.appendChild(el("span", "trace-glyph", text));
+      return c;
+    };
+    const row = el("div", "trace-row");
+    row.appendChild(cell("model", t.char));
+    for (let i = 0; i < (t.guides || 4); i++) row.appendChild(cell("guide", t.char));
+    for (let i = 0; i < (t.blanks || 3); i++) row.appendChild(cell("blank"));
+    const wrap = el("div", "trace-block");
+    wrap.appendChild(row);
+    if (t.word) wrap.appendChild(el("div", "trace-word", `${t.char}  —  ${t.word}`));
+    return wrap;
+  }
+
   // One sub-part of a blueprint question: its text, marks, options if it is an
   // MCQ, and working space sized by its question type.
   function renderPart(p, box, spec) {
@@ -775,6 +793,9 @@
     row.appendChild(pt);
     if (p.marks > 0) row.appendChild(el("span", "pmarks", `[${p.marks}]`));
     box.appendChild(row);
+
+    // A tracing item brings its own handwriting grid instead of working space.
+    if (p.item.trace) { box.appendChild(traceGrid(p.item.trace)); return; }
 
     if (p.type === "MCQ" && p.options) {
       const opts = el("div", "mcq-opts");
@@ -883,8 +904,10 @@
         setMath(span, item.q);
         box.appendChild(span);
       }
+      // A tracing item brings its own handwriting grid and needs no ruled space.
+      if (item.trace) box.appendChild(traceGrid(item.trace));
       sheet.appendChild(box);
-      if (spec.space > 0) sheet.appendChild(el("div", "space-" + spec.space));
+      if (!item.trace && spec.space > 0) sheet.appendChild(el("div", "space-" + spec.space));
     });
 
     if (spec.rubric) sheet.appendChild(rubricTable(spec, model));
@@ -1104,6 +1127,7 @@ td.right { text-align: right; }
         } else {
           h += `<p><b>Q${i + 1}.</b> ${mathWord(item.q)}</p>`;
         }
+        if (item.trace) { h += wordTrace(item.trace); return; }
         if (spec.space > 0) h += spacer(spec.space === 1 ? 26 : spec.space === 2 ? 56 : 96);
       });
     }
@@ -1172,6 +1196,7 @@ td.right { text-align: right; }
     const label = single ? "" : `(${p.letter})&nbsp; `;
     let h = layRow(`&nbsp;&nbsp;&nbsp;${label}${mathWord(p.item.q)}`,
       p.marks > 0 ? `[${p.marks}]` : "");
+    if (p.item.trace) return h + wordTrace(p.item.trace);
     if (p.type === "MCQ" && p.options) {
       h += `<table class="lay" style="margin-left:22pt"><tr>`;
       p.options.forEach((o, i) => {
@@ -1184,6 +1209,21 @@ td.right { text-align: right; }
     const base = TYPES[p.type] ? TYPES[p.type].space : 1;
     const room = Math.max(base, p.marks >= 4 ? 3 : p.marks >= 3 ? 2 : base);
     return h + (room > 0 ? spacer(room >= 3 ? 90 : room === 2 ? 56 : 28) : "");
+  }
+
+  // Word has no text-stroke, so the guide numerals print in light grey — the
+  // child still traces over them, and it prints identically on any printer.
+  function wordTrace(t) {
+    const cell = (inner, colour) =>
+      `<td style="width:52pt;height:52pt;border:1pt solid #999;text-align:center;` +
+      `font-size:34pt;color:${colour};padding:0">${inner}</td>`;
+    let h = `<table class="lay" style="margin:6pt 0 6pt 14pt;border-collapse:collapse"><tr>`;
+    h += cell(esc(t.char), "#000");
+    for (let i = 0; i < (t.guides || 4); i++) h += cell(esc(t.char), "#c8c8c8");
+    for (let i = 0; i < (t.blanks || 3); i++) h += cell("&nbsp;", "#000");
+    h += `</tr></table>`;
+    if (t.word) h += `<p style="margin:0 0 8pt 14pt">${esc(t.char)} &mdash; ${esc(t.word)}</p>`;
+    return h;
   }
 
   function wordBreakdown(model) {

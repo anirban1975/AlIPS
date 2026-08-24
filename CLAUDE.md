@@ -19,7 +19,7 @@ department's request (v0.4). Do not re-introduce bilingual strings.
   slide deck (present mode, Word and PowerPoint export)
 - `zip.js` — minimal STORE-method ZIP writer, used to build a real `.pptx`
   in the browser with no library and no build step
-- `gen.js` — question engine: seeded RNG (`mulberry32`) + 103 generators in
+- `gen.js` — question engine: seeded RNG (`mulberry32`) + 104 generators in
   `GENERATORS`, mapped to grades via `GRADE_GENS`
 - `lessons.js` — topic content library (concept, worked example, key points,
   resource links) used to draft lesson plans and slides
@@ -123,6 +123,26 @@ Topic keys are `<trackKey>|<sub-topic name>`, unique per syllabus. `genOf(key)`
 resolves the generator and falls back to treating the key as a generator id, so
 teacher defaults saved before this change still load.
 
+## Worksheets that are not questions (v1.4)
+
+Not every syllabus line is a question. Grade 1's "Tracing numbers 1 to 10" is
+handwriting practice: the child traces over dotted numerals in a grid.
+
+A generator can return a `trace` field instead of relying on the question line:
+
+```js
+trace: { char: "5", guides: 4, blanks: 3, word: "five" }
+```
+
+`traceGrid()` in `sheet.js` prints one solid model numeral, `guides` hollow
+numerals to trace over, and `blanks` empty squares to write in unaided, with
+the number word underneath. The hollow effect is `-webkit-text-stroke` with a
+transparent fill, behind an `@supports` guard so browsers without it fall back
+to light grey — still traceable, and it prints the same either way. Word has no
+text-stroke at all, so `wordTrace()` prints light-grey numerals in a bordered
+table. A tracing item brings its own grid, so no ruled working space is added
+after it, and it is never turned into an MCQ.
+
 ## Teacher-configurable rubrics (v0.6)
 
 Nothing about marks or difficulty is hardcoded any more — `DEFAULT_PART_RUBRIC`
@@ -156,8 +176,14 @@ generator by word overlap: every significant word of the shorter name must
 match, and a tie counts as no match, because a wrong lesson is worse than none.
 `TOPIC_ALIASES` covers wording that will never align on its own ("Finding
 totals" -> Addition within 20, "Tracing numbers 1 to 10" -> Reading and writing
-numbers). **482 of the 725 sub-topics reach a generator**; extend both
+numbers). **625 of the 896 sub-topics reach a generator**; extend both
 `GENERATORS` and `TOPIC_ALIASES` together whenever a gap is reported.
+
+**Sub-topic level, not unit level.** The AS, A Level and GED Advance tracks
+originally listed each annual-plan *unit* as one topic ("Series", "Algebra"),
+which hid the sub-topics under it. Every track now lists the plan's own
+sub-topic lines. When adding a track, transcribe the SUB TOPIC NAME column,
+never the UNIT NAME column.
 
 Run the coverage audit before claiming a grade is covered:
 

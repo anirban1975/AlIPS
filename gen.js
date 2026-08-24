@@ -629,6 +629,23 @@ const GENERATORS = {
 
   // ===================== Primary: number and counting =====================
 
+  // Handwriting practice, not a question: the sheet prints large hollow
+  // numerals in a grid for the child to trace over, then empty squares to
+  // write in. sheet.js renders `trace` instead of a question line.
+  traceNumbers: {
+    name: "Tracing numbers", grades: [1, 2],
+    gen(r, d) {
+      const n = d === 1 ? ri(r, 1, 5) : d === 2 ? ri(r, 1, 10) : ri(r, 10, 20);
+      return {
+        // The numeral is in the question text so the repeat-check can tell one
+        // tracing row from another — otherwise every row reads the same.
+        q: `Trace the number ${n}, then write it yourself.`,
+        a: `Correct formation of ${n}`,
+        trace: { char: String(n), guides: 4, blanks: 3, word: numberWords(n) },
+        sol: [S(`Start at the top and follow the arrows to form ${n}`, "B1")]
+      };
+    }
+  },
   readWriteNumbers: {
     name: "Reading and writing numbers", grades: [1, 2, 3],
     gen(r, d) {

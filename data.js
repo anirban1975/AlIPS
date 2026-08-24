@@ -1093,29 +1093,153 @@ const TRACKS = {
     tag: "cambridge",
     strands: [
       {
-        name: "Pure Mathematics 1",
+        name: "Pure Mathematics 1 — Quadratics",
         topics: [
-          { n: "Quadratics", m: "Aug", s: "Solving by factorisation, completing the square, the quadratic formula, simultaneous equations with one quadratic, quadratic inequalities, maximum and minimum values, the number of roots, intersection of a line and a curve." },
-          { n: "Functions", m: "Sep", s: "Composite functions, inverse functions, transformations of functions." },
-          { n: "Coordinate geometry", m: "Oct", s: "Length and midpoint of a line segment, parallel and perpendicular lines, equations of straight lines, the equation of a circle, intersections of lines and circles." },
-          { n: "Circular measure", m: "Oct", s: "Radians, length of an arc, area of a sector." },
-          { n: "Trigonometry", m: "Nov", s: "Angles between 0° and 90°, general angles, trigonometric ratios and graphs, inverse trigonometric functions, equations and identities." },
-          { n: "Series", m: "Jan", s: "Binomial expansion of (a + b)ⁿ, binomial coefficients, arithmetic and geometric progressions, infinite geometric series." },
-          { n: "Differentiation", m: "Jan", s: "Derivatives and gradient functions, the chain rule, tangents and normals, second derivatives, increasing and decreasing functions, stationary points, practical maxima and minima, rates of change." },
-          { n: "Integration", m: "Feb", s: "Integration as the reverse of differentiation, the constant of integration, (ax + b)ⁿ, definite integration, area under a curve, area between curves, improper integrals, volumes of revolution." }
+          { n: "Solving quadratic equations by factorisation", m: "Aug" },
+          { n: "Completing the square", m: "Aug" },
+          { n: "The quadratic formula", m: "Aug" },
+          { n: "Solving simultaneous equations (one linear and one quadratic)", m: "Aug" },
+          { n: "Solving more complex quadratic equations", m: "Aug" },
+          { n: "Maximum and minimum values of a quadratic function", m: "Aug" },
+          { n: "Solving quadratic inequalities", m: "Aug" },
+          { n: "The number of roots of a quadratic equation", m: "Aug" },
+          { n: "Intersection of a line and a quadratic curve", m: "Aug" }
         ]
       },
       {
-        name: "Probability & Statistics 1",
+        name: "Pure Mathematics 1 — Functions",
         topics: [
-          { n: "Representation of data", m: "Oct", s: "Stem-and-leaf diagrams, histograms, cumulative frequency curves, comparing representations." },
-          { n: "Measures of central tendency", m: "Oct", s: "The mode and modal class, the mean, the median." },
-          { n: "Measures of variation", m: "Oct", s: "The range, the interquartile range and percentiles, variance and standard deviation." },
-          { n: "Permutations and combinations", m: "Nov", s: "The factorial function, permutations, combinations, problem solving." },
-          { n: "Probability", m: "Jan", s: "Experiments, events and outcomes; mutually exclusive events and the addition law; independent events and the multiplication law; conditional probability; dependent events." },
-          { n: "Probability distributions", m: "Feb", s: "Discrete random variables, probability distributions, expectation and variance." },
-          { n: "The binomial and geometric distributions", m: "Feb" },
-          { n: "The normal distribution", m: "Feb", s: "Continuous random variables, the normal distribution, modelling, the normal approximation to the binomial." }
+          { n: "Composite functions", m: "Sep" },
+          { n: "Inverse functions", m: "Sep" },
+          { n: "Transformations of functions", m: "Sep" }
+        ]
+      },
+      {
+        name: "Pure Mathematics 1 — Coordinate geometry",
+        topics: [
+          { n: "Length of a line segment and midpoint", m: "Oct" },
+          { n: "Parallel and perpendicular lines", m: "Oct" },
+          { n: "Equations of straight lines", m: "Oct" },
+          { n: "The equation of a circle", m: "Oct" },
+          { n: "Problems involving intersections of lines and circles", m: "Oct" }
+        ]
+      },
+      {
+        name: "Pure Mathematics 1 — Circular measure",
+        topics: [
+          { n: "Radians", m: "Oct" },
+          { n: "Length of an arc", m: "Oct" },
+          { n: "Area of a sector", m: "Oct" }
+        ]
+      },
+      {
+        name: "Pure Mathematics 1 — Trigonometry",
+        topics: [
+          { n: "Angles between 0° and 90°", m: "Nov" },
+          { n: "The general definition of an angle", m: "Nov" },
+          { n: "Trigonometric ratios of general angles", m: "Nov" },
+          { n: "Graphs of trigonometric functions", m: "Nov" },
+          { n: "Inverse trigonometric functions", m: "Nov" },
+          { n: "Trigonometric equations", m: "Nov" },
+          { n: "Trigonometric identities", m: "Nov" },
+          { n: "Further trigonometric equations", m: "Nov" }
+        ]
+      },
+      {
+        name: "Pure Mathematics 1 — Series",
+        topics: [
+          { n: "Binomial expansion of (a + b)ⁿ", m: "Jan" },
+          { n: "Binomial coefficients", m: "Jan" },
+          { n: "Arithmetic progressions", m: "Jan" },
+          { n: "Geometric progressions", m: "Jan" },
+          { n: "Infinite geometric series", m: "Jan" },
+          { n: "Further arithmetic and geometric series", m: "Jan" }
+        ]
+      },
+      {
+        name: "Pure Mathematics 1 — Differentiation",
+        topics: [
+          { n: "Derivatives and gradient functions", m: "Jan" },
+          { n: "The chain rule", m: "Jan" },
+          { n: "Tangents and normals", m: "Jan" },
+          { n: "Second derivatives", m: "Jan" },
+          { n: "Increasing and decreasing functions", m: "Feb" },
+          { n: "Stationary points", m: "Feb" },
+          { n: "Practical maximum and minimum problems", m: "Feb" },
+          { n: "Rates of change", m: "Feb" },
+          { n: "Practical applications of connected rates of change", m: "Feb" }
+        ]
+      },
+      {
+        name: "Pure Mathematics 1 — Integration",
+        topics: [
+          { n: "Integration as the reverse of differentiation", m: "Feb" },
+          { n: "Finding the constant of integration", m: "Feb" },
+          { n: "Integration of expressions of the form (ax + b)ⁿ", m: "Feb" },
+          { n: "Further indefinite integration", m: "Feb" },
+          { n: "Definite integration", m: "Feb" },
+          { n: "Area under a curve", m: "Feb" },
+          { n: "Area bounded by a curve and a line or by two curves", m: "Feb" },
+          { n: "Improper integrals", m: "Feb" },
+          { n: "Volumes of revolution", m: "Feb" }
+        ]
+      },
+      {
+        name: "Probability & Statistics 1 — Representation of data",
+        topics: [
+          { n: "Stem-and-leaf diagrams", m: "Sep" },
+          { n: "Histograms", m: "Sep" },
+          { n: "Cumulative frequency curves", m: "Sep" },
+          { n: "Comparing different data representations", m: "Sep" }
+        ]
+      },
+      {
+        name: "Probability & Statistics 1 — Measures of central tendency",
+        topics: [
+          { n: "The mode and the modal class", m: "Oct" },
+          { n: "The mean", m: "Oct" },
+          { n: "The median", m: "Oct" }
+        ]
+      },
+      {
+        name: "Probability & Statistics 1 — Measures of variation",
+        topics: [
+          { n: "The range", m: "Oct" },
+          { n: "The interquartile range and percentiles", m: "Oct" },
+          { n: "Variance and standard deviation", m: "Oct" }
+        ]
+      },
+      {
+        name: "Probability & Statistics 1 — Permutations and combinations",
+        topics: [
+          { n: "The factorial function", m: "Nov" },
+          { n: "Permutations", m: "Nov" },
+          { n: "Combinations", m: "Nov" },
+          { n: "Problem solving with permutations and combinations", m: "Nov" }
+        ]
+      },
+      {
+        name: "Probability & Statistics 1 — Probability",
+        topics: [
+          { n: "Experiments, events and outcomes", m: "Jan" },
+          { n: "Mutually exclusive events and the addition law", m: "Jan" },
+          { n: "Independent events and the multiplication law", m: "Jan" },
+          { n: "Conditional probability", m: "Jan" },
+          { n: "Dependent events and conditional probability", m: "Jan" }
+        ]
+      },
+      {
+        name: "Probability & Statistics 1 — Distributions",
+        topics: [
+          { n: "Discrete random variables", m: "Feb" },
+          { n: "Probability distributions", m: "Feb" },
+          { n: "Expectation and variance of a discrete random variable", m: "Feb" },
+          { n: "The binomial distribution", m: "Feb" },
+          { n: "The geometric distribution", m: "Feb" },
+          { n: "Continuous random variables", m: "Feb" },
+          { n: "The normal distribution", m: "Feb" },
+          { n: "Modelling with the normal distribution", m: "Feb" },
+          { n: "The normal approximation to the binomial distribution", m: "Feb" }
         ]
       }
     ]
@@ -1128,23 +1252,105 @@ const TRACKS = {
     tag: "ged",
     strands: [
       {
-        name: "Pure Mathematics",
+        name: "Algebra",
         topics: [
-          { n: "Algebra: quadratics", m: "Aug", s: "Completing the square, the discriminant, quadratic equations and inequalities in one unknown, simultaneous equations, equations quadratic in some function of x." },
-          { n: "Functions", m: "Sep", s: "Domain, range, one-one and many-one functions, inverse functions graphically, transformations of functions." },
-          { n: "Algebra (PM 2 & 3)", m: "Oct", s: "Modulus of a linear function, dividing a polynomial, the factor and remainder theorems, partial fractions." },
-          { n: "Differentiation", m: "Nov", s: "Gradient as a limit, differentiating polynomials and xⁿ, the chain rule, stationary points, increasing and decreasing functions, tangents and normals, second derivatives, rates of change." },
-          { n: "Coordinate geometry", m: "Jan", s: "The equation of a straight line, problems involving straight lines, graphs and their equations." },
-          { n: "Circular measure and trigonometry", m: "Jan", s: "Radians, arc length and sector area, sine/cosine/tangent for any angle, exact values for 30°, 45° and 60°, identities, inverse relations, simple trigonometric equations." },
-          { n: "Series", m: "Feb", s: "Binomial expansion of (a + b)ⁿ, arithmetic and geometric progressions, nth term, sum of n terms, sum to infinity." },
-          { n: "Integration", m: "Mar", s: "Integration as the reverse of differentiation, (a + bx)ⁿ, definite integrals, areas bounded by curves, volumes of revolution." }
+          { n: "Completing the square for a quadratic polynomial", m: "Aug" },
+          { n: "The discriminant of a quadratic polynomial", m: "Aug" },
+          { n: "Solving quadratic equations by completing the square", m: "Aug" },
+          { n: "Solving quadratic inequalities in one unknown", m: "Aug" },
+          { n: "Solving simultaneous equations", m: "Aug" },
+          { n: "Equations that are quadratic in some function of x", m: "Aug" },
+          { n: "Modulus of a linear function", m: "Oct" },
+          { n: "Dividing a polynomial by a linear or quadratic polynomial", m: "Oct" },
+          { n: "The factor theorem and the remainder theorem", m: "Oct" },
+          { n: "Partial fractions", m: "Oct" }
         ]
       },
       {
-        name: "Probability & Statistics 1",
+        name: "Functions",
         topics: [
-          { n: "Representation of data", m: "Nov", s: "Discrete, continuous, grouped and ungrouped data; presenting data; mean, median and mode; range, interquartile range and standard deviation; grouped data." },
-          { n: "Probability, permutations and combinations", m: "Apr", s: "Permutations and combinations, evaluating probabilities, Venn diagrams, mutually exclusive, independent and dependent events, conditional probability." }
+          { n: "Function, domain, range, one-one and many-one", m: "Sep" },
+          { n: "Identifying the range of a given function", m: "Sep" },
+          { n: "Deciding whether a function is one-one or many-one", m: "Sep" },
+          { n: "The graphical relation between a one-one function and its inverse", m: "Sep" },
+          { n: "Transformations of functions", m: "Sep" }
+        ]
+      },
+      {
+        name: "Differentiation",
+        topics: [
+          { n: "The gradient of a curve as a limit", m: "Nov" },
+          { n: "Differentiating a polynomial", m: "Nov" },
+          { n: "Differentiating xⁿ", m: "Nov" },
+          { n: "Differentiating composite functions using the chain rule", m: "Nov" },
+          { n: "Locating stationary points and determining their nature", m: "Nov" },
+          { n: "Identifying increasing and decreasing functions", m: "Nov" },
+          { n: "Gradients, tangents and normals", m: "Nov" },
+          { n: "Second derivatives", m: "Nov" },
+          { n: "Applying differentiation to rates of change", m: "Nov" }
+        ]
+      },
+      {
+        name: "Coordinate geometry",
+        topics: [
+          { n: "Finding the equation of a straight line", m: "Jan" },
+          { n: "Solving problems involving straight lines", m: "Jan" },
+          { n: "Graphs and their equations", m: "Jan" }
+        ]
+      },
+      {
+        name: "Circular measure and trigonometry",
+        topics: [
+          { n: "Radians", m: "Jan" },
+          { n: "Arc length and sector area of a circle", m: "Jan" },
+          { n: "Sine, cosine and tangent for any angle", m: "Feb" },
+          { n: "Graphs of the sine, cosine and tangent functions", m: "Feb" },
+          { n: "Exact values of sine, cosine and tangent of 30°, 45° and 60°", m: "Feb" },
+          { n: "Identities connecting sin x, cos x and tan x", m: "Feb" },
+          { n: "Principal values of inverse trigonometric relations", m: "Feb" },
+          { n: "Solving simple trigonometric equations", m: "Feb" }
+        ]
+      },
+      {
+        name: "Series",
+        topics: [
+          { n: "Expanding expressions of the form (a + b)ⁿ", m: "Feb" },
+          { n: "Arithmetic progressions", m: "Feb" },
+          { n: "Geometric progressions", m: "Feb" },
+          { n: "The nth term of an arithmetic or geometric progression", m: "Feb" },
+          { n: "The sum of the first n terms of a progression", m: "Feb" },
+          { n: "The sum to infinity of a convergent geometric progression", m: "Feb" }
+        ]
+      },
+      {
+        name: "Integration",
+        topics: [
+          { n: "Integration as the reverse process of differentiation", m: "Mar" },
+          { n: "Integrating (a + bx)ⁿ for rational n", m: "Mar" },
+          { n: "Definite integrals", m: "Mar" },
+          { n: "Areas bounded by curves and the coordinate axes", m: "Mar" },
+          { n: "Using integration to find a volume of revolution", m: "Mar" }
+        ]
+      },
+      {
+        name: "Probability & Statistics 1 — Representation of data",
+        topics: [
+          { n: "Measures of central tendency", m: "Nov" },
+          { n: "Discrete, continuous, grouped and ungrouped data", m: "Nov" },
+          { n: "Presenting data", m: "Nov" },
+          { n: "Calculating the mean, median and mode", m: "Nov" },
+          { n: "Measures of variation: range, interquartile range and standard deviation", m: "Nov" },
+          { n: "Mean and standard deviation of grouped and ungrouped data", m: "Nov" }
+        ]
+      },
+      {
+        name: "Probability & Statistics 1 — Probability",
+        topics: [
+          { n: "Problems involving permutations and combinations", m: "Apr" },
+          { n: "Evaluating probabilities", m: "Apr" },
+          { n: "Venn diagrams and probabilities", m: "Apr" },
+          { n: "Mutually exclusive, independent and dependent events", m: "Apr" },
+          { n: "Conditional probability", m: "Apr" }
         ]
       }
     ]
@@ -1224,31 +1430,151 @@ const TRACKS = {
     tag: "cambridge",
     strands: [
       {
-        name: "Pure Mathematics 3",
+        name: "Pure Mathematics 3 — Algebra",
         topics: [
-          { n: "Algebra: the modulus function", m: "Aug", s: "The modulus function, graphs of y = |f(x)| for linear f, solving modulus inequalities." },
-          { n: "Polynomials", m: "Aug", s: "Division of polynomials, the factor theorem, the remainder theorem." },
-          { n: "Further algebra", m: "Aug", s: "Improper algebraic fractions, partial fractions, binomial expansion of (1 + x)ⁿ and (a + x)ⁿ, partial fractions with binomial expansions." },
-          { n: "Logarithmic and exponential functions", m: "Sep", s: "Logarithms to base 10 and base a, the laws of logarithms, solving logarithmic and exponential equations and inequalities, natural logarithms, transforming a relationship to linear form." },
-          { n: "Trigonometry", m: "Sep", s: "Cosecant, secant and cotangent; compound angle formulae; double angle formulae; further identities; a sin θ + b cos θ in R sin(θ ± α) and R cos(θ ± α) form." },
-          { n: "Differentiation", m: "Oct", s: "The product and quotient rules; derivatives of eˣ, ln x and trigonometric functions; implicit and parametric differentiation; the derivative of tan⁻¹x." },
-          { n: "Integration", m: "Nov", s: "Integration of exponential functions, 1/(ax + b), sin(ax + b), cos(ax + b), sec²(ax + b); further trigonometric integration; the trapezium rule." },
-          { n: "Further calculus", m: "Jan", s: "Integration of 1/(x² + a²) and kf′(x)/f(x), integration by substitution, partial fractions in integration, integration by parts." },
-          { n: "Numerical solution of equations", m: "Jan", s: "Finding a starting point, improving the solution, iterative processes." },
-          { n: "Vectors", m: "Feb", s: "Displacement and translation vectors, position vectors, the scalar product, the vector equation of a line, intersection of two lines." },
-          { n: "Differential equations", m: "Feb", s: "Separating the variables, forming a differential equation from a problem." },
-          { n: "Complex numbers", m: "Feb", s: "Imaginary numbers, complex arithmetic, the complex plane, solving equations, loci." }
+          { n: "The modulus function", m: "Aug" },
+          { n: "Graphs of y = |f(x)| where f(x) is linear", m: "Aug" },
+          { n: "Solving modulus inequalities", m: "Aug" },
+          { n: "Division of polynomials", m: "Aug" },
+          { n: "The factor theorem", m: "Aug" },
+          { n: "The remainder theorem", m: "Aug" }
         ]
       },
       {
-        name: "Probability & Statistics 2",
+        name: "Pure Mathematics 3 — Further algebra",
         topics: [
-          { n: "Hypothesis testing", m: "Sep", s: "Introduction to hypothesis testing, one-tailed and two-tailed tests, Type I and Type II errors." },
-          { n: "The Poisson distribution", m: "Oct", s: "Introduction, adapting for different intervals, as an approximation to the binomial, the normal approximation to the Poisson, hypothesis testing with the Poisson." },
-          { n: "Linear combinations of random variables", m: "Nov", s: "Expectation and variance, sums and differences of independent random variables, working with normal distributions, linear combinations of Poisson distributions." },
-          { n: "Continuous random variables", m: "Nov", s: "Introduction, the median and other percentiles, expectation and variance." },
-          { n: "Sampling", m: "Feb", s: "Introduction to sampling, the distribution of sample means." },
-          { n: "Estimation", m: "Feb", s: "Unbiased estimates of population mean and variance, hypothesis testing of the population mean, confidence intervals for a population mean and proportion." }
+          { n: "Improper algebraic fractions", m: "Aug" },
+          { n: "Partial fractions", m: "Aug" },
+          { n: "Binomial expansion of (1 + x)ⁿ", m: "Sep" },
+          { n: "Binomial expansion of (a + x)ⁿ", m: "Sep" },
+          { n: "Partial fractions and binomial expansions", m: "Sep" }
+        ]
+      },
+      {
+        name: "Pure Mathematics 3 — Logarithmic and exponential functions",
+        topics: [
+          { n: "Logarithms to base 10", m: "Sep" },
+          { n: "Logarithms to base a", m: "Sep" },
+          { n: "The laws of logarithms", m: "Sep" },
+          { n: "Solving logarithmic equations", m: "Sep" },
+          { n: "Solving exponential equations", m: "Sep" },
+          { n: "Solving exponential inequalities", m: "Sep" },
+          { n: "Natural logarithms", m: "Sep" },
+          { n: "Transforming a relationship to linear form", m: "Sep" }
+        ]
+      },
+      {
+        name: "Pure Mathematics 3 — Trigonometry",
+        topics: [
+          { n: "The cosecant, secant and cotangent ratios", m: "Oct" },
+          { n: "Compound angle formulae", m: "Oct" },
+          { n: "Double angle formulae", m: "Oct" },
+          { n: "Further trigonometric identities", m: "Oct" },
+          { n: "Expressing a sin θ + b cos θ as R sin(θ ± α) or R cos(θ ± α)", m: "Oct" }
+        ]
+      },
+      {
+        name: "Pure Mathematics 3 — Differentiation",
+        topics: [
+          { n: "The product rule", m: "Oct" },
+          { n: "The quotient rule", m: "Oct" },
+          { n: "Derivatives of exponential functions", m: "Oct" },
+          { n: "Derivatives of natural logarithmic functions", m: "Oct" },
+          { n: "Derivatives of trigonometric functions", m: "Oct" },
+          { n: "Implicit differentiation", m: "Oct" },
+          { n: "Parametric differentiation", m: "Oct" },
+          { n: "The derivative of tan⁻¹x", m: "Oct" }
+        ]
+      },
+      {
+        name: "Pure Mathematics 3 — Integration",
+        topics: [
+          { n: "Integration of exponential functions", m: "Nov" },
+          { n: "Integration of 1/(ax + b)", m: "Nov" },
+          { n: "Integration of sin(ax + b), cos(ax + b) and sec²(ax + b)", m: "Nov" },
+          { n: "Further integration of trigonometric functions", m: "Nov" },
+          { n: "The trapezium rule", m: "Nov" },
+          { n: "Integration of 1/(x² + a²)", m: "Jan" },
+          { n: "Integration of kf′(x)/f(x)", m: "Jan" },
+          { n: "Integration by substitution", m: "Jan" },
+          { n: "The use of partial fractions in integration", m: "Jan" },
+          { n: "Integration by parts", m: "Jan" }
+        ]
+      },
+      {
+        name: "Pure Mathematics 3 — Numerical solution of equations",
+        topics: [
+          { n: "Finding a starting point", m: "Jan" },
+          { n: "Improving your solution", m: "Jan" },
+          { n: "Using iterative processes to solve problems", m: "Jan" }
+        ]
+      },
+      {
+        name: "Pure Mathematics 3 — Vectors",
+        topics: [
+          { n: "Displacement or translation vectors", m: "Feb" },
+          { n: "Position vectors", m: "Feb" },
+          { n: "The scalar product", m: "Feb" },
+          { n: "The vector equation of a line", m: "Feb" },
+          { n: "Intersection of two lines", m: "Feb" }
+        ]
+      },
+      {
+        name: "Pure Mathematics 3 — Differential equations",
+        topics: [
+          { n: "The technique of separating the variables", m: "Feb" },
+          { n: "Forming a differential equation from a problem", m: "Feb" }
+        ]
+      },
+      {
+        name: "Pure Mathematics 3 — Complex numbers",
+        topics: [
+          { n: "Imaginary numbers", m: "Feb" },
+          { n: "Complex numbers", m: "Feb" },
+          { n: "The complex plane", m: "Feb" },
+          { n: "Solving equations with complex roots", m: "Feb" },
+          { n: "Loci in the complex plane", m: "Feb" }
+        ]
+      },
+      {
+        name: "Probability & Statistics 2 — Hypothesis testing",
+        topics: [
+          { n: "Introduction to hypothesis testing", m: "Sep" },
+          { n: "One-tailed and two-tailed hypothesis tests", m: "Sep" },
+          { n: "Type I and Type II errors", m: "Sep" }
+        ]
+      },
+      {
+        name: "Probability & Statistics 2 — The Poisson distribution",
+        topics: [
+          { n: "Introduction to the Poisson distribution", m: "Oct" },
+          { n: "Adapting the Poisson distribution for different intervals", m: "Oct" },
+          { n: "The Poisson distribution as an approximation to the binomial", m: "Oct" },
+          { n: "The normal distribution as an approximation to the Poisson", m: "Oct" },
+          { n: "Hypothesis testing with the Poisson distribution", m: "Oct" }
+        ]
+      },
+      {
+        name: "Probability & Statistics 2 — Random variables",
+        topics: [
+          { n: "Expectation and variance", m: "Nov" },
+          { n: "Sum and difference of independent random variables", m: "Nov" },
+          { n: "Working with normal distributions", m: "Nov" },
+          { n: "Linear combinations of Poisson distributions", m: "Nov" },
+          { n: "Introduction to continuous random variables", m: "Nov" },
+          { n: "The median and other percentiles of a continuous random variable", m: "Nov" },
+          { n: "The expectation and variance of a continuous random variable", m: "Nov" }
+        ]
+      },
+      {
+        name: "Probability & Statistics 2 — Sampling and estimation",
+        topics: [
+          { n: "Introduction to sampling", m: "Feb" },
+          { n: "The distribution of sample means", m: "Feb" },
+          { n: "Unbiased estimates of population mean and variance", m: "Feb" },
+          { n: "Hypothesis testing of the population mean", m: "Feb" },
+          { n: "Confidence intervals for a population mean", m: "Feb" },
+          { n: "Confidence intervals for a population proportion", m: "Feb" }
         ]
       }
     ]

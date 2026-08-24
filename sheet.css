@@ -337,6 +337,57 @@ table.rubric-edit button.x {
 .sheet .space-2 { height: 74px; }
 .sheet .space-3 { height: 130px; }
 
+/* ---------- Handwriting practice (tracing numerals) ----------
+   A solid model, then hollow numerals to trace over, then empty squares.
+   The hollow effect uses text-stroke with a transparent fill, which prints as
+   a clean outline; browsers without it fall back to light grey, still
+   traceable. */
+.sheet .trace-block { margin: 6px 0 10px; break-inside: avoid; page-break-inside: avoid; }
+
+.sheet .trace-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-inline-start: 22px;
+}
+
+.sheet .trace-cell {
+  width: 78px;
+  height: 78px;
+  border: 1px solid #999;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* faint quarter guides, as on handwriting paper */
+  background:
+    linear-gradient(to right, transparent 49.5%, #e4e4e4 49.5%, #e4e4e4 50.5%, transparent 50.5%),
+    linear-gradient(to bottom, transparent 49.5%, #e4e4e4 49.5%, #e4e4e4 50.5%, transparent 50.5%);
+}
+
+.sheet .trace-glyph {
+  font-size: 54px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.sheet .trace-cell.model .trace-glyph { color: #000; }
+
+.sheet .trace-cell.guide .trace-glyph {
+  color: #cfcfcf;
+  -webkit-text-stroke: 1.2px #9a9a9a;
+  text-stroke: 1.2px #9a9a9a;
+}
+@supports (-webkit-text-stroke: 1px black) {
+  .sheet .trace-cell.guide .trace-glyph { color: transparent; }
+}
+
+.sheet .trace-word {
+  padding-inline-start: 22px;
+  margin-top: 4px;
+  font-size: 0.9em;
+}
+
 /* Multiple-choice options — two columns, so four options take two lines and a
    long option can still run the full width. */
 .sheet .mcq-opts {
