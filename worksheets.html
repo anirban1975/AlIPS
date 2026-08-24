@@ -72,25 +72,44 @@
       <!-- Blueprint: one row per question (or per part, for exams) -->
       <div class="panel-group hidden" id="blueprint-opts">
         <label>Blueprint <span class="hint" id="bp-hint"></span></label>
-        <table class="rubric-edit bp" id="blueprint">
-          <thead>
-            <tr><th>Q</th><th>Topic</th><th>Level</th><th>Mk</th><th></th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+        <div class="bp-scroll">
+          <table class="rubric-edit bp" id="blueprint">
+            <thead>
+              <tr>
+                <th title="Question number">Q</th>
+                <th title="Sub-part letter, set by the order of the rows">Part</th>
+                <th>Topic</th>
+                <th title="Difficulty of this sub-part">Level</th>
+                <th title="MCQ multiple choice · SAQ short answer · LAQ long answer">Type</th>
+                <th title="AO1 knowledge and understanding · AO2 reasoning, interpretation and communication">AO</th>
+                <th title="Marks for this sub-part">Mk</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="row-btns bp-add-row">
+          <label class="sub-inline" for="bp-parts">Sub-parts</label>
+          <input id="bp-parts" type="number" min="1" max="8" value="3">
+          <button id="bp-addq" class="mini-btn" title="Add a question with this many sub-parts">+ Question</button>
+          <button id="bp-add" class="mini-btn" title="Add one more sub-part to the last question">+ Sub-part</button>
+        </div>
         <div class="row-btns">
-          <button id="bp-add" class="mini-btn">+ Row</button>
           <button id="bp-fill" class="mini-btn" title="Create rows from the topics ticked above">Fill from topics</button>
           <button id="bp-clear" class="mini-btn">Clear</button>
         </div>
-        <p class="hint" id="bp-total"></p>
+        <p class="hint bp-tally" id="bp-total"></p>
         <details class="bp-paste">
           <summary>Paste from a spreadsheet</summary>
-          <p class="hint">One row per line: <code>Q, Topic, Level, Marks</code> —
-            commas or tabs. Level: Easy / Medium / Challenging.</p>
-          <textarea id="bp-text" rows="5" placeholder="1, Factorising, Easy, 2
-1, Factorising, Medium, 3
-2, Pythagoras' theorem, Challenging, 5"></textarea>
+          <p class="hint">One line per sub-part:
+            <code>Q, Topic, Level, Type, AO, Marks</code> — commas or tabs.
+            Level: Easy / Medium / Challenging. Type: MCQ / SAQ / LAQ.
+            AO: AO1 / AO2. Type and AO may be left out.</p>
+          <textarea id="bp-text" rows="5" placeholder="1, Factorising, Easy, MCQ, AO1, 2
+1, Factorising, Medium, SAQ, AO1, 3
+1, Factorising, Challenging, LAQ, AO2, 5
+2, Pythagoras' theorem, Medium, SAQ, AO2, 4"></textarea>
           <button id="bp-import" class="mini-btn">Load these rows</button>
           <p class="hint" id="bp-import-msg"></p>
         </details>

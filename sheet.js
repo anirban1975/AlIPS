@@ -46,8 +46,24 @@
   // Put maths-aware text into an element.
   const setMath = (node, text) => { node.innerHTML = mathHTML(text); return node; };
 
-  const LETTERS = ["a", "b", "c", "d"];
+  const LETTERS = ["a", "b", "c", "d", "e", "f", "g", "h"];
   const DIFF_NAMES = { 1: "Easy", 2: "Medium", 3: "Challenging", mixed: "Mixed" };
+
+  // Question types. `space` is the working room printed after the part: an MCQ
+  // needs none, a short answer a line or two, a long answer a worked page.
+  const TYPES = {
+    MCQ: { name: "MCQ", full: "Multiple choice", space: 0 },
+    SAQ: { name: "SAQ", full: "Short answer", space: 1 },
+    LAQ: { name: "LAQ", full: "Long answer", space: 3 }
+  };
+  const TYPE_KEYS = ["MCQ", "SAQ", "LAQ"];
+
+  // Assessment objectives, as Cambridge defines them for 0580 and 9709.
+  const AOS = {
+    AO1: "Knowledge and understanding of mathematical techniques",
+    AO2: "Reasoning, interpretation and communication"
+  };
+  const AO_KEYS = ["AO1", "AO2"];
 
   // Department defaults — teachers can change every one of these in the panel.
   const DEFAULT_PART_RUBRIC = [
@@ -250,6 +266,8 @@
     return sel;
   }
 
+  // One blueprint row is one sub-part: Q number, its part letter, topic,
+  // difficulty, question type (MCQ / SAQ / LAQ), assessment objective, marks.
   function blueprintRow(row) {
     const tr = el("tr");
 
@@ -263,20 +281,45 @@
     qtd.appendChild(q);
     tr.appendChild(qtd);
 
+    // Part letter, derived from position within the question — not editable.
+    const ptd = el("td", "prt");
+    ptd.appendChild(el("span", "bpart", ""));
+    tr.appendChild(ptd);
+
     const ttd = el("td", "topic");
     ttd.appendChild(bpTopicSelect(row.topic));
     tr.appendChild(ttd);
 
+    const mkSelect = (cls, options, value) => {
+      const s = el("select", cls);
+      options.forEach(([v, t]) => {
+        const o = el("option", "", t);
+        o.value = v;
+        s.appendChild(o);
+      });
+      s.value = value;
+      return s;
+    };
+
     const ltd = el("td", "lvl");
-    const l = el("select", "bdiff");
-    [["1", "Easy"], ["2", "Medium"], ["3", "Chall."]].forEach(([v, t]) => {
-      const o = el("option", "", t);
-      o.value = v;
-      l.appendChild(o);
-    });
-    l.value = String(row.diff || 2);
-    ltd.appendChild(l);
+    ltd.appendChild(mkSelect("bdiff", [["1", "Easy"], ["2", "Medium"], ["3", "Chall."]],
+      String(row.diff || 2)));
     tr.appendChild(ltd);
+
+    const tytd = el("td", "typ");
+    const ty = mkSelect("btype", TYPE_KEYS.map((k) => [k, k]),
+      TYPES[row.type] ? row.type : "SAQ");
+    ty.title = TYPES[ty.value].full;
+    ty.addEventListener("change", () => { ty.title = TYPES[ty.value].full; });
+    tytd.appendChild(ty);
+    tr.appendChild(tytd);
+
+    const aotd = el("td", "ao");
+    const ao = mkSelect("bao", AO_KEYS.map((k) => [k, k]), AOS[row.ao] ? row.ao : "AO1");
+    ao.title = AOS[ao.value];
+    ao.addEventListener("change", () => { ao.title = AOS[ao.value]; });
+    aotd.appendChild(ao);
+    tr.appendChild(aotd);
 
     const mtd = el("td", "mk");
     const m = el("input");
@@ -290,7 +333,7 @@
 
     const ktd = el("td", "kill");
     const x = el("button", "x", "×");
-    x.title = "Remove this row";
+    x.title = "Remove this sub-part";
     x.addEventListener("click", () => { tr.remove(); updateBpTotal(); });
     ktd.appendChild(x);
     tr.appendChild(ktd);
@@ -311,16 +354,70 @@
       q: Math.max(1, +tr.querySelector(".bq").value || 1),
       topic: tr.querySelector(".btopic").value,
       diff: +tr.querySelector(".bdiff").value || 2,
+      type: tr.querySelector(".btype").value,
+      ao: tr.querySelector(".bao").value,
       marks: Math.max(0, +tr.querySelector(".bmarks").value || 0)
     }));
 
+  // Add one question made of `parts` sub-parts, after the highest Q number.
+  function addQuestion(parts) {
+    const rows = readBlueprint();
+    const qn = rows.length ? Math.max(...rows.map((r) => r.q)) + 1 : 1;
+    const tbody = $("blueprint").querySelector("tbody");
+    const last = rows[rows.length - 1] || {};
+    for (let i = 0; i < parts; i++) {
+      tbody.appendChild(blueprintRow({
+        q: qn,
+        topic: last.topic || (GRADE_GENS[state.grade] || Object.keys(GENERATORS))[0],
+        diff: Math.min(3, i + 1),
+        type: last.type || "SAQ",
+        ao: i === parts - 1 && parts > 1 ? "AO2" : "AO1",
+        marks: last.marks || 2
+      }));
+    }
+    updateBpTotal();
+  }
+
+  // Part letters follow position within the question, so they stay correct
+  // however rows are added, removed or renumbered.
+  function relabelParts() {
+    const trs = [...$("blueprint").querySelectorAll("tbody tr")];
+    const seen = new Map();
+    trs.forEach((tr) => {
+      const q = Math.max(1, +tr.querySelector(".bq").value || 1);
+      const i = seen.get(q) || 0;
+      seen.set(q, i + 1);
+      tr.querySelector(".bpart").textContent = LETTERS[i] ? `(${LETTERS[i]})` : `(${i + 1})`;
+    });
+    // A question with a single part prints without a letter, so show none.
+    trs.forEach((tr) => {
+      const q = Math.max(1, +tr.querySelector(".bq").value || 1);
+      if (seen.get(q) === 1) tr.querySelector(".bpart").textContent = "—";
+    });
+  }
+
   function updateBpTotal() {
+    relabelParts();
     const rows = readBlueprint();
     const marks = rows.reduce((t, r) => t + r.marks, 0);
     const qs = new Set(rows.map((r) => r.q)).size;
-    $("bp-total").textContent = rows.length
-      ? `${rows.length} row(s) · ${qs} question(s) · ${marks} marks`
-      : "No rows yet — add rows, fill from topics, or paste from a spreadsheet.";
+    if (!rows.length) {
+      $("bp-total").textContent =
+        "No sub-parts yet — add a question, fill from topics, or paste from a spreadsheet.";
+      return;
+    }
+    const by = (key) => {
+      const t = {};
+      rows.forEach((r) => { t[r[key]] = (t[r[key]] || 0) + r.marks; });
+      return t;
+    };
+    const ao = by("ao"), ty = by("type");
+    const pct = (v) => (marks ? Math.round((v / marks) * 100) : 0);
+    const aoTxt = AO_KEYS.filter((k) => ao[k]).map((k) => `${k} ${ao[k]} (${pct(ao[k])}%)`).join(" · ");
+    const tyTxt = TYPE_KEYS.filter((k) => ty[k]).map((k) => `${k} ${ty[k]}`).join(" · ");
+    $("bp-total").textContent =
+      `${qs} question(s) · ${rows.length} sub-part(s) · ${marks} marks\n` +
+      `Marks by objective: ${aoTxt}\nMarks by type: ${tyTxt}`;
   }
 
   // Build blueprint rows from the ticked topics and the current quick settings.
@@ -329,10 +426,16 @@
     if (!topics.length) return;
     const diffs = topicDiffs();
     const rows = [];
+    // Seeded defaults: the last part of a multi-part question carries the
+    // reasoning mark, so it starts as AO2; the rest are AO1.
     if (state.mode === "exam") {
       const parts = readPartRubric();
       topics.forEach((id, qi) => {
-        parts.forEach((p) => rows.push({ q: qi + 1, topic: id, diff: p.diff, marks: p.marks }));
+        parts.forEach((p, pi) => rows.push({
+          q: qi + 1, topic: id, diff: p.diff, marks: p.marks,
+          type: p.marks >= 4 ? "LAQ" : "SAQ",
+          ao: pi === parts.length - 1 && parts.length > 1 ? "AO2" : "AO1"
+        }));
       });
     } else {
       const per = Math.max(1, +$("q-count").value || 5);
@@ -341,11 +444,14 @@
       topics.forEach((id) => {
         const setting = diffs[id] || "2";
         for (let i = 0; i < per; i++) {
+          const diff = setting === "mixed" ? (i % 3) + 1 : +setting;
           rows.push({
             q: n++,
             topic: id,
-            diff: setting === "mixed" ? (i % 3) + 1 : +setting,
-            marks
+            diff,
+            marks,
+            type: diff === 3 ? "LAQ" : "SAQ",
+            ao: diff === 3 ? "AO2" : "AO1"
           });
         }
       });
@@ -353,7 +459,9 @@
     buildBlueprint(rows);
   }
 
-  // Accept "1, Factorising, Easy, 2" — commas or tabs, level by name or number.
+  // Accept "1, Factorising, Easy, SAQ, AO1, 2" — commas or tabs, level by name
+  // or number. Type and AO are optional, so the older four-column form
+  // "Q, Topic, Level, Marks" still loads.
   function parseBlueprint(text) {
     const byName = {};
     Object.keys(GENERATORS).forEach((id) => {
@@ -374,17 +482,25 @@
       if (!raw) return;
       const cells = raw.split(/\t|,(?![^(]*\))/).map((c) => c.trim());
       if (cells.length < 2) { bad.push(i + 1); return; }
-      const [qc, tc, lc, mc] = cells;
+      const [qc, tc, lc] = cells;
       if (/^q/i.test(qc) && isNaN(parseInt(qc, 10))) return;   // header line
       const key = String(tc || "").toLowerCase().replace(/^["']|["']$/g, "");
       const topic = byName[key] ||
         Object.keys(byName).find((n) => n.includes(key) && key.length > 3);
       if (!topic) { bad.push(i + 1); return; }
+      // Type, AO and marks are found by what they look like, so a sheet can
+      // carry them in any order after the level — or leave them out entirely.
+      const rest = cells.slice(3);
+      const type = TYPE_KEYS.find((k) => rest.some((c) => c.toUpperCase() === k)) || "SAQ";
+      const ao = AO_KEYS.find((k) => rest.some((c) => c.toUpperCase().replace(/\s/g, "") === k)) || "AO1";
+      const marksCell = rest.find((c) => /^\d+$/.test(c));
       rows.push({
         q: Math.max(1, parseInt(qc, 10) || rows.length + 1),
         topic: byName[topic] || topic,
         diff: levelOf(lc),
-        marks: Math.max(0, parseInt(mc, 10) || 0)
+        type,
+        ao,
+        marks: Math.max(0, parseInt(marksCell, 10) || 0)
       });
     });
     return { rows, bad };
@@ -444,18 +560,10 @@
     return sum > 0 ? sum : questions.length;
   };
 
-  // Blueprint → worksheet: one row is one question.
-  function blueprintWorksheetModel(spec) {
-    const rng = mulberry32(spec.seed);
-    const seen = new Set();
-    const questions = spec.blueprint.map((r) => ({
-      ...draw(rng, r.topic, r.diff, seen), topic: r.topic, diff: r.diff, marks: r.marks
-    }));
-    return { questions, total: paperTotal(questions) };
-  }
-
-  // Blueprint → exam: rows sharing a Q number become the parts of that question.
-  function blueprintExamModel(spec) {
+  // Blueprint → paper. Rows sharing a Q number are the sub-parts of that
+  // question; a question with one row prints without a part letter. The same
+  // shape serves worksheets and exams, so the two stay in step.
+  function blueprintModel(spec) {
     const rng = mulberry32(spec.seed);
     const seen = new Set();
     const groups = new Map();
@@ -464,20 +572,49 @@
       groups.get(r.q).push(r);
     });
     const questions = [...groups.keys()].sort((a, b) => a - b).map((qn) => {
-      const parts = groups.get(qn).map((r, pi) => ({
-        letter: LETTERS[pi] || String(pi + 1),
-        marks: r.marks,
-        diff: r.diff,
-        item: draw(rng, r.topic, r.diff, seen)
-      }));
+      const rows = groups.get(qn);
+      const parts = rows.map((r, pi) => {
+        const item = draw(rng, r.topic, r.diff, seen);
+        const type = TYPES[r.type] ? r.type : "SAQ";
+        // An MCQ needs three distractors; where the generator cannot supply
+        // them the part falls back to a written short answer rather than
+        // printing a choice that gives itself away.
+        let opts = null;
+        if (type === "MCQ") opts = makeOptions(r.topic, r.diff, item, rng);
+        return {
+          letter: LETTERS[pi] || String(pi + 1),
+          single: rows.length === 1,
+          marks: r.marks,
+          diff: r.diff,
+          type: opts ? "MCQ" : (type === "MCQ" ? "SAQ" : type),
+          ao: AOS[r.ao] ? r.ao : "AO1",
+          topic: r.topic,
+          options: opts ? opts.options : null,
+          correct: opts ? opts.correct : -1,
+          item
+        };
+      });
       return {
-        topic: groups.get(qn)[0].topic,
+        topic: rows[0].topic,
         parts,
         total: parts.reduce((t, p) => t + p.marks, 0)
       };
     });
     const grandTotal = questions.reduce((t, q) => t + q.total, 0);
-    return { questions, grandTotal, total: grandTotal };
+    return { questions, grandTotal, total: grandTotal, blueprint: true };
+  }
+
+  // Marks split by assessment objective and by question type — the tally that
+  // makes a blueprint worth writing.
+  function paperBreakdown(model) {
+    const ao = {}, type = {};
+    let total = 0;
+    (model.questions || []).forEach((q) => (q.parts || []).forEach((p) => {
+      ao[p.ao] = (ao[p.ao] || 0) + p.marks;
+      type[p.type] = (type[p.type] || 0) + p.marks;
+      total += p.marks;
+    }));
+    return { ao, type, total };
   }
 
   function examModel(spec) {
@@ -503,17 +640,26 @@
   }
 
   function markSchemeEntries(spec, model) {
-    if (spec.mode === "exam") {
+    if (spec.mode === "exam" || model.blueprint) {
       const out = [];
       model.questions.forEach((q, qi) =>
-        q.parts.forEach((p) =>
-          out.push({ label: `Q${qi + 1} (${p.letter})`, marks: p.marks, item: p.item })));
+        q.parts.forEach((p) => out.push({
+          label: `Q${qi + 1}${p.single ? "" : " (" + p.letter + ")"}`,
+          marks: p.marks, item: p.item, part: p
+        })));
       return out;
     }
     return model.questions.map((item, i) => ({
       label: `Q${i + 1}`, marks: item.marks || 0, item
     }));
   }
+
+  // For an MCQ the mark scheme leads with the option letter the learner
+  // should have chosen, then the working that gets them there.
+  const msAnswer = (e) =>
+    e.part && e.part.type === "MCQ" && e.part.correct >= 0
+      ? `${OPTION_LETTERS[e.part.correct]}  (${e.item.a})`
+      : e.item.a;
 
   // ---------- Page rendering ----------
 
@@ -546,6 +692,66 @@
     return wrap;
   }
 
+  // One sub-part of a blueprint question: its text, marks, options if it is an
+  // MCQ, and working space sized by its question type.
+  function renderPart(p, box, spec) {
+    const row = el("div", "part");
+    const label = p.single ? "" : `(${p.letter})&nbsp; `;
+    const pt = el("span", "ptext");
+    pt.innerHTML = label + mathHTML(p.item.q);
+    row.appendChild(pt);
+    if (p.marks > 0) row.appendChild(el("span", "pmarks", `[${p.marks}]`));
+    box.appendChild(row);
+
+    if (p.type === "MCQ" && p.options) {
+      const opts = el("div", "mcq-opts");
+      p.options.forEach((o, i) => {
+        const cell = el("div", "mcq-opt");
+        cell.innerHTML = `<span class="mcq-let">${OPTION_LETTERS[i]}.</span> ` + mathHTML(o);
+        opts.appendChild(cell);
+      });
+      box.appendChild(opts);
+      return;
+    }
+    // Long answers get a worked page, short answers a line or two; the
+    // teacher's own space setting can still widen a worksheet.
+    const base = TYPES[p.type] ? TYPES[p.type].space : 1;
+    const room = Math.max(base, p.marks >= 4 ? 3 : p.marks >= 3 ? 2 : base);
+    if (room > 0) box.appendChild(el("div", "space-" + Math.min(3, room)));
+  }
+
+  // Marks by assessment objective and question type, printed on the paper so
+  // the blueprint the teacher planned is visible on the paper they hand out.
+  function breakdownTable(model) {
+    const b = paperBreakdown(model);
+    const wrap = el("div", "foot-block");
+    wrap.appendChild(el("p", "tbl-head", "Assessment Objectives"));
+    const t = el("table", "tpl");
+    const head = el("tr");
+    ["Assessment Objective", "Description", "Marks", "%"].forEach((h) => head.appendChild(el("th", "", h)));
+    t.appendChild(head);
+    AO_KEYS.filter((k) => b.ao[k]).forEach((k) => {
+      const tr = el("tr");
+      tr.appendChild(el("td", "", k));
+      tr.appendChild(el("td", "", AOS[k]));
+      tr.appendChild(el("td", "", String(b.ao[k])));
+      tr.appendChild(el("td", "", b.total ? Math.round((b.ao[k] / b.total) * 100) + "%" : "—"));
+      t.appendChild(tr);
+    });
+    const types = TYPE_KEYS.filter((k) => b.type[k]);
+    if (types.length) {
+      const tr = el("tr");
+      tr.appendChild(el("td", "", "Question types"));
+      tr.appendChild(el("td", "",
+        types.map((k) => `${TYPES[k].full} (${k}) ${b.type[k]}`).join(",  ")));
+      tr.appendChild(el("td", "", String(b.total)));
+      tr.appendChild(el("td", "", "100%"));
+      t.appendChild(tr);
+    }
+    wrap.appendChild(t);
+    return wrap;
+  }
+
   function renderWorksheet(spec, model, sheet) {
     sheet.appendChild(letterheadImg());
 
@@ -568,6 +774,24 @@
     r3.appendChild(name);
     meta.appendChild(r3);
     sheet.appendChild(meta);
+
+    // A blueprint worksheet has sub-parts per question; a quick-setup one has
+    // a flat list, and prints exactly as it always has.
+    if (model.blueprint) {
+      model.questions.forEach((q, qi) => {
+        const box = el("div", "ws-q");
+        const qh = el("div", "q-head");
+        qh.appendChild(el("span", "", `Q${qi + 1}.`));
+        if (q.total > 0) qh.appendChild(el("span", "", `[${q.total} Marks]`));
+        box.appendChild(qh);
+        q.parts.forEach((p) => renderPart(p, box, spec));
+        sheet.appendChild(box);
+      });
+      sheet.appendChild(breakdownTable(model));
+      if (spec.rubric) sheet.appendChild(rubricTable(spec, model));
+      sheet.appendChild(worksheetFooter(spec, model));
+      return;
+    }
 
     model.questions.forEach((item, i) => {
       const box = el("div", "ws-q");
@@ -692,18 +916,12 @@
       qh.appendChild(el("span", "", `Q${qi + 1})`));
       qh.appendChild(el("span", "", `[${q.total} Marks]`));
       box.appendChild(qh);
-      q.parts.forEach((p) => {
-        const row = el("div", "part");
-        const label = q.parts.length > 1 ? `(${p.letter})&nbsp; ` : "";
-        const pt = el("span", "ptext");
-        pt.innerHTML = label + mathHTML(p.item.q);
-        row.appendChild(pt);
-        row.appendChild(el("span", "pmarks", `[${p.marks}]`));
-        box.appendChild(row);
-        box.appendChild(el("div", "space-" + (p.marks >= 4 ? 3 : p.marks >= 3 ? 2 : 1)));
-      });
+      q.parts.forEach((p) => renderPart(
+        { ...p, single: p.single !== undefined ? p.single : q.parts.length === 1 }, box, spec));
       sheet.appendChild(box);
     });
+
+    if (model.blueprint) sheet.appendChild(breakdownTable(model));
   }
 
   function renderMarkScheme(spec, model, sheet) {
@@ -714,7 +932,7 @@
       const item = el("div", "ms-item");
       item.appendChild(el("div", "ms-q", `${e.label}${e.marks ? "  [" + e.marks + "]" : ""}`));
       const ansLine = el("div", "ms-ans");
-      ansLine.innerHTML = "Answer: " + mathHTML(e.item.a);
+      ansLine.innerHTML = "Answer: " + mathHTML(msAnswer(e));
       item.appendChild(ansLine);
       (e.item.sol || []).forEach((s) => {
         const line = el("div", "ms-steps");
@@ -800,14 +1018,22 @@ td.right { text-align: right; }
     h += layRow(`Topic: ${esc(spec.topicTitle)}`, `Date: ____________`);
     h += `<p>Name: ______________________________________________________________</p>`;
 
-    model.questions.forEach((item, i) => {
-      if (item.marks > 0) {
-        h += layRow(`<b>Q${i + 1}.</b> ${mathWord(item.q)}`, `[${item.marks}]`);
-      } else {
-        h += `<p><b>Q${i + 1}.</b> ${mathWord(item.q)}</p>`;
-      }
-      if (spec.space > 0) h += spacer(spec.space === 1 ? 26 : spec.space === 2 ? 56 : 96);
-    });
+    if (model.blueprint) {
+      model.questions.forEach((q, qi) => {
+        h += layRow(`<b>Q${qi + 1}.</b>`, q.total > 0 ? `<b>[${q.total} Marks]</b>` : "");
+        q.parts.forEach((p) => { h += wordPart(p, q.parts.length === 1); });
+      });
+      h += wordBreakdown(model);
+    } else {
+      model.questions.forEach((item, i) => {
+        if (item.marks > 0) {
+          h += layRow(`<b>Q${i + 1}.</b> ${mathWord(item.q)}`, `[${item.marks}]`);
+        } else {
+          h += `<p><b>Q${i + 1}.</b> ${mathWord(item.q)}</p>`;
+        }
+        if (spec.space > 0) h += spacer(spec.space === 1 ? 26 : spec.space === 2 ? 56 : 96);
+      });
+    }
 
     h += wordRubric(spec, model);
 
@@ -860,13 +1086,47 @@ td.right { text-align: right; }
 
     model.questions.forEach((q, qi) => {
       h += layRow(`<span class="qhead">Q${qi + 1})</span>`, `<b>[${q.total} Marks]</b>`);
-      q.parts.forEach((p) => {
-        const label = q.parts.length > 1 ? `(${p.letter})&nbsp; ` : "";
-        h += layRow(`&nbsp;&nbsp;&nbsp;${label}${mathWord(p.item.q)}`, `[${p.marks}]`);
-        h += spacer(p.marks >= 4 ? 90 : p.marks >= 3 ? 56 : 28);
-      });
+      q.parts.forEach((p) => { h += wordPart(p, q.parts.length === 1); });
     });
+    if (model.blueprint) h += wordBreakdown(model);
     return h;
+  }
+
+  // Word twin of renderPart(). Word has no flexbox, so options go in a
+  // borderless table, two to a row.
+  function wordPart(p, onlyPart) {
+    const single = p.single !== undefined ? p.single : onlyPart;
+    const label = single ? "" : `(${p.letter})&nbsp; `;
+    let h = layRow(`&nbsp;&nbsp;&nbsp;${label}${mathWord(p.item.q)}`,
+      p.marks > 0 ? `[${p.marks}]` : "");
+    if (p.type === "MCQ" && p.options) {
+      h += `<table class="lay" style="margin-left:22pt"><tr>`;
+      p.options.forEach((o, i) => {
+        if (i && i % 2 === 0) h += `</tr><tr>`;
+        h += `<td style="width:50%"><b>${OPTION_LETTERS[i]}.</b> ${mathWord(o)}</td>`;
+      });
+      h += `</tr></table>`;
+      return h + spacer(6);
+    }
+    const base = TYPES[p.type] ? TYPES[p.type].space : 1;
+    const room = Math.max(base, p.marks >= 4 ? 3 : p.marks >= 3 ? 2 : base);
+    return h + (room > 0 ? spacer(room >= 3 ? 90 : room === 2 ? 56 : 28) : "");
+  }
+
+  function wordBreakdown(model) {
+    const b = paperBreakdown(model);
+    let h = `<p style="margin-top:8pt"><b>Assessment Objectives</b></p><table class="tpl">`;
+    h += `<tr><th>Assessment Objective</th><th>Description</th><th>Marks</th><th>%</th></tr>`;
+    AO_KEYS.filter((k) => b.ao[k]).forEach((k) => {
+      const pct = b.total ? Math.round((b.ao[k] / b.total) * 100) + "%" : "—";
+      h += `<tr><td>${k}</td><td>${esc(AOS[k])}</td><td>${b.ao[k]}</td><td>${pct}</td></tr>`;
+    });
+    const types = TYPE_KEYS.filter((k) => b.type[k]);
+    if (types.length) {
+      const desc = types.map((k) => `${TYPES[k].full} (${k}) ${b.type[k]}`).join(",  ");
+      h += `<tr><td>Question types</td><td>${esc(desc)}</td><td>${b.total}</td><td>100%</td></tr>`;
+    }
+    return h + `</table>`;
   }
 
   function wordMarkScheme(spec, model) {
@@ -874,7 +1134,7 @@ td.right { text-align: right; }
     h += `<p class="title">Mark Scheme — ${esc(spec.mode === "exam" ? spec.title : "Worksheet")} (Grade ${esc(spec.grade)}, Paper ${esc(spec.seed)})</p>`;
     markSchemeEntries(spec, model).forEach((e) => {
       h += `<p style="margin-bottom:0"><b>${esc(e.label)}${e.marks ? "  [" + e.marks + "]" : ""}</b></p>`;
-      h += `<p style="margin:0 0 0 14pt">Answer: ${mathWord(e.item.a)}</p>`;
+      h += `<p style="margin:0 0 0 14pt">Answer: ${mathWord(msAnswer(e))}</p>`;
       (e.item.sol || []).forEach((s) => {
         h += `<p style="margin:0 0 0 14pt">${mathWord(s.t)} <span class="ms-code">${esc(s.m)}</span></p>`;
       });
@@ -963,7 +1223,7 @@ td.right { text-align: right; }
         const uniq = [...new Set(spec.blueprint.map((r) => r.topic))];
         spec.topicTitle = uniq.map((id) => GENERATORS[id].name).join(", ");
       }
-      state.model = spec.mode === "exam" ? blueprintExamModel(spec) : blueprintWorksheetModel(spec);
+      state.model = blueprintModel(spec);
     } else {
       state.model = spec.mode === "exam" ? examModel(spec) : worksheetModel(spec);
     }
@@ -980,13 +1240,14 @@ td.right { text-align: right; }
     $("worksheet-opts").classList.toggle("hidden",
       plan === "blueprint" || state.mode !== "worksheet");
     $("part-rubric-group").classList.toggle("hidden", plan === "blueprint");
+    // The blueprint table has eight columns; give the panel room for them.
+    document.querySelector(".gen-layout").classList.toggle("wide-panel", plan === "blueprint");
     updateBpHint();
   }
 
   function updateBpHint() {
-    $("bp-hint").textContent = state.mode === "exam"
-      ? "— rows with the same Q number become parts (a) (b) (c)"
-      : "— one row per question";
+    $("bp-hint").textContent =
+      "— one line per sub-part; lines sharing a Q number become (a) (b) (c)";
   }
 
   function setMode(mode) {
@@ -1008,17 +1269,22 @@ td.right { text-align: right; }
     setPlan("blueprint");
     if (!readBlueprint().length) fillFromTopics();
   });
+  // "+ Sub-part" adds one more part to the question the last row belongs to.
   $("bp-add").addEventListener("click", () => {
     const rows = readBlueprint();
     const last = rows[rows.length - 1];
-    const nextQ = state.mode === "exam" ? (last ? last.q : 1) : (last ? last.q + 1 : 1);
     $("blueprint").querySelector("tbody").appendChild(blueprintRow({
-      q: nextQ,
+      q: last ? last.q : 1,
       topic: last ? last.topic : (selectedTopics()[0] || (GRADE_GENS[state.grade] || [])[0]),
       diff: last ? last.diff : 2,
+      type: last ? last.type : "SAQ",
+      ao: last ? last.ao : "AO1",
       marks: last ? last.marks : (state.mode === "exam" ? 3 : 1)
     }));
     updateBpTotal();
+  });
+  $("bp-addq").addEventListener("click", () => {
+    addQuestion(Math.max(1, Math.min(8, +$("bp-parts").value || 1)));
   });
   $("bp-fill").addEventListener("click", fillFromTopics);
   $("bp-clear").addEventListener("click", () => buildBlueprint([]));

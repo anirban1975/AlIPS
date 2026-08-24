@@ -5,10 +5,12 @@ Interactive math app for grades 1–12 at Al Injaz International Private School
 curriculum. **The app is English-only** — Arabic was removed at the
 department's request (v0.4). Do not re-introduce bilingual strings.
 
-## Current state (v0.4)
+## Current state (v1.1)
 
-- `index.html` / `app.js` — curriculum browser: grades 1–12 → strands → topics,
-  Cambridge / Oman / Both tags, Student & Teacher views, search
+- `index.html` / `app.js` — curriculum browser: grades 1–12 → stream → strands →
+  topics, built from the department's Annual Syllabus 2026-27. Stream selector
+  for Grades 10–12 (IGCSE/GED, GED Advance/Basic), month filter, Student &
+  Teacher views, search
 - `worksheets.html` / `sheet.css` / `sheet.js` — teacher tool: worksheet and
   exam-paper generator built to the department's Word templates
 - `plan.html` / `plan.css` / `plan.js` — teacher tool: lesson planner and
@@ -19,9 +21,11 @@ department's request (v0.4). Do not re-introduce bilingual strings.
   `GENERATORS`, mapped to grades via `GRADE_GENS`
 - `lessons.js` — topic content library (concept, worked example, key points,
   resource links) used to draft lesson plans and slides
-- `data.js` — curriculum dataset and UI strings (`UI_STRINGS`). `STAGES` holds
-  each Cambridge stage once, `GRADE_STAGES` says which stage each school grade
-  sits in, and `CURRICULUM` (what `app.js` reads) is built from the two
+- `data.js` — curriculum dataset and UI strings (`UI_STRINGS`), transcribed from
+  the seventeen annual plan documents. `TRACKS` holds each syllabus once (with
+  its course book and the month each topic is taught), `GRADE_TRACKS` says which
+  track(s) a grade offers, and `CURRICULUM` (what `app.js` reads) is built from
+  the two
 - `letterhead.png` — the official school letterhead, extracted from the
   department's Word templates and printed at the top of every sheet
 - `letterhead-data.js` — the same image as a base64 data URI, so exported
@@ -58,23 +62,45 @@ questions as `Qn)` with `[N Marks]` and parts `(a) (b) (c)` each marked `[n]`.
 Each question draws all its parts from one topic so the question reads
 coherently.
 
-## Paper plan: Quick setup vs Blueprint (v0.7)
+## Paper plan: Quick setup vs Blueprint (v1.1)
 
 `Paper plan` switches how a paper is specified.
 
 - **Quick setup** — topics × questions-per-topic, difficulty per topic
   (worksheets) or the part rubric (exams). Fast for routine sheets.
-- **Blueprint** — an explicit table, one row per question (worksheets) or per
-  part (exams): `Q | Topic | Level | Marks`. Rows sharing a Q number become
-  the parts (a)(b)(c) of that question, so a single exam question can even
-  draw its parts from **different topics**. Marks are per row, so question
-  totals, the marks-tally table and the grading rubric all follow the plan.
-  `Fill from topics` seeds rows from the quick settings; `Paste from a
-  spreadsheet` accepts comma- or tab-separated lines (header row ignored,
-  topic names matched case-insensitively with a substring fallback, level
-  by name or 1–3) and reports which lines it skipped.
+- **Blueprint** — an explicit table, **one line per sub-part**:
+  `Q | Part | Topic | Level | Type | AO | Marks`. Lines sharing a Q number
+  become the parts (a)(b)(c) of that question, so one question can draw its
+  parts from **different topics**; a question with one line prints with no part
+  letter. The Part column is derived from position, never typed.
+  - **Type** — `MCQ` / `SAQ` / `LAQ`. It sets the working space printed after
+    the part (none / a line or two / a worked page) and, for MCQ, prints
+    options A–D.
+  - **AO** — `AO1` (knowledge and understanding) or `AO2` (reasoning,
+    interpretation and communication). Marks are tallied per objective and
+    printed on the paper as an **Assessment Objectives** table with
+    percentages, alongside the split by question type.
+  - `+ Question` adds a question with N sub-parts; `+ Sub-part` adds one more
+    to the last question. Both worksheets and exams support sub-parts.
+
+`Fill from topics` seeds lines from the quick settings, defaulting the last
+part of a question to AO2 and challenging parts to LAQ. `Paste from a
+spreadsheet` accepts comma- or tab-separated lines (header row ignored, topic
+names matched case-insensitively with a substring fallback, level by name or
+1–3). Type and AO are recognised anywhere after the level and may be omitted,
+so the older `Q, Topic, Level, Marks` form still loads.
 
 Blueprint rows are part of the saved teacher defaults.
+
+**MCQ options** come from `makeOptions()` in `gen.js`: distractors are drawn
+from the *same generator at the same difficulty*, so a wrong option is always
+the answer to a question the learner could plausibly have solved instead.
+`shapeOf()` prefers distractors of the same form as the answer (a "x = 3"
+option under a "write as a single logarithm" question is a giveaway), and
+three same-shape options are preferred over four with an odd one out. Numeric
+near-misses fill any gap. If a generator cannot supply two distinct
+distractors the part silently falls back to SAQ rather than printing a
+dishonest choice. The mark scheme prints the option letter and the answer.
 
 ## Teacher-configurable rubrics (v0.6)
 
@@ -179,17 +205,17 @@ fallback face — that is expected; check sizes, not the letterforms.
 
 ## Important caveats
 
-- Curriculum content in `data.js` and lessons in `lessons.js` are AI-drafted.
-  The math department must verify them against the official Cambridge
-  frameworks (Primary, Lower Secondary, IGCSE, AS) and the Oman syllabus.
-- **The pathway is an assumption, not a fact.** `GRADE_STAGES` in `data.js`
-  assumes Grades 1–6 = Primary Stages 1–6, Grades 7–9 = Lower Secondary
-  Stages 7–9, Grade 10 = IGCSE 0580, Grade 11 = AS 9709, Grade 12 = A Level
-  9709. Only Grades 11–12 are confirmed (by the department's own Grade 11
-  Probability & Statistics 1 paper). A school running IGCSE over Grades 9–10
-  shifts everything below by one year — the header comment in `data.js` gives
-  the replacement table. Generator years live in the `grades` array on each
-  generator in `gen.js` and must be shifted to match.
+- Curriculum content in `data.js` is transcribed from the department's own
+  Annual Syllabus 2026-27 (seventeen PDFs, one per grade and stream). Lessons
+  in `lessons.js` are still AI-drafted and need department review.
+- **The pathway comes from the annual plans, not from a guess.** `GRADE_TRACKS`
+  in `data.js`: Grades 1–6 Primary Stages 1–6; Grade 7 Lower Secondary Stages
+  7 **and** 8; Grade 8 Stages 8 **and** 9; Grade 9 IGCSE 0580 year 1; Grade 10
+  IGCSE year 2 **or** GED; Grade 11 AS 9709 **or** GED Advance / Basic; Grade
+  12 A Level 9709 (PM3 **and** S2) **or** GED Advance / Basic. Lower Secondary
+  is compressed so IGCSE can start in Grade 9 and AS in Grade 11.
+  Generator years live in the `grades` array on each generator in `gen.js` and
+  must be kept in step with this.
 - No hard-coded YouTube video IDs — research links are searches. A teacher can
   pin a vetted video by setting `yt: "<videoId>"` on a lesson; it then embeds.
 

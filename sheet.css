@@ -10,8 +10,12 @@
   padding: 0 24px;
 }
 
+/* The blueprint table needs eight columns, so the panel widens for it. */
+.gen-layout.wide-panel { grid-template-columns: 500px 1fr; max-width: 1400px; }
+
 @media (max-width: 860px) {
-  .gen-layout { grid-template-columns: 1fr; }
+  .gen-layout,
+  .gen-layout.wide-panel { grid-template-columns: 1fr; }
 }
 
 .gen-panel {
@@ -137,11 +141,37 @@ table.rubric-edit input, table.rubric-edit select {
 table.rubric-edit td.narrow { width: 62px; }
 
 /* Blueprint table — widths must be on the header row for table-layout: fixed */
-table.bp { table-layout: fixed; }
-table.bp th:nth-child(1), table.bp td:nth-child(1) { width: 42px; }
-table.bp th:nth-child(3), table.bp td:nth-child(3) { width: 76px; }
-table.bp th:nth-child(4), table.bp td:nth-child(4) { width: 46px; }
-table.bp th:nth-child(5), table.bp td:nth-child(5) { width: 22px; }
+/* Q | Part | Topic | Level | Type | AO | Mk | × — wider than the panel, so it
+   scrolls sideways inside its own box rather than squeezing the selects. */
+.bp-scroll { overflow-x: auto; padding-bottom: 2px; }
+
+table.bp { table-layout: fixed; min-width: 470px; }
+table.bp th:nth-child(1), table.bp td:nth-child(1) { width: 38px; }
+table.bp th:nth-child(2), table.bp td:nth-child(2) { width: 34px; }
+table.bp th:nth-child(4), table.bp td:nth-child(4) { width: 72px; }
+table.bp th:nth-child(5), table.bp td:nth-child(5) { width: 60px; }
+table.bp th:nth-child(6), table.bp td:nth-child(6) { width: 58px; }
+table.bp th:nth-child(7), table.bp td:nth-child(7) { width: 44px; }
+table.bp th:nth-child(8), table.bp td:nth-child(8) { width: 22px; }
+
+table.bp td.prt { text-align: center; color: var(--ink-soft); font-size: 0.76rem; }
+
+.bp-add-row { align-items: center; gap: 6px; }
+.bp-add-row .sub-inline { font-size: 0.74rem; font-weight: 600; text-transform: none; }
+.bp-add-row input[type="number"] {
+  width: 46px;
+  padding: 5px 4px;
+  text-align: center;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-family: inherit;
+  font-size: 0.8rem;
+  -moz-appearance: textfield;
+}
+.bp-add-row input[type="number"]::-webkit-outer-spin-button,
+.bp-add-row input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+.bp-tally { white-space: pre-line; line-height: 1.55; }
 table.bp input, table.bp select { padding: 4px 3px; font-size: 0.78rem; }
 /* Hide number spinners so the digits themselves have room */
 table.bp input[type="number"] { -moz-appearance: textfield; text-align: center; }
@@ -284,6 +314,22 @@ table.rubric-edit button.x {
 .sheet .space-1 { height: 34px; }
 .sheet .space-2 { height: 74px; }
 .sheet .space-3 { height: 130px; }
+
+/* Multiple-choice options — two columns, so four options take two lines and a
+   long option can still run the full width. */
+.sheet .mcq-opts {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2px 24px;
+  margin: 4px 0 8px;
+  padding-inline-start: 40px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.sheet .mcq-opt { white-space: pre-line; }
+.sheet .mcq-let { font-weight: 700; margin-inline-end: 4px; }
+
+.sheet .tbl-head { font-weight: 700; margin: 10px 0 3px; }
 
 /* Worksheet question list */
 .sheet .ws-q {
