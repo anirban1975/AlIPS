@@ -11,6 +11,13 @@
 .primary-btn.present-btn { background: #1d7a3f; }
 .primary-btn.pptx { background: #c43e1c; }   /* PowerPoint orange */
 
+#track-group { display: flex; flex-direction: column; gap: 6px; }
+#topic-note { line-height: 1.45; }
+#topic-note.warn { color: #a2540f; }
+
+/* Blank ruled space on a plan for a topic with no generated questions. */
+.sheet .to-write { color: #666; margin-top: 4px; }
+
 /* ---------- Lesson plan ---------- */
 
 .sheet .plan-sec { margin-top: 12px; break-inside: avoid; page-break-inside: avoid; }

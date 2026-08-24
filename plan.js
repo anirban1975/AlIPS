@@ -33,14 +33,188 @@
   const mathPlainText = (t) => String(t)
     .replace(FRAC_RE, "$1/$2").replace(RAD_RE, "√$1");
 
-  const state = { view: "plan", grade: 5, topic: null, model: null, spec: null, slide: 0, revealed: false };
+  const state = { view: "plan", grade: 5, track: 0, topic: null, topics: [],
+                  model: null, spec: null, slide: 0, revealed: false };
+
+  // ---------- Curriculum topics → question generators ----------
+  // The topic list comes from the annual syllabus (data.js), so every topic the
+  // department teaches can be planned. Where a topic also has a question
+  // generator, the plan gets starter, practice and homework questions too;
+  // where it does not, the plan is still drafted, just without them.
+
+  const STOPWORDS = new Set(["a", "an", "the", "of", "and", "or", "to", "in", "on",
+    "for", "with", "by", "from", "as", "is", "are", "its", "their", "using", "use"]);
+
+  // Lowercase, strip punctuation, drop filler words, and take a crude stem so
+  // "circle" matches "circles" and "equation" matches "equations".
+  const words = (s) => String(s).toLowerCase()
+    .replace(/[^a-z0-9 ]+/g, " ")
+    .split(/\s+/)
+    .filter((w) => w && !STOPWORDS.has(w))
+    .map((w) => w.replace(/(ies)$/, "y").replace(/(es|s)$/, ""));
+
+  // Curriculum wording that no amount of word matching will connect to the
+  // generator that actually covers it. Primary needs most of these: the annual
+  // plan says "Finding totals" and "Taking away" where the generators say
+  // "Addition within 20" and "Subtraction within 20". Add to this table as
+  // more generators are written.
+  const TOPIC_ALIASES = {
+    // Stage 1-2 number
+    "adding numbers by counting on": "addWithin20",
+    "counting on for addition": "addWithin20",
+    "finding totals": "addWithin20",
+    "addition facts to 5": "addWithin20",
+    "pairs that total 10": "addWithin20",
+    "pairs that total 20": "addWithin20",
+    "equivalent addition facts": "addWithin20",
+    "adding small numbers": "addWithin20",
+    "combining sets of objects to add to 20": "addWithin20",
+    "adding amounts up to 20": "addWithin20",
+    "addition and subtraction facts for 10": "addWithin20",
+    "addition and subtraction facts for 20": "addWithin20",
+    "addition and subtraction with numbers to 20": "addWithin20",
+    "subtracting numbers by counting back": "subWithin20",
+    "counting back for subtraction": "subWithin20",
+    "taking away": "subWithin20",
+    "taking away a small number of objects": "subWithin20",
+    "finding the difference": "subWithin20",
+    "subtracting amounts up to 20": "subWithin20",
+    "subtracting on a number line": "subWithin20",
+    "counting up on a number line to find the difference": "subWithin20",
+    "tens and ones making numbers": "placeValue",
+    "tens and ones breaking up numbers": "placeValue",
+    "tens and ones": "placeValue",
+    // Stage 2-3 multiplication and division
+    "counting in twos fives and tens": "timesTables",
+    "multiplication as repeated addition": "timesTables",
+    "multiplication tables of 1 and 2": "timesTables",
+    "multiplication tables of 5 and 10": "timesTables",
+    "multiplication tables of 2 4 and 8": "timesTables",
+    "multiplication tables of 3 6 and 9": "timesTables",
+    "learning multiplication tables": "timesTables",
+    "multiples of 2 5 and 10": "timesTables",
+    "division as sharing": "divisionRemainder",
+    "division as grouping": "divisionRemainder",
+    "division with and without remainders": "divisionRemainder",
+    "sharing for division": "divisionRemainder",
+    "grouping for division": "divisionRemainder",
+    "adding pairs of two digit numbers": "columnAdd",
+    "adding pairs of 2 digit numbers": "columnAdd",
+    "adding pairs of 3 digit numbers": "columnAdd",
+    "adding two digit and one digit numbers": "columnAdd",
+    "adding pairs of 2 digit and 3 digit numbers": "columnAdd",
+    "subtracting two digit numbers": "columnSub",
+    "subtracting 2 digit numbers": "columnSub",
+    "subtracting with 3 digit numbers": "columnSub",
+    "subtracting 2 digit numbers from 3 digit numbers": "columnSub",
+    "subtracting a one digit number from a two digit number": "columnSub",
+    "fractions of a group": "fractionOfAmount",
+    "divide to find fractions": "fractionOfAmount",
+    "fractions of shapes and quantities": "fractionOfAmount",
+    "fractions as operators": "fractionOfAmount",
+    "percentage of shapes and quantities": "percentOfAmount",
+    "percentages": "percentOfAmount",
+    "introducing percentages": "percentOfAmount",
+    "multiplying larger numbers": "longMultiplication",
+    "multiplying 2 digit numbers": "longMultiplication",
+    "multiplying a 2 digit number by a 1 digit number": "longMultiplication",
+    "multiplying a 3 digit number by a 1 digit number": "longMultiplication",
+    "multiplying by a 2 digit number": "longMultiplication",
+    "multiplying numbers up to 1000": "longMultiplication",
+    "multiplying whole numbers up to 10 000": "longMultiplication",
+    "calculating angles in triangles": "anglesTriangle",
+    "perimeter and area": "areaPerimeterRect",
+    // Senior wording
+    "logarithmic and exponential functions": "logarithms",
+    "logarithms in other bases": "logarithms",
+    "the laws of logarithms": "logarithms",
+    "the relationship between exponents and logarithms": "logarithms",
+    "using logarithms to solve equations and inequalities": "logarithms",
+    "solving equations of the form a b": "expEquations",
+    "indices standard form and surds": "standardForm",
+    "algebraic indices": "indices",
+    "index laws": "indices",
+    "negative and fractional indices": "indices",
+    "algebraic representation and manipulation": "factorise",
+    "expanding the product of two algebraic expressions": "expandBrackets",
+    "measures of variation": "standardDeviation",
+    "variance and standard deviation": "standardDeviation",
+    "mean median mode and range": "meanOfNumbers",
+    "mode mean median range": "meanOfNumbers",
+    "series": "binomial",
+    "using the binomial expansion to expand brackets": "binomial"
+  };
+
+  // Best-matching generator for a curriculum topic name, or null.
+  //
+  // Every significant word of the shorter of the two names must be matched.
+  // A partial overlap is not good enough: "The binomial and geometric
+  // distributions" shares "binomial" with the binomial *expansion* generator
+  // but is a different topic entirely, and a wrong lesson is worse than none.
+  // A tie between two generators is also treated as no match.
+  function matchGenerator(name) {
+    const alias = TOPIC_ALIASES[String(name).toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim()];
+    if (alias && GENERATORS[alias]) return alias;
+
+    const want = new Set(words(name));
+    if (!want.size) return null;
+    const hits = [];
+    Object.keys(GENERATORS).forEach((id) => {
+      const have = new Set(words(GENERATORS[id].name));
+      const shared = [...want].filter((w) => have.has(w));
+      if (shared.length < Math.min(want.size, have.size)) return;
+      if (!shared.some((w) => w.length >= 5)) return;   // "time" or "area" alone is not enough
+      hits.push(id);
+    });
+    return hits.length === 1 ? hits[0] : null;
+  }
+
+  const trackList = () => {
+    const g = CURRICULUM.find((x) => x.id === state.grade) || CURRICULUM[0];
+    return g.tracks;
+  };
+  const currentTrack = () => {
+    const ts = trackList();
+    return ts[Math.min(state.track, ts.length - 1)];
+  };
+
+  // Flat list of every topic in the current grade and stream, each with the
+  // generator that covers it (or null).
+  function buildTopicRegistry() {
+    const track = currentTrack();
+    const out = [];
+    track.strands.forEach((strand) => {
+      strand.topics.forEach((t) => {
+        const gen = matchGenerator(t.n);
+        out.push({
+          // The key must be unique per topic — two topics can legitimately map
+          // to the same generator, and keying by generator would merge them.
+          key: `${track.key}|${t.n}`,
+          name: t.n,
+          strand: strand.name,
+          month: t.m || "",
+          detail: t.s || "",
+          note: t.t || "",
+          gen
+        });
+      });
+    });
+    state.topics = out;
+    return out;
+  }
+
+  const topicByKey = (key) => state.topics.find((t) => t.key === key) || null;
 
   // ---------- Teacher's own wording, remembered per topic ----------
   const FIELD_KEY = "alips-lesson-fields";     // { [topicId]: {objectives, criteria} }
   const PREF_KEY = "alips-planner-prefs";      // teacher, section, duration
 
+  // Some syllabus topics are written "Algebra: the modulus function"; the
+  // strand prefix belongs on the heading, not inside the objective.
+  const bareTitle = (t) => String(t).replace(/^[^:]{1,28}:\s*/, "");
+
   const draftObjectives = (title) => [
-    `Understand ${title}.`,
+    `Understand ${bareTitle(title)}.`,
     "Apply the method accurately to routine questions.",
     "Explain each step of the reasoning."
   ];
@@ -60,9 +234,12 @@
 
   const linesOf = (id) => $(id).value.split("\n").map((t) => t.trim()).filter(Boolean);
 
-  // Department-approved wording for a topic, falling back to a generic draft.
+  // Department-approved wording, which lives against the question generator, so
+  // it is found by the generator a topic maps to rather than by the topic key.
   function deptFields(topic, title) {
-    const d = (typeof DEPT_FIELDS !== "undefined" && DEPT_FIELDS[topic]) || null;
+    const t = topicByKey(topic);
+    const gid = t ? t.gen : topic;
+    const d = (typeof DEPT_FIELDS !== "undefined" && gid && DEPT_FIELDS[gid]) || null;
     return {
       objectives: d && d.objectives && d.objectives.length ? d.objectives : draftObjectives(title),
       criteria: d && d.criteria && d.criteria.length ? d.criteria : DRAFT_CRITERIA,
@@ -70,9 +247,13 @@
     };
   }
 
-  // Three layers: this teacher's saved wording → department wording → generic draft.
+  // Three layers: this teacher's saved wording → department wording → generic
+  // draft. Wording saved before topics were keyed per syllabus lives under the
+  // generator id, so that is checked too and nothing a teacher wrote is lost.
   function loadFields(topic, title) {
-    const saved = readStore(FIELD_KEY)[topic];
+    const store = readStore(FIELD_KEY);
+    const t = topicByKey(topic);
+    const saved = store[topic] || (t && t.gen ? store[t.gen] : null);
     const dept = deptFields(topic, title);
     const useSaved = saved && saved.objectives && saved.objectives.length;
     $("objectives").value = (useSaved ? saved.objectives : dept.objectives).join("\n");
@@ -115,45 +296,102 @@
     }
   }
 
-  function buildTopicSelect() {
-    const sel = $("topic-select");
+  // Stream selector — only Grades 10-12 run more than one syllabus.
+  function buildTrackSelect() {
+    const sel = $("track-select");
+    const tracks = trackList();
     sel.innerHTML = "";
-    const ids = GRADE_GENS[state.grade] || [];
-    ids.forEach((id) => {
-      const o = el("option", "", GENERATORS[id].name);
-      o.value = id;
+    tracks.forEach((t, i) => {
+      const o = el("option", "", t.label);
+      o.value = i;
+      o.title = t.stage;
       sel.appendChild(o);
     });
-    if (!ids.includes(state.topic)) state.topic = ids[0] || null;
+    if (state.track >= tracks.length) state.track = 0;
+    sel.value = state.track;
+    $("track-group").classList.toggle("hidden", tracks.length < 2);
+  }
+
+  // Every topic in the grade and stream, grouped by strand as the plan groups
+  // them. A topic with no question generator is marked, so a teacher knows
+  // before they generate that the plan will come without questions.
+  function buildTopicSelect() {
+    const sel = $("topic-select");
+    const topics = buildTopicRegistry();
+    sel.innerHTML = "";
+    let group = null, lastStrand = null;
+    topics.forEach((t) => {
+      if (t.strand !== lastStrand) {
+        group = el("optgroup");
+        group.label = t.strand;
+        sel.appendChild(group);
+        lastStrand = t.strand;
+      }
+      const o = el("option", "", t.name + (t.month ? `  — ${t.month}` : "") + (t.gen ? "" : "  ·"));
+      o.value = t.key;
+      group.appendChild(o);
+    });
+    if (!topics.some((t) => t.key === state.topic)) state.topic = topics.length ? topics[0].key : null;
     if (state.topic) sel.value = state.topic;
+
+    const withGen = topics.filter((t) => t.gen).length;
+    $("topic-count").textContent = `— ${topics.length} in this stream`;
+    updateTopicNote();
+    return topics;
+  }
+
+  function updateTopicNote() {
+    const t = topicByKey($("topic-select").value);
+    const note = $("topic-note");
+    if (!t) { note.textContent = ""; return; }
+    note.textContent = t.gen
+      ? `Questions from: ${GENERATORS[t.gen].name}`
+      : "No question generator for this topic yet — the plan is drafted without questions.";
+    note.classList.toggle("warn", !t.gen);
   }
 
   // ---------- Model ----------
 
+  // Search links for a topic with no lesson entry of its own.
+  const searchLinks = (name) => {
+    const q = encodeURIComponent(name + " maths");
+    return [
+      { label: "▶ YouTube", url: `https://www.youtube.com/results?search_query=${q}` },
+      { label: "Khan Academy", url: `https://www.khanacademy.org/search?page_search_query=${encodeURIComponent(name)}` },
+      { label: "Corbettmaths", url: `https://corbettmaths.com/?s=${encodeURIComponent(name)}` },
+      { label: "Save My Exams", url: `https://www.google.com/search?q=${encodeURIComponent("site:savemyexams.com " + name)}` }
+    ];
+  };
+
   function buildModel(spec) {
     const rng = mulberry32(spec.seed);
     const seen = new Set();
+    const gid = spec.gen;                       // null when no generator covers this topic
     const draw = (diff) => {
       for (let i = 0; i < 25; i++) {
-        const item = GENERATORS[spec.topic].gen(rng, diff);
+        const item = GENERATORS[gid].gen(rng, diff);
         if (!seen.has(item.q)) { seen.add(item.q); return item; }
       }
-      return GENERATORS[spec.topic].gen(rng, diff);
+      return GENERATORS[gid].gen(rng, diff);
     };
-    const many = (n, diff) => Array.from({ length: n }, () => draw(diff));
+    const many = (n, diff) => (gid ? Array.from({ length: n }, () => draw(diff)) : []);
 
-    const L = LESSONS[spec.topic] || {};
+    const L = (gid && LESSONS[gid]) || {};
     return {
-      concept: L.concept || "",
+      hasQuestions: !!gid,
+      // With no lesson entry, the syllabus's own description of the topic is
+      // the key idea — it is the department's wording, not a guess.
+      concept: L.concept || spec.detail || "",
       example: L.example || [],
-      tips: L.tips || [],
-      links: typeof researchLinks === "function" ? researchLinks(spec.topic) : [],
+      tips: L.tips || (spec.note ? [spec.note] : []),
+      links: gid && typeof researchLinks === "function"
+        ? researchLinks(gid) : searchLinks(spec.title),
       starter: many(spec.nStarter, 1),
       examples: many(spec.nExamples, 2),
       support: many(spec.nPractice, 1),
       core: many(spec.nPractice, 2),
       challenge: many(spec.nPractice, 3),
-      plenary: many(1, 2)[0],
+      plenary: gid ? many(1, 2)[0] : null,
       homework: many(spec.nHome, 2)
     };
   }
@@ -240,6 +478,11 @@
       pre.textContent = model.example.join("\n");
       s.appendChild(pre);
     }
+    if (!model.hasQuestions) {
+      s.appendChild(el("p", "to-write",
+        "Worked examples: ____________________________________________________"));
+      s.appendChild(el("div", "space-3"));
+    }
     model.examples.forEach((ex, i) => {
       const box = el("div", "worked");
       box.innerHTML = `<b>Example ${i + 1}.</b> ` + mathHTML(ex.q);
@@ -264,10 +507,10 @@
     s.querySelector(".plan-sec-head span").textContent = "Guided & independent practice — We do / You do";
     [["Support", model.support], ["Core", model.core], ["Challenge", model.challenge]]
       .forEach(([label, items]) => {
-        if (!items.length) return;
         const g = el("div", "diff-group");
         g.appendChild(el("div", "diff-label", label));
-        g.appendChild(qList(items, spec.answers));
+        if (items.length) g.appendChild(qList(items, spec.answers));
+        else g.appendChild(el("div", "space-2"));   // room to write the task in
         s.appendChild(g);
       });
     sheet.appendChild(s);
@@ -275,16 +518,20 @@
     // Plenary
     s = section("Plenary / exit ticket", "5 min");
     const p = el("div", "worked");
-    p.innerHTML = mathHTML(model.plenary.q) + (spec.answers ? ` <span class="ans">(${mathHTML(model.plenary.a)})</span>` : "");
+    if (model.plenary) {
+      p.innerHTML = mathHTML(model.plenary.q) +
+        (spec.answers ? ` <span class="ans">(${mathHTML(model.plenary.a)})</span>` : "");
+    } else {
+      p.appendChild(el("div", "space-1"));
+    }
     s.appendChild(p);
     sheet.appendChild(s);
 
     // Homework
-    if (model.homework.length) {
-      s = section("Homework");
-      s.appendChild(qList(model.homework, spec.answers));
-      sheet.appendChild(s);
-    }
+    s = section("Homework");
+    if (model.homework.length) s.appendChild(qList(model.homework, spec.answers));
+    else s.appendChild(el("div", "space-2"));
+    sheet.appendChild(s);
 
     // Resources
     if (model.links.length) {
@@ -328,7 +575,8 @@
       s.push({ kind: "questions", title: "Your turn", items: model.core });
     if (model.challenge.length)
       s.push({ kind: "questions", title: "Challenge", items: model.challenge });
-    s.push({ kind: "worked", title: "Plenary — exit ticket", q: model.plenary.q, steps: [], a: model.plenary.a });
+    if (model.plenary)
+      s.push({ kind: "worked", title: "Plenary — exit ticket", q: model.plenary.q, steps: [], a: model.plenary.a });
     if (model.homework.length)
       s.push({ kind: "questions", title: "Homework", items: model.homework });
     return s;
@@ -455,8 +703,10 @@
       if (items.length) b += `<p><b>${k}</b></p>` + li(items, spec.answers);
     });
 
-    b += `<p><b>Plenary / exit ticket (5 min)</b></p><p>${mathWord(model.plenary.q)}` +
-      (spec.answers ? ` <i>(${mathWord(model.plenary.a)})</i>` : "") + `</p>`;
+    b += `<p><b>Plenary / exit ticket (5 min)</b></p>`;
+    b += model.plenary
+      ? `<p>${mathWord(model.plenary.q)}` + (spec.answers ? ` <i>(${mathWord(model.plenary.a)})</i>` : "") + `</p>`
+      : `<p>&nbsp;</p><p>&nbsp;</p>`;
     if (model.homework.length) b += `<p><b>Homework</b></p>` + li(model.homework, spec.answers);
     b += `<p>&nbsp;</p><p>Teacher's Signature: ____________________&nbsp;&nbsp;&nbsp; Head of Department: ____________________</p>`;
 
@@ -670,17 +920,24 @@
 
   const currentTitle = () => {
     const typed = $("lesson-title").value.trim();
-    const t = $("topic-select").value;
-    return typed || (GENERATORS[t] ? GENERATORS[t].name : "Lesson");
+    const t = topicByKey($("topic-select").value);
+    return typed || (t ? t.name : "Lesson");
   };
 
   function readSpec() {
-    const topic = $("topic-select").value;
+    const key = $("topic-select").value;
+    const t = topicByKey(key) || {};
     const typed = $("lesson-title").value.trim();
     return {
       grade: state.grade,
-      topic,
-      title: typed || (GENERATORS[topic] ? GENERATORS[topic].name : "Lesson"),
+      topic: key,
+      gen: t.gen || null,
+      detail: t.detail || "",
+      note: t.note || "",
+      month: t.month || "",
+      strand: t.strand || "",
+      stage: currentTrack().stage,
+      title: typed || t.name || "Lesson",
       section: $("section-input").value.trim(),
       teacher: $("teacher-input").value.trim(),
       date: $("date-input").value.trim(),
@@ -735,11 +992,19 @@
   $("view-deck").addEventListener("click", () => setView("deck"));
   $("grade-select").addEventListener("change", (e) => {
     state.grade = +e.target.value;
+    state.track = 0;
+    buildTrackSelect();
+    buildTopicSelect();
+    loadFields($("topic-select").value, currentTitle());
+  });
+  $("track-select").addEventListener("change", (e) => {
+    state.track = +e.target.value;
     buildTopicSelect();
     loadFields($("topic-select").value, currentTitle());
   });
   $("topic-select").addEventListener("change", (e) => {
     state.topic = e.target.value;
+    updateTopicNote();
     loadFields(state.topic, currentTitle());
   });
   $("fields-dept").addEventListener("click", () => {
@@ -747,9 +1012,12 @@
     const dept = deptFields(topic, currentTitle());
     $("objectives").value = dept.objectives.join("\n");
     $("criteria").value = dept.criteria.join("\n");
-    // Forget this teacher's override so the department wording stays next time.
+    // Forget this teacher's override so the department wording stays next time,
+    // including any saved under the older generator-keyed form.
     const all = readStore(FIELD_KEY);
+    const t = topicByKey(topic);
     delete all[topic];
+    if (t && t.gen) delete all[t.gen];
     writeStore(FIELD_KEY, all);
     $("fields-msg").textContent = dept.isDept ? "department wording" : "draft wording";
   });
@@ -771,7 +1039,7 @@
     txt += "\nSend this file to the Head of Department to have any of it adopted\n";
     txt += "as the department wording for everyone.\n";
     topics.forEach((t) => {
-      const name = GENERATORS[t] ? GENERATORS[t].name : t;
+      const name = GENERATORS[t] ? GENERATORS[t].name : t.replace(/^[^|]*\|/, "");
       txt += "\n" + "=".repeat(60) + "\n" + name + "\n" + "=".repeat(60) + "\n";
       txt += "\nLearning objectives\n";
       (all[t].objectives || []).forEach((o) => { txt += "  - " + o + "\n"; });
@@ -817,8 +1085,10 @@
   // ---------- Init ----------
   const params = new URLSearchParams(location.search);
   if (params.get("grade")) state.grade = +params.get("grade");
+  if (params.get("track")) state.track = +params.get("track") || 0;
   buildGradeSelect();
-  if (params.get("topic") && GENERATORS[params.get("topic")]) state.topic = params.get("topic");
+  buildTrackSelect();
+  if (params.get("topic")) state.topic = params.get("topic");
   buildTopicSelect();
   const prefs = readStore(PREF_KEY);
   if (prefs.teacher) $("teacher-input").value = prefs.teacher;

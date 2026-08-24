@@ -122,10 +122,23 @@ and `DEFAULT_BANDS` in `sheet.js` are only starting values.
 - **"Save these settings as my default"** persists rubrics and options to
   `localStorage` under `alips-teacher-defaults`, per teacher, per browser.
 
-## Lesson Planner (v0.8)
+## Lesson Planner (v1.2)
 
 `plan.html` drafts a lesson from one topic and renders it two ways from a single
-model, so the printed plan and the presented slides always match:
+model, so the printed plan and the presented slides always match.
+
+**The topic list is the curriculum, not the generator list.** All 725 syllabus
+topics are selectable, grouped by strand and labelled with the month they are
+timetabled; Grades 10-12 get a **Stream** selector (IGCSE/GED, AS/GED
+Advance/Basic). `matchGenerator()` in `plan.js` links a topic to a question
+generator by word overlap: every significant word of the shorter name must
+match, and a tie counts as no match, because a wrong lesson is worse than none.
+`TOPIC_ALIASES` covers wording that will never align on its own ("Finding
+totals" -> Addition within 20). About 162 of the 725 topics currently reach a
+generator; **extend `TOPIC_ALIASES` whenever a new generator is written.**
+A topic with no generator still produces a full plan — objectives, success
+criteria, the syllabus's own description as the key idea, resource links, and
+ruled space for the teacher to write the examples and tasks in.
 
 - **Lesson plan** — objectives, success criteria, key idea, starter, I-do worked
   examples with mark-scheme steps, differentiated practice (Support / Core /

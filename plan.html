@@ -38,8 +38,13 @@
       <div class="panel-group">
         <label for="grade-select">Grade</label>
         <select id="grade-select"></select>
-        <label for="topic-select">Topic</label>
+        <div id="track-group" class="hidden">
+          <label for="track-select">Stream</label>
+          <select id="track-select"></select>
+        </div>
+        <label for="topic-select">Topic <span class="hint" id="topic-count"></span></label>
         <select id="topic-select"></select>
+        <p class="hint" id="topic-note"></p>
         <label for="lesson-title">Lesson title</label>
         <input id="lesson-title" type="text" placeholder="auto from topic">
       </div>
