@@ -13,6 +13,8 @@ department's request (v0.4). Do not re-introduce bilingual strings.
   Teacher views, search
 - `worksheets.html` / `sheet.css` / `sheet.js` — teacher tool: worksheet and
   exam-paper generator built to the department's Word templates
+- `topics.js` — the syllabus topic list and topic→generator matching, shared by
+  the planner and the worksheet generator so both offer the same topics
 - `plan.html` / `plan.css` / `plan.js` — teacher tool: lesson planner and
   slide deck (present mode, Word and PowerPoint export)
 - `zip.js` — minimal STORE-method ZIP writer, used to build a real `.pptx`
@@ -102,6 +104,25 @@ near-misses fill any gap. If a generator cannot supply two distinct
 distractors the part silently falls back to SAQ rather than printing a
 dishonest choice. The mark scheme prints the option letter and the answer.
 
+## Topics come from the syllabus, everywhere (v1.3)
+
+`topics.js` is the single source: `topicRegistry(grade, trackIndex)` returns the
+sub-topics of one syllabus, each with the generator that covers it or `null`,
+and `tracksForGrade(grade)` lists the streams a grade offers. The planner and
+the worksheet generator both read it, so a topic named one way in one tool is
+never named another way in the other.
+
+The **worksheet generator** lists the department's sub-topics grouped by strand,
+with a **Stream** selector on Grades 10-12. A sub-topic with no generator cannot
+make a worksheet, so it is shown struck through and disabled rather than left
+out — a teacher sees the whole syllabus and exactly what is covered. "Only
+sub-topics with questions" (on by default) hides them. The printed `Topic:` line
+uses the syllabus wording, and blueprint rows pick from the same list.
+
+Topic keys are `<trackKey>|<sub-topic name>`, unique per syllabus. `genOf(key)`
+resolves the generator and falls back to treating the key as a generator id, so
+teacher defaults saved before this change still load.
+
 ## Teacher-configurable rubrics (v0.6)
 
 Nothing about marks or difficulty is hardcoded any more — `DEFAULT_PART_RUBRIC`
@@ -130,7 +151,7 @@ model, so the printed plan and the presented slides always match.
 **The topic list is the curriculum, not the generator list.** All 725 syllabus
 topics are selectable, grouped by strand and labelled with the month they are
 timetabled; Grades 10-12 get a **Stream** selector (IGCSE/GED, AS/GED
-Advance/Basic). `matchGenerator()` in `plan.js` links a topic to a question
+Advance/Basic). `matchGenerator()` in `topics.js` links a topic to a question
 generator by word overlap: every significant word of the shorter name must
 match, and a tie counts as no match, because a wrong lesson is worse than none.
 `TOPIC_ALIASES` covers wording that will never align on its own ("Finding

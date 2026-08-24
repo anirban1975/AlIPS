@@ -117,6 +117,28 @@
 }
 .topic-checks label.off .tdiff { opacity: 0.35; }
 
+/* Stream selector stacks like the other panel fields. */
+#track-group { display: flex; flex-direction: column; gap: 6px; }
+
+/* Strand headings inside the topic list, so the syllabus reads as it does in
+   the annual plan rather than as one flat list. */
+.topic-checks .strand-head {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--primary);
+  background: var(--primary-soft);
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin: 8px 0 2px;
+}
+.topic-checks .strand-head:first-child { margin-top: 0; }
+
+/* A sub-topic with no question generator: visible, but not selectable. */
+.topic-checks label.no-gen { opacity: 0.45; }
+.topic-checks label.no-gen .tname { text-decoration: line-through; }
+
 /* Rubric editors in the side panel */
 table.rubric-edit { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 table.rubric-edit th {

@@ -89,7 +89,8 @@
 
   const STORE_KEY = "alips-teacher-defaults";
 
-  const state = { mode: "worksheet", plan: "quick", grade: 5, spec: null, model: null };
+  const state = { mode: "worksheet", plan: "quick", grade: 5, track: 0,
+                  topics: [], spec: null, model: null };
 
   // Grades 1–4 print at 14 pt, all other grades at 12 pt.
   const fontFor = (grade) => (grade <= 4 ? 14 : 12);
@@ -116,32 +117,75 @@
     }
   }
 
-  // Each topic carries its own difficulty selector.
+  // Stream selector — only Grades 10-12 run more than one syllabus.
+  function buildTrackSelect() {
+    const sel = $("track-select");
+    const tracks = tracksForGrade(state.grade);
+    sel.innerHTML = "";
+    tracks.forEach((t, i) => {
+      const o = el("option", "", t.label);
+      o.value = i;
+      o.title = t.stage;
+      sel.appendChild(o);
+    });
+    if (state.track >= tracks.length) state.track = 0;
+    sel.value = state.track;
+    $("track-group").classList.toggle("hidden", tracks.length < 2);
+  }
+
+  // The topic list is the department's syllabus for this grade and stream,
+  // grouped by strand, not the list of question generators. A sub-topic with no
+  // generator cannot make a worksheet, so it is shown disabled rather than
+  // silently left out — the teacher can see their whole syllabus and what is
+  // covered. Each topic carries its own difficulty selector.
   function buildTopicList(preset) {
     const box = $("topic-list");
     const prevChecked = new Set([...box.querySelectorAll("input:checked")].map((i) => i.value));
     const prevDiff = {};
     box.querySelectorAll(".tdiff").forEach((s) => { prevDiff[s.dataset.topic] = s.value; });
 
+    state.topics = topicRegistry(state.grade, state.track);
+    const onlyGen = $("topic-only-gen").checked;
+    const shown = state.topics.filter((t) => t.gen || !onlyGen);
+
+    // Topic keys are per stream, so on a change of grade or stream none of the
+    // previous ticks apply. Falling through to the default first-four keeps the
+    // panel usable instead of silently leaving nothing selected.
+    const carry = [...prevChecked].some((k) => state.topics.some((t) => t.key === k))
+      ? prevChecked : new Set();
+
     box.innerHTML = "";
-    (GRADE_GENS[state.grade] || []).forEach((id, idx) => {
-      const label = el("label");
+    let lastStrand = null, nTicked = 0;
+    shown.forEach((t) => {
+      if (t.strand !== lastStrand) {
+        box.appendChild(el("div", "strand-head", t.strand));
+        lastStrand = t.strand;
+      }
+      const label = el("label", t.gen ? "" : "no-gen");
       const cb = el("input");
       cb.type = "checkbox";
-      cb.value = id;
-      cb.checked = prevChecked.size ? prevChecked.has(id) : idx < 4;
+      cb.value = t.key;
+      cb.disabled = !t.gen;
+      if (t.gen) {
+        cb.checked = carry.size ? carry.has(t.key) : nTicked < 4;
+        if (cb.checked) nTicked++;
+      }
 
-      const name = el("span", "tname", GENERATORS[id].name);
+      const name = el("span", "tname", t.name);
+      name.title = t.gen
+        ? `${t.month ? t.month + " · " : ""}Questions from: ${GENERATORS[t.gen].name}`
+        : `${t.month ? t.month + " · " : ""}No question generator for this sub-topic yet`;
 
       const diff = el("select", "tdiff");
-      diff.dataset.topic = id;
+      diff.dataset.topic = t.key;
+      diff.disabled = !t.gen;
       [["1", "Easy"], ["2", "Medium"], ["3", "Challenging"], ["mixed", "Mixed"]]
-        .forEach(([v, t]) => {
-          const o = el("option", "", t);
+        .forEach(([v, x]) => {
+          const o = el("option", "", x);
           o.value = v;
           diff.appendChild(o);
         });
-      diff.value = prevDiff[id] || (preset && preset.defaultDiff) || "2";
+      diff.value = prevDiff[t.key] || (preset && preset.defaultDiff) || "2";
 
       const sync = () => label.classList.toggle("off", !cb.checked);
       cb.addEventListener("change", sync);
@@ -152,7 +196,29 @@
       label.appendChild(diff);
       box.appendChild(label);
     });
+
+    const withGen = state.topics.filter((t) => t.gen).length;
+    $("topic-coverage").textContent =
+      `${withGen} of ${state.topics.length} sub-topics in this syllabus can generate questions.`;
   }
+
+  // First sub-topic in this syllabus that can actually generate questions.
+  const firstUsableTopic = () => {
+    const t = (state.topics || []).find((x) => x.gen);
+    return t ? t.key : null;
+  };
+
+  // The generator behind a ticked topic key.
+  const genOf = (key) => {
+    const t = (state.topics || []).find((x) => x.key === key);
+    return t ? t.gen : (GENERATORS[key] ? key : null);
+  };
+  // The syllabus name for a topic key, for printed headings.
+  const topicName = (key) => {
+    const t = (state.topics || []).find((x) => x.key === key);
+    if (t) return t.name;
+    return GENERATORS[key] ? GENERATORS[key].name : key;
+  };
 
   function buildPartRubric(preset) {
     const tbody = $("part-rubric").querySelector("tbody");
@@ -244,23 +310,26 @@
   // ---------- Blueprint ----------
   // One row per question (worksheets) or per part (exams, grouped by Q number).
 
+  // Blueprint rows pick from this grade and stream's syllabus sub-topics that
+  // can generate questions, grouped by strand.
   function bpTopicSelect(selected) {
     const sel = el("select", "btopic");
-    const here = new Set(GRADE_GENS[state.grade] || []);
-    const mine = el("optgroup");
-    mine.label = "Grade " + state.grade;
-    const other = el("optgroup");
-    other.label = "Other grades";
-    Object.keys(GENERATORS).forEach((id) => {
-      const o = el("option", "", GENERATORS[id].name);
-      o.value = id;
-      (here.has(id) ? mine : other).appendChild(o);
+    const usable = (state.topics || []).filter((t) => t.gen);
+    let group = null, lastStrand = null;
+    usable.forEach((t) => {
+      if (t.strand !== lastStrand) {
+        group = el("optgroup");
+        group.label = t.strand;
+        sel.appendChild(group);
+        lastStrand = t.strand;
+      }
+      const o = el("option", "", t.name);
+      o.value = t.key;
+      group.appendChild(o);
     });
-    sel.appendChild(mine);
-    if (other.children.length) sel.appendChild(other);
-    if (selected && GENERATORS[selected]) sel.value = selected;
-    else sel.value = (GRADE_GENS[state.grade] || Object.keys(GENERATORS))[0];
-    const tip = () => { sel.title = GENERATORS[sel.value] ? GENERATORS[sel.value].name : ""; };
+    if (selected && usable.some((t) => t.key === selected)) sel.value = selected;
+    else if (usable.length) sel.value = usable[0].key;
+    const tip = () => { sel.title = topicName(sel.value); };
     sel.addEventListener("change", tip);
     tip();
     return sel;
@@ -368,7 +437,7 @@
     for (let i = 0; i < parts; i++) {
       tbody.appendChild(blueprintRow({
         q: qn,
-        topic: last.topic || (GRADE_GENS[state.grade] || Object.keys(GENERATORS))[0],
+        topic: last.topic || firstUsableTopic(),
         diff: Math.min(3, i + 1),
         type: last.type || "SAQ",
         ao: i === parts - 1 && parts > 1 ? "AO2" : "AO1",
@@ -463,10 +532,15 @@
   // or number. Type and AO are optional, so the older four-column form
   // "Q, Topic, Level, Marks" still loads.
   function parseBlueprint(text) {
+    // Match the syllabus sub-topic names a teacher actually sees first, then
+    // fall back to generator names so older spreadsheets still load.
     const byName = {};
     Object.keys(GENERATORS).forEach((id) => {
       byName[GENERATORS[id].name.toLowerCase()] = id;
       byName[id.toLowerCase()] = id;
+    });
+    (state.topics || []).forEach((t) => {
+      if (t.gen) byName[t.name.toLowerCase()] = t.key;
     });
     const levelOf = (s) => {
       const t = String(s).trim().toLowerCase();
@@ -531,13 +605,16 @@
 
   // ---------- Models ----------
 
-  // Draw one question for a topic at a difficulty, avoiding repeats.
+  // Draw one question for a topic at a difficulty, avoiding repeats. `topic` is
+  // a syllabus topic key; the generator behind it does the work.
   function draw(rng, topic, diff, seen) {
+    const g = GENERATORS[genOf(topic)];
+    if (!g) return { q: topicName(topic), a: "", sol: [] };
     for (let tries = 0; tries < 25; tries++) {
-      const item = GENERATORS[topic].gen(rng, diff);
+      const item = g.gen(rng, diff);
       if (!seen.has(item.q)) { seen.add(item.q); return item; }
     }
-    return GENERATORS[topic].gen(rng, diff);
+    return g.gen(rng, diff);
   }
 
   function worksheetModel(spec) {
@@ -580,7 +657,7 @@
         // them the part falls back to a written short answer rather than
         // printing a choice that gives itself away.
         let opts = null;
-        if (type === "MCQ") opts = makeOptions(r.topic, r.diff, item, rng);
+        if (type === "MCQ") opts = makeOptions(genOf(r.topic), r.diff, item, rng);
         return {
           letter: LETTERS[pi] || String(pi + 1),
           single: rows.length === 1,
@@ -624,13 +701,7 @@
       const topic = spec.topics[qi % spec.topics.length];
       const parts = [], seen = new Set();
       spec.partRubric.forEach((rule, pi) => {
-        let item = null;
-        for (let tries = 0; tries < 20; tries++) {
-          const c = GENERATORS[topic].gen(rng, rule.diff);
-          if (!seen.has(c.q)) { item = c; break; }
-        }
-        if (!item) item = GENERATORS[topic].gen(rng, rule.diff);
-        seen.add(item.q);
+        const item = draw(rng, topic, rule.diff, seen);
         parts.push({ letter: LETTERS[pi], marks: rule.marks, diff: rule.diff, item });
       });
       questions.push({ topic, parts, total: parts.reduce((t, p) => t + p.marks, 0) });
@@ -1178,7 +1249,7 @@ td.right { text-align: right; }
 
   // ---------- Wiring ----------
 
-  const autoTopicTitle = (topics) => topics.map((id) => GENERATORS[id].name).join(", ");
+  const autoTopicTitle = (topics) => topics.map(topicName).join(", ");
 
   function generate() {
     const topics = selectedTopics();
@@ -1221,7 +1292,7 @@ td.right { text-align: right; }
       }
       if (!spec.topicTitle || !typed) {
         const uniq = [...new Set(spec.blueprint.map((r) => r.topic))];
-        spec.topicTitle = uniq.map((id) => GENERATORS[id].name).join(", ");
+        spec.topicTitle = uniq.map(topicName).join(", ");
       }
       state.model = blueprintModel(spec);
     } else {
@@ -1275,7 +1346,7 @@ td.right { text-align: right; }
     const last = rows[rows.length - 1];
     $("blueprint").querySelector("tbody").appendChild(blueprintRow({
       q: last ? last.q : 1,
-      topic: last ? last.topic : (selectedTopics()[0] || (GRADE_GENS[state.grade] || [])[0]),
+      topic: last ? last.topic : (selectedTopics()[0] || firstUsableTopic()),
       diff: last ? last.diff : 2,
       type: last ? last.type : "SAQ",
       ao: last ? last.ao : "AO1",
@@ -1300,10 +1371,17 @@ td.right { text-align: right; }
   $("mode-exam").addEventListener("click", () => setMode("exam"));
   $("grade-select").addEventListener("change", (e) => {
     state.grade = +e.target.value;
+    state.track = 0;
+    buildTrackSelect();
     buildTopicList();
   });
+  $("track-select").addEventListener("change", (e) => {
+    state.track = +e.target.value;
+    buildTopicList();
+  });
+  $("topic-only-gen").addEventListener("change", () => buildTopicList());
   $("topic-all").addEventListener("click", () => {
-    const boxes = $("topic-list").querySelectorAll("input[type=checkbox]");
+    const boxes = $("topic-list").querySelectorAll("input[type=checkbox]:not(:disabled)");
     const allOn = [...boxes].every((b) => b.checked);
     boxes.forEach((b) => { b.checked = !allOn; b.dispatchEvent(new Event("change")); });
   });
@@ -1348,7 +1426,9 @@ td.right { text-align: right; }
   const saved = load();
 
   if (params.get("grade")) state.grade = +params.get("grade");
+  if (params.get("track")) state.track = +params.get("track") || 0;
   buildGradeSelect();
+  buildTrackSelect();
   buildTopicList(saved);
 
   if (saved) {

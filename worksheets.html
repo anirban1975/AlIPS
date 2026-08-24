@@ -40,6 +40,10 @@
       <div class="panel-group">
         <label for="grade-select">Grade</label>
         <select id="grade-select"></select>
+        <div id="track-group" class="hidden">
+          <label for="track-select">Stream</label>
+          <select id="track-select"></select>
+        </div>
         <label for="section-input">Section / class</label>
         <input id="section-input" type="text" value="A" maxlength="6">
         <label for="exam-subject">Subject</label>
@@ -48,7 +52,10 @@
 
       <div class="panel-group">
         <label>Topics <span class="hint" id="topic-hint">— tick a topic, then set its difficulty</span></label>
+        <label class="check-inline"><input id="topic-only-gen" type="checkbox" checked>
+          Only sub-topics with questions</label>
         <div id="topic-list" class="topic-checks"></div>
+        <p class="hint" id="topic-coverage"></p>
         <div class="row-btns">
           <button id="topic-all" class="mini-btn">Select all</button>
           <select id="difficulty" title="Set the difficulty of every ticked topic">
@@ -202,6 +209,7 @@
   <script src="data.js"></script>
   <script src="gen.js"></script>
   <script src="letterhead-data.js"></script>
+  <script src="topics.js"></script>
   <script src="sheet.js"></script>
 </body>
 </html>
