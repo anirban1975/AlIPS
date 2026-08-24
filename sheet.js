@@ -185,7 +185,9 @@
           o.value = v;
           diff.appendChild(o);
         });
-      diff.value = prevDiff[t.key] || (preset && preset.defaultDiff) || "2";
+      // Grades 1-2 start on Easy; the rest on Medium.
+      diff.value = prevDiff[t.key] || (preset && preset.defaultDiff) ||
+        (state.grade <= 2 ? "1" : "2");
 
       const sync = () => label.classList.toggle("off", !cb.checked);
       cb.addEventListener("change", sync);

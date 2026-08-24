@@ -19,7 +19,7 @@ department's request (v0.4). Do not re-introduce bilingual strings.
   slide deck (present mode, Word and PowerPoint export)
 - `zip.js` — minimal STORE-method ZIP writer, used to build a real `.pptx`
   in the browser with no library and no build step
-- `gen.js` — question engine: seeded RNG (`mulberry32`) + ~35 generators in
+- `gen.js` — question engine: seeded RNG (`mulberry32`) + 103 generators in
   `GENERATORS`, mapped to grades via `GRADE_GENS`
 - `lessons.js` — topic content library (concept, worked example, key points,
   resource links) used to draft lesson plans and slides
@@ -155,8 +155,24 @@ Advance/Basic). `matchGenerator()` in `topics.js` links a topic to a question
 generator by word overlap: every significant word of the shorter name must
 match, and a tie counts as no match, because a wrong lesson is worse than none.
 `TOPIC_ALIASES` covers wording that will never align on its own ("Finding
-totals" -> Addition within 20). About 162 of the 725 topics currently reach a
-generator; **extend `TOPIC_ALIASES` whenever a new generator is written.**
+totals" -> Addition within 20, "Tracing numbers 1 to 10" -> Reading and writing
+numbers). **482 of the 725 sub-topics reach a generator**; extend both
+`GENERATORS` and `TOPIC_ALIASES` together whenever a gap is reported.
+
+Run the coverage audit before claiming a grade is covered:
+
+```
+node -e 'const fs=require("fs"),vm=require("vm");const c={console};vm.createContext(c);
+for(const f of ["data.js","gen.js","topics.js"])vm.runInContext(fs.readFileSync(f,"utf8"),c);
+const{CURRICULUM,topicRegistry}=vm.runInContext("({CURRICULUM,topicRegistry})",c);
+for(const g of CURRICULUM)g.tracks.forEach((t,i)=>{const r=topicRegistry(g.id,i);
+console.log("G"+g.id,"["+t.label+"]",r.filter(x=>x.gen).length+"/"+r.length,
+r.filter(x=>!x.gen).map(x=>x.name).join(" | "))});'
+```
+
+What remains uncovered is mostly work a generated worksheet cannot carry:
+Venn and Carroll diagrams, "Patterns and pictures", data-collection and
+sampling tasks, constructions, and topics needing a printed diagram.
 A topic with no generator still produces a full plan — objectives, success
 criteria, the syllabus's own description as the key idea, resource links, and
 ruled space for the teacher to write the examples and tasks in.

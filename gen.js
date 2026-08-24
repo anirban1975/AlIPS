@@ -41,6 +41,34 @@ const SUB_MAP = { 0: "₀", 1: "₁", 2: "₂", 3: "₃", 4: "₄", 5: "₅", 6:
 const sup = (n) => String(n).split("").map((c) => SUP_MAP[c] || c).join("");
 const sub = (n) => String(n).split("").map((c) => SUB_MAP[c] || c).join("");
 
+// Number names, for the reading-and-writing-numbers generator.
+const ONES = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight",
+  "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen",
+  "seventeen", "eighteen", "nineteen"];
+const TENS = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+function numberWords(n) {
+  if (n < 20) return ONES[n];
+  if (n < 100) return TENS[Math.floor(n / 10)] + (n % 10 ? "-" + ONES[n % 10] : "");
+  const h = ONES[Math.floor(n / 100)] + " hundred";
+  return n % 100 ? h + " and " + numberWords(n % 100) : h;
+}
+// An exact multiple of π: 3 π, ⁅11/3⁆π, π — never a recurring decimal.
+function piTerm(n, d) {
+  const g = gcd(n, d);
+  const a = n / g, b = d / g;
+  if (b === 1) return a === 1 ? "π" : `${a}π`;
+  return `${frac(a, b)}π`;
+}
+
+// Trim binary rounding noise from a money-style value: 948.7499999999999 → 948.75.
+const money = (v) => {
+  const s = (Math.round(v * 100) / 100).toFixed(2);
+  return s.replace(/\.00$/, "").replace(/(\.\d)0$/, "$1");
+};
+
+const ORDINALS = ["", "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth"];
+const ordinalWord = (n) => ORDINALS[n] || n + "th";
+
 function term(c, p, first) {
   if (c === 0) return "";
   const sign = c < 0 ? " − " : first ? "" : " + ";
@@ -596,6 +624,1080 @@ const GENERATORS = {
               S(`C(${n},${k}) = ${coef},  ${a}${sup(k)} = ${Math.pow(a, k)}`, "M1"),
               S(`${coef} × ${Math.pow(a, k)} = ${ans}`, "A1")]
       };
+    }
+  },
+
+  // ===================== Primary: number and counting =====================
+
+  readWriteNumbers: {
+    name: "Reading and writing numbers", grades: [1, 2, 3],
+    gen(r, d) {
+      // Easy stays inside 1-10, matching the Stage 1 "numbers 1 to 10" work.
+      const n = d === 1 ? ri(r, 1, 10) : d === 2 ? ri(r, 11, 99) : ri(r, 100, 999);
+      if (r() < 0.5)
+        return { q: `Write this number in words:  ${n}`, a: numberWords(n),
+          sol: [S(`${n} is written “${numberWords(n)}”`, "B1")] };
+      return { q: `Write this as a numeral:  ${numberWords(n)}`, a: String(n),
+        sol: [S(`“${numberWords(n)}” is ${n}`, "B1")] };
+    }
+  },
+  countingSequence: {
+    name: "Counting on and back", grades: [1, 2, 3, 4],
+    gen(r, d) {
+      const step = pick(r, d === 1 ? [1, 2, 5, 10] : d === 2 ? [2, 3, 5, 10] : [4, 6, 25, 50, 100]);
+      const back = d === 3 && r() < 0.4;
+      const start = ri(r, 1, d === 1 ? 10 : d === 2 ? 40 : 300) * (back ? step : 1);
+      const seq = [0, 1, 2, 3, 4].map((i) => start + (back ? -1 : 1) * step * i);
+      const hide = ri(r, 2, 4);
+      const shown = seq.map((v, i) => (i === hide ? "▢" : nf(v)));
+      return { q: `Fill in the missing number:  ${shown.join(", ")}`, a: nf(seq[hide]),
+        sol: [S(`The numbers go ${back ? "back" : "on"} in ${step}s`, "M1"),
+              S(`${nf(seq[hide - 1])} ${back ? "−" : "+"} ${step} = ${nf(seq[hide])}`, "A1")] };
+    }
+  },
+  compareNumbers: {
+    name: "Comparing and ordering numbers", grades: [1, 2, 3, 4],
+    gen(r, d) {
+      const hi = d === 1 ? 20 : d === 2 ? 100 : 10000;
+      let a = ri(r, 1, hi), b = ri(r, 1, hi);
+      if (d === 3 && r() < 0.4) b = a;
+      const sign = a > b ? ">" : a < b ? "<" : "=";
+      const word = sign === ">" ? "greater than" : sign === "<" ? "less than" : "equal to";
+      return { q: `Write <, > or = between the numbers:  ${a} ▢ ${b}`, a: sign,
+        sol: [S(`${a} is ${word} ${b}`, "M1"), S(`${a} ${sign} ${b}`, "A1")] };
+    }
+  },
+  oneMoreLess: {
+    name: "One more and one less", grades: [1, 2],
+    gen(r, d) {
+      const step = d === 3 ? 10 : 1;
+      const n = ri(r, step + 1, d === 1 ? 19 : 99);
+      const more = r() < 0.5;
+      const ans = more ? n + step : n - step;
+      return { q: `What is ${step} ${more ? "more" : "less"} than ${n}?`, a: String(ans),
+        sol: [S(`${n} ${more ? "+" : "−"} ${step} = ${ans}`, "B1")] };
+    }
+  },
+  oddEven: {
+    name: "Odd and even numbers", grades: [1, 2, 3, 4],
+    gen(r, d) {
+      const n = ri(r, 1, d === 1 ? 20 : d === 2 ? 100 : 999);
+      const even = n % 2 === 0;
+      return { q: `Is ${n} odd or even?`, a: even ? "even" : "odd",
+        sol: [S(`Look at the ones digit: ${n % 10}`, "M1"),
+              S(`${n % 10} is ${even ? "even, so " + n + " is even" : "odd, so " + n + " is odd"}`, "A1")] };
+    }
+  },
+  ordinals: {
+    name: "Ordinal numbers", grades: [1, 2],
+    gen(r, d) {
+      const items = ["red", "blue", "green", "yellow", "orange", "purple", "pink", "brown"];
+      const n = ri(r, 4, d === 1 ? 5 : 8);
+      const pos = ri(r, 1, n);
+      const row = items.slice(0, n);
+      return { q: `The counters are in a line:\n${row.join(", ")}\nWhich colour is ${ordinalWord(pos)}?`,
+        a: row[pos - 1],
+        sol: [S(`Count from the start: ${ordinalWord(pos)} means position ${pos}`, "M1"),
+              S(`Position ${pos} is ${row[pos - 1]}`, "A1")] };
+    }
+  },
+  doubleHalve: {
+    name: "Doubling and halving", grades: [1, 2, 3],
+    gen(r, d) {
+      const dbl = r() < 0.5;
+      const n = d === 1 ? ri(r, 1, 10) : d === 2 ? ri(r, 5, 25) : ri(r, 20, 50);
+      if (dbl)
+        return { q: `Double ${n}`, a: String(n * 2),
+          sol: [S(`${n} + ${n} = ${n * 2}`, "B1")] };
+      return { q: `Halve ${n * 2}`, a: String(n),
+        sol: [S(`${n * 2} ÷ 2 = ${n}`, "B1")] };
+    }
+  },
+  rounding: {
+    name: "Rounding", grades: [3, 4, 5, 6],
+    gen(r, d) {
+      const to = d === 1 ? 10 : d === 2 ? 100 : 1000;
+      const n = ri(r, to, to * 10);
+      const ans = Math.round(n / to) * to;
+      const digit = Math.floor((n % to) / (to / 10));
+      return { q: `Round ${n} to the nearest ${to}`, a: String(ans),
+        sol: [S(`Look at the digit in the ${to === 10 ? "ones" : to === 100 ? "tens" : "hundreds"} place: ${digit}`, "M1"),
+              S(`${digit >= 5 ? "5 or more, so round up" : "less than 5, so round down"} → ${ans}`, "A1")] };
+    }
+  },
+  multiplesOf10: {
+    name: "Adding multiples of 10 and 100", grades: [2, 3, 4],
+    gen(r, d) {
+      const unit = d === 1 ? 10 : d === 2 ? 10 : 100;
+      const a = ri(r, 2, 9) * unit, b = ri(r, 2, 9) * unit;
+      const plus = r() < 0.6 || a <= b;
+      const ans = plus ? a + b : a - b;
+      return { q: `Work out ${a} ${plus ? "+" : "−"} ${b}`, a: String(ans),
+        sol: [S(`${a / unit} ${plus ? "+" : "−"} ${b / unit} = ${ans / unit} lots of ${unit}`, "M1"),
+              S(`${ans / unit} × ${unit} = ${ans}`, "A1")] };
+    }
+  },
+  complementsTo100: {
+    name: "Number bonds to 100", grades: [2, 3, 4],
+    gen(r, d) {
+      const total = d === 1 ? 10 : d === 2 ? 100 : 1000;
+      const a = d === 1 ? ri(r, 1, 9) : d === 2 ? ri(r, 1, 19) * 5 : ri(r, 1, 19) * 50;
+      return { q: `What must be added to ${a} to make ${total}?`, a: String(total - a),
+        sol: [S(`${total} − ${a} = ${total - a}`, "M1"), S(`${a} + ${total - a} = ${total}`, "A1")] };
+    }
+  },
+  placeValueParts: {
+    name: "Hundreds, tens and ones", grades: [2, 3, 4],
+    gen(r, d) {
+      const n = d === 1 ? ri(r, 11, 99) : d === 2 ? ri(r, 101, 999) : ri(r, 1001, 9999);
+      const names = ["thousands", "hundreds", "tens", "ones"];
+      const digits = String(n).split("").map(Number);
+      const use = names.slice(names.length - digits.length);
+      const parts = digits.map((x, i) => `${x} ${use[i]}`).filter((_, i) => digits[i] !== 0);
+      return { q: `Break ${n} into hundreds, tens and ones.`, a: parts.join(" + "),
+        sol: [S(`Take each digit in turn`, "M1"), S(`${n} = ${parts.join(" + ")}`, "A1")] };
+    }
+  },
+  multiplyBy10: {
+    name: "Multiplying and dividing by 10, 100 and 1000", grades: [3, 4, 5, 6],
+    gen(r, d) {
+      const by = d === 1 ? 10 : d === 2 ? pick(r, [10, 100]) : pick(r, [10, 100, 1000]);
+      const n = ri(r, 2, 99);
+      if (r() < 0.5)
+        return { q: `Work out ${n} × ${by}`, a: String(n * by),
+          sol: [S(`Each digit moves ${String(by).length - 1} place(s) to the left`, "M1"),
+                S(`${n} × ${by} = ${n * by}`, "A1")] };
+      return { q: `Work out ${n * by} ÷ ${by}`, a: String(n),
+        sol: [S(`Each digit moves ${String(by).length - 1} place(s) to the right`, "M1"),
+              S(`${n * by} ÷ ${by} = ${n}`, "A1")] };
+    }
+  },
+  factorsMultiples: {
+    name: "Factors and multiples", grades: [4, 5, 6, 7],
+    gen(r, d) {
+      if (d === 1) {
+        const n = ri(r, 2, 9), k = ri(r, 2, 9);
+        return { q: `Write down the first four multiples of ${n}`,
+          a: [1, 2, 3, 4].map((i) => n * i).join(", "),
+          sol: [S(`Count up in ${n}s`, "M1"), S([1, 2, 3, 4].map((i) => n * i).join(", "), "A1")] };
+      }
+      if (d === 2) {
+        const n = pick(r, [12, 18, 20, 24, 28, 30, 36, 40]);
+        const f = []; for (let i = 1; i <= n; i++) if (n % i === 0) f.push(i);
+        return { q: `List all the factors of ${n}`, a: f.join(", "),
+          sol: [S(`Look for pairs that multiply to ${n}`, "M1"), S(f.join(", "), "A1")] };
+      }
+      const a = pick(r, [12, 16, 18, 20, 24]), b = pick(r, [8, 15, 27, 30, 36]);
+      const h = gcd(a, b), l = (a * b) / h;
+      return { q: `Find the HCF and the LCM of ${a} and ${b}`, a: `HCF = ${h}, LCM = ${l}`,
+        sol: [S(`Highest common factor of ${a} and ${b} is ${h}`, "M1"),
+              S(`LCM = ${a} × ${b} ÷ ${h} = ${l}`, "A1")] };
+    }
+  },
+  squareCubeNumbers: {
+    name: "Square and cube numbers", grades: [4, 5, 6, 7],
+    gen(r, d) {
+      if (d === 3) {
+        const n = ri(r, 2, 8);
+        return { q: `Work out ${n}${sup(3)}`, a: String(n * n * n),
+          sol: [S(`${n} × ${n} × ${n}`, "M1"), S(`= ${n * n * n}`, "A1")] };
+      }
+      const n = ri(r, 2, d === 1 ? 9 : 15);
+      return { q: `Work out ${n}${sup(2)}`, a: String(n * n),
+        sol: [S(`${n} × ${n} = ${n * n}`, "B1")] };
+    }
+  },
+  primeNumbers: {
+    name: "Prime numbers", grades: [5, 6, 7],
+    gen(r, d) {
+      const isPrime = (n) => { if (n < 2) return false; for (let i = 2; i * i <= n; i++) if (n % i === 0) return false; return true; };
+      const n = ri(r, 2, d === 1 ? 20 : d === 2 ? 50 : 100);
+      if (isPrime(n))
+        return { q: `Is ${n} a prime number? Give a reason.`, a: `Yes — ${n} has only two factors, 1 and ${n}`,
+          sol: [S(`Test for factors up to √${n}`, "M1"), S(`${n} has only 1 and ${n} as factors, so it is prime`, "A1")] };
+      let f = 2; while (n % f !== 0) f++;
+      return { q: `Is ${n} a prime number? Give a reason.`, a: `No — ${n} is divisible by ${f}`,
+        sol: [S(`Test for factors up to √${n}`, "M1"),
+              S(`${n} ÷ ${f} = ${n / f}, so ${n} is not prime`, "A1")] };
+    }
+  },
+  divisibility: {
+    name: "Tests of divisibility", grades: [4, 5, 6, 7],
+    gen(r, d) {
+      const by = pick(r, d === 1 ? [2, 5, 10] : d === 2 ? [3, 4, 6] : [8, 9, 11]);
+      const n = ri(r, 100, 999);
+      const reasons = {
+        2: "the last digit is even", 5: "the last digit is 0 or 5", 10: "the last digit is 0",
+        3: "the digits add to a multiple of 3", 6: "it is divisible by both 2 and 3",
+        4: "the last two digits make a multiple of 4", 9: "the digits add to a multiple of 9",
+        8: "the last three digits make a multiple of 8", 11: "the alternating digit sum is a multiple of 11"
+      };
+      const yes = n % by === 0;
+      return { q: `Is ${n} divisible by ${by}? Give a reason.`, a: yes ? "Yes" : "No",
+        sol: [S(`A number is divisible by ${by} when ${reasons[by]}`, "M1"),
+              S(`${n} ÷ ${by} ${yes ? "= " + n / by + ", so yes" : "leaves a remainder of " + (n % by) + ", so no"}`, "A1")] };
+    }
+  },
+  missingOperation: {
+    name: "Fact families and missing numbers", grades: [2, 3, 4],
+    gen(r, d) {
+      const a = ri(r, 2, d === 1 ? 6 : 12), b = ri(r, 2, d === 1 ? 6 : 12);
+      if (d === 1)
+        return { q: `Complete the fact family for ${a}, ${b} and ${a + b}:\n${a} + ${b} = ▢`, a: String(a + b),
+          sol: [S(`${a} + ${b} = ${a + b}`, "B1")] };
+      if (r() < 0.5)
+        return { q: `Find the missing number:  ▢ × ${a} = ${a * b}`, a: String(b),
+          sol: [S(`Divide to undo the multiplication: ${a * b} ÷ ${a}`, "M1"), S(`= ${b}`, "A1")] };
+      return { q: `Find the missing number:  ${a * b} ÷ ▢ = ${a}`, a: String(b),
+        sol: [S(`${a * b} ÷ ${a} = ${b}`, "M1"), S(`so the missing number is ${b}`, "A1")] };
+    }
+  },
+  arraysMultiplication: {
+    name: "Arrays and repeated addition", grades: [2, 3],
+    gen(r, d) {
+      const rows = ri(r, 2, d === 1 ? 5 : 9), cols = ri(r, 2, d === 1 ? 5 : 9);
+      return { q: `An array has ${rows} rows of ${cols} counters.\nWrite this as a multiplication and find the total.`,
+        a: `${rows} × ${cols} = ${rows * cols}`,
+        sol: [S(`${cols} added ${rows} times`, "M1"), S(`${rows} × ${cols} = ${rows * cols}`, "A1")] };
+    }
+  },
+  moneyTotals: {
+    name: "Money", grades: [1, 2, 3, 4],
+    gen(r, d) {
+      // Omani money: 1 rial = 1000 baisa; keep the amounts classroom-sized.
+      if (d === 1) {
+        const a = ri(r, 1, 9) * 50, b = ri(r, 1, 9) * 50;
+        return { q: `Find the total:  ${a} baisa + ${b} baisa`, a: `${a + b} baisa`,
+          sol: [S(`${a} + ${b} = ${a + b}`, "A1")] };
+      }
+      const cost = ri(r, 1, 19) * 50, paid = 1000;
+      return { q: `A pen costs ${cost} baisa. You pay with 1 rial (1000 baisa).\nHow much change do you get?`,
+        a: `${paid - cost} baisa`,
+        sol: [S(`1 rial = 1000 baisa`, "M1"), S(`${paid} − ${cost} = ${paid - cost} baisa`, "A1")] };
+    }
+  },
+
+  // ===================== Primary: fractions and decimals =====================
+
+  fractionOfShape: {
+    name: "Fractions of a shape", grades: [1, 2, 3],
+    gen(r, d) {
+      const den = pick(r, d === 1 ? [2, 4] : d === 2 ? [3, 4, 6] : [5, 8, 10]);
+      const num = d === 1 ? 1 : ri(r, 1, den - 1);
+      const g = gcd(num, den);
+      const simple = g > 1 ? `${frac(num, den)}  = ${frac(num / g, den / g)}` : frac(num, den);
+      return { q: `A shape is split into ${den} equal parts and ${num} ${num === 1 ? "part is" : "parts are"} shaded.\nWhat fraction is shaded? Give your answer in its simplest form.`,
+        a: g > 1 ? frac(num / g, den / g) : frac(num, den),
+        sol: [S(`${den} equal parts, so each part is ${frac(1, den)}`, "M1"),
+              S(`${num} shaded, so ${simple}`, "A1")] };
+    }
+  },
+  equalSharing: {
+    name: "Equal sharing", grades: [1, 2, 3],
+    gen(r, d) {
+      const groups = ri(r, 2, d === 1 ? 4 : 8), each = ri(r, 2, d === 1 ? 5 : 12);
+      return { q: `${groups * each} counters are shared equally between ${groups} children.\nHow many does each child get?`,
+        a: String(each),
+        sol: [S(`${groups * each} ÷ ${groups}`, "M1"), S(`= ${each} each`, "A1")] };
+    }
+  },
+  compareFractions: {
+    name: "Comparing and ordering fractions", grades: [3, 4, 5, 6],
+    gen(r, d) {
+      const d1 = pick(r, [2, 3, 4, 5, 6, 8, 10, 12]);
+      let d2 = pick(r, [2, 3, 4, 5, 6, 8, 10, 12]);
+      if (d === 1) d2 = d1;
+      const n1 = ri(r, 1, d1 - 1), n2 = ri(r, 1, d2 - 1);
+      const v1 = n1 / d1, v2 = n2 / d2;
+      const sign = v1 > v2 ? ">" : v1 < v2 ? "<" : "=";
+      const common = (d1 * d2) / gcd(d1, d2);
+      return { q: `Write <, > or = between the fractions:  ${frac(n1, d1)} ▢ ${frac(n2, d2)}`, a: sign,
+        sol: [S(`Use a common denominator of ${common}`, "M1"),
+              S(`${frac(n1 * (common / d1), common)} ${sign} ${frac(n2 * (common / d2), common)}`, "A1")] };
+    }
+  },
+  improperMixed: {
+    name: "Improper fractions and mixed numbers", grades: [5, 6, 7],
+    gen(r, d) {
+      const den = ri(r, 2, 3 + d * 2), whole = ri(r, 1, 4), num = ri(r, 1, den - 1);
+      const imp = whole * den + num;
+      if (r() < 0.5)
+        return { q: `Write ${frac(imp, den)} as a mixed number`, a: `${whole} ${frac(num, den)}`,
+          sol: [S(`${imp} ÷ ${den} = ${whole} remainder ${num}`, "M1"),
+                S(`= ${whole} ${frac(num, den)}`, "A1")] };
+      return { q: `Write ${whole} ${frac(num, den)} as an improper fraction`, a: frac(imp, den),
+        sol: [S(`${whole} × ${den} = ${whole * den}`, "M1"),
+              S(`${whole * den} + ${num} = ${imp}, so ${frac(imp, den)}`, "A1")] };
+    }
+  },
+  decimalPlaceValue: {
+    name: "Decimal place value", grades: [4, 5, 6],
+    gen(r, d) {
+      const places = d === 1 ? 1 : 2;
+      const n = (ri(r, 100, 9999) / Math.pow(10, places)).toFixed(places);
+      const s = n.replace(".", "");
+      const i = ri(r, n.indexOf(".") + 1, n.length - 1);
+      const digit = n[i];
+      const pow = i - n.indexOf(".");
+      const place = ["tenths", "hundredths", "thousandths"][pow - 1];
+      return { q: `What is the value of the digit ${digit} in ${n}?`,
+        a: `${digit} ${place}  (${frac(digit, Math.pow(10, pow))})`,
+        sol: [S(`The digit ${digit} is in the ${place} place`, "M1"),
+              S(`so its value is ${frac(digit, Math.pow(10, pow))}`, "A1")] };
+    }
+  },
+  addDecimals: {
+    name: "Adding and subtracting decimals", grades: [5, 6, 7],
+    gen(r, d) {
+      const p = d === 1 ? 1 : 2;
+      const k = Math.pow(10, p);
+      let a = ri(r, 10, 99 * k) / k, b = ri(r, 10, 99 * k) / k;
+      const plus = r() < 0.5;
+      if (!plus && b > a) [a, b] = [b, a];
+      const ans = (plus ? a + b : a - b).toFixed(p);
+      return { q: `Work out ${a.toFixed(p)} ${plus ? "+" : "−"} ${b.toFixed(p)}`, a: ans,
+        sol: [S("Line up the decimal points", "M1"),
+              S(`${a.toFixed(p)} ${plus ? "+" : "−"} ${b.toFixed(p)} = ${ans}`, "A1")] };
+    }
+  },
+  multiplyDecimals: {
+    name: "Multiplying decimals", grades: [5, 6, 7],
+    gen(r, d) {
+      const p = d === 1 ? 1 : 2;
+      const whole = ri(r, 11, d === 3 ? 999 : 99);
+      const a = whole / Math.pow(10, p);
+      const b = d === 3 ? ri(r, 11, 29) : ri(r, 2, 9);
+      const ans = (whole * b) / Math.pow(10, p);
+      return { q: `Work out ${a.toFixed(p)} × ${b}`, a: ans.toFixed(p),
+        sol: [S(`Ignore the decimal point: ${whole} × ${b} = ${whole * b}`, "M1"),
+              S(`Put back ${p} decimal place${p > 1 ? "s" : ""}: ${ans.toFixed(p)}`, "A1")] };
+    }
+  },
+  fdpEquivalence: {
+    name: "Fractions, decimals and percentages", grades: [5, 6, 7, 8],
+    gen(r, d) {
+      const set = d === 1 ? [[1, 2, "0.5", "50%"], [1, 4, "0.25", "25%"], [3, 4, "0.75", "75%"], [1, 10, "0.1", "10%"]]
+        : d === 2 ? [[1, 5, "0.2", "20%"], [2, 5, "0.4", "40%"], [3, 5, "0.6", "60%"], [7, 10, "0.7", "70%"], [1, 20, "0.05", "5%"]]
+        : [[1, 8, "0.125", "12.5%"], [3, 8, "0.375", "37.5%"], [1, 3, "0.333…", "33⅓%"], [2, 3, "0.666…", "66⅔%"]];
+      const [n, den, dec, pct] = pick(r, set);
+      return { q: `Complete the table row for ${frac(n, den)}:\nfraction → decimal → percentage`,
+        a: `${frac(n, den)} = ${dec} = ${pct}`,
+        sol: [S(`${n} ÷ ${den} = ${dec}`, "M1"), S(`${dec} × 100 = ${pct}`, "A1")] };
+    }
+  },
+  multiplyFraction: {
+    name: "Multiplying fractions", grades: [6, 7, 8],
+    gen(r, d) {
+      const den = ri(r, 2, 8), num = ri(r, 1, den - 1);
+      if (d === 1) {
+        const w = ri(r, 2, 9);
+        const top = num * w, g = gcd(top, den);
+        return { q: `Work out ${frac(num, den)} × ${w}`,
+          a: g === den ? String(top / den) : frac(top / g, den / g),
+          sol: [S(`${num} × ${w} = ${top}`, "M1"),
+                S(`${frac(top, den)} = ${g === den ? top / den : frac(top / g, den / g)}`, "A1")] };
+      }
+      const d2 = ri(r, 2, 8), n2 = ri(r, 1, d2 - 1);
+      const tn = num * n2, td = den * d2, g = gcd(tn, td);
+      return { q: `Work out ${frac(num, den)} × ${frac(n2, d2)}`, a: frac(tn / g, td / g),
+        sol: [S(`Multiply the numerators: ${num} × ${n2} = ${tn}`, "M1"),
+              S(`Multiply the denominators: ${den} × ${d2} = ${td}`, "M1"),
+              S(`${frac(tn, td)} = ${frac(tn / g, td / g)}`, "A1")] };
+    }
+  },
+
+  // ================ Primary: geometry, measure and statistics ================
+
+  shapeProperties: {
+    name: "Properties of 2D and 3D shapes", grades: [1, 2, 3, 4],
+    gen(r, d) {
+      const flat = [["triangle", 3, 3], ["square", 4, 4], ["rectangle", 4, 4], ["pentagon", 5, 5],
+                    ["hexagon", 6, 6], ["octagon", 8, 8]];
+      const solid = [["cube", 6, 12, 8], ["cuboid", 6, 12, 8], ["square-based pyramid", 5, 8, 5],
+                     ["triangular prism", 5, 9, 6], ["cylinder", 3, 2, 0], ["cone", 2, 1, 1]];
+      if (d < 3 || r() < 0.5) {
+        const [name, sides, corners] = pick(r, d === 1 ? flat.slice(0, 4) : flat);
+        const askSides = r() < 0.5;
+        return { q: `How many ${askSides ? "sides" : "corners"} does a ${name} have?`,
+          a: String(askSides ? sides : corners),
+          sol: [S(`A ${name} has ${sides} sides and ${corners} corners`, "B1")] };
+      }
+      const [name, faces, edges, vertices] = pick(r, solid);
+      const which = pick(r, ["faces", "edges", "vertices"]);
+      const ans = which === "faces" ? faces : which === "edges" ? edges : vertices;
+      return { q: `How many ${which} does a ${name} have?`, a: String(ans),
+        sol: [S(`A ${name} has ${faces} faces, ${edges} edges and ${vertices} vertices`, "M1"),
+              S(`So ${ans} ${which}`, "A1")] };
+    }
+  },
+  symmetryLines: {
+    name: "Lines of symmetry", grades: [2, 3, 4, 5],
+    gen(r, d) {
+      const shapes = [["square", 4], ["rectangle", 2], ["equilateral triangle", 3],
+                      ["isosceles triangle", 1], ["regular pentagon", 5], ["regular hexagon", 6],
+                      ["circle", "infinitely many"], ["parallelogram", 0], ["kite", 1],
+                      ["regular octagon", 8], ["rhombus", 2]];
+      const pool = d === 1 ? shapes.slice(0, 4) : d === 2 ? shapes.slice(0, 7) : shapes;
+      const [name, n] = pick(r, pool);
+      return { q: `How many lines of symmetry does a ${name} have?`, a: String(n),
+        sol: [S(`Fold the shape so both halves match exactly`, "M1"),
+              S(`A ${name} has ${n} line${n === 1 ? "" : "s"} of symmetry`, "A1")] };
+    }
+  },
+  tellTime: {
+    name: "Telling the time", grades: [1, 2, 3, 4],
+    gen(r, d) {
+      const h = ri(r, 1, 12);
+      const mins = d === 1 ? pick(r, [0, 30]) : d === 2 ? pick(r, [0, 15, 30, 45]) : ri(r, 0, 11) * 5;
+      const words = { 0: `${h} o'clock`, 15: `quarter past ${h}`, 30: `half past ${h}`,
+                      45: `quarter to ${h === 12 ? 1 : h + 1}` };
+      const digital = `${h}:${String(mins).padStart(2, "0")}`;
+      const ans = words[mins] || (mins < 30 ? `${mins} minutes past ${h}` : `${60 - mins} minutes to ${h === 12 ? 1 : h + 1}`);
+      return { q: `Write this time in words:  ${digital}`, a: ans,
+        sol: [S(`${mins} minutes ${mins <= 30 ? "past" : "to"} the hour`, "M1"), S(ans, "A1")] };
+    }
+  },
+  timeIntervals: {
+    name: "Time intervals", grades: [3, 4, 5, 6],
+    gen(r, d) {
+      const h1 = ri(r, 7, 11), m1 = ri(r, 0, 11) * 5;
+      const dur = d === 1 ? ri(r, 1, 5) * 10 : d === 2 ? ri(r, 4, 15) * 5 : ri(r, 70, 200);
+      const t1 = h1 * 60 + m1, t2 = t1 + dur;
+      const fmt = (t) => `${Math.floor(t / 60) % 24}:${String(t % 60).padStart(2, "0")}`;
+      const hh = Math.floor(dur / 60), mm = dur % 60;
+      return { q: `A lesson starts at ${fmt(t1)} and lasts ${hh ? hh + " hour" + (hh > 1 ? "s" : "") + " " : ""}${mm ? mm + " minutes" : ""}.\nWhat time does it finish?`,
+        a: fmt(t2),
+        sol: [S(`${fmt(t1)} + ${dur} minutes`, "M1"), S(`= ${fmt(t2)}`, "A1")] };
+    }
+  },
+  unitConversion: {
+    name: "Converting units of measure", grades: [3, 4, 5, 6, 7],
+    gen(r, d) {
+      const sets = [["cm", "mm", 10], ["m", "cm", 100], ["km", "m", 1000],
+                    ["kg", "g", 1000], ["litres", "ml", 1000]];
+      const [big, small, k] = pick(r, sets);
+      const n = d === 1 ? ri(r, 2, 9) : d === 2 ? ri(r, 2, 99) : ri(r, 2, 99) + 0.5;
+      if (r() < 0.5)
+        return { q: `Convert ${n} ${big} into ${small}`, a: `${n * k} ${small}`,
+          sol: [S(`1 ${big} = ${k} ${small}`, "M1"), S(`${n} × ${k} = ${n * k} ${small}`, "A1")] };
+      return { q: `Convert ${n * k} ${small} into ${big}`, a: `${n} ${big}`,
+        sol: [S(`${k} ${small} = 1 ${big}`, "M1"), S(`${n * k} ÷ ${k} = ${n} ${big}`, "A1")] };
+    }
+  },
+  perimeterShapes: {
+    name: "Perimeter", grades: [3, 4, 5, 6],
+    gen(r, d) {
+      if (d === 1) {
+        const a = ri(r, 2, 12);
+        return { q: `Find the perimeter of a square with side ${a} cm.`, a: `${4 * a} cm`,
+          sol: [S(`4 × ${a}`, "M1"), S(`= ${4 * a} cm`, "A1")] };
+      }
+      if (d === 2) {
+        const a = ri(r, 2, 15), b = ri(r, 2, 15);
+        return { q: `Find the perimeter of a rectangle ${a} cm by ${b} cm.`, a: `${2 * (a + b)} cm`,
+          sol: [S(`2 × (${a} + ${b})`, "M1"), S(`= ${2 * (a + b)} cm`, "A1")] };
+      }
+      const a = ri(r, 3, 12), b = ri(r, 3, 12), c = ri(r, 2, a - 1), e = ri(r, 2, b - 1);
+      return { q: `An L-shape is made by cutting a ${c} cm by ${e} cm corner from a ${a} cm by ${b} cm rectangle.\nFind its perimeter.`,
+        a: `${2 * (a + b)} cm`,
+        sol: [S("The cut-out corner moves two sides but does not change the total distance round", "M1"),
+              S(`Perimeter = 2 × (${a} + ${b}) = ${2 * (a + b)} cm`, "A1")] };
+    }
+  },
+  volumeCuboid: {
+    name: "Volume of a cuboid", grades: [5, 6, 7, 8],
+    gen(r, d) {
+      const a = ri(r, 2, 6 + d), b = ri(r, 2, 6 + d), c = ri(r, 2, 6 + d);
+      if (d === 3) {
+        const v = a * b * c;
+        return { q: `A cuboid has volume ${v} cm³, length ${a} cm and width ${b} cm.\nFind its height.`,
+          a: `${c} cm`,
+          sol: [S(`${a} × ${b} = ${a * b}`, "M1"), S(`${v} ÷ ${a * b} = ${c} cm`, "A1")] };
+      }
+      return { q: `Find the volume of a cuboid ${a} cm by ${b} cm by ${c} cm.`, a: `${a * b * c} cm³`,
+        sol: [S(`Volume = length × width × height`, "M1"),
+              S(`${a} × ${b} × ${c} = ${a * b * c} cm³`, "A1")] };
+    }
+  },
+  coordinates: {
+    name: "Coordinates", grades: [4, 5, 6, 7],
+    gen(r, d) {
+      const lim = d === 1 ? 6 : 8;
+      const neg = d >= 2;
+      const x = neg ? ri(r, -lim, lim) : ri(r, 0, lim);
+      const y = neg ? ri(r, -lim, lim) : ri(r, 0, lim);
+      if (d === 3) {
+        const dx = ri(r, 1, 5), dy = ri(r, 1, 5);
+        return { q: `The point (${nf(x)}, ${nf(y)}) is translated ${dx} right and ${dy} up.\nWrite the new coordinates.`,
+          a: `(${nf(x + dx)}, ${nf(y + dy)})`,
+          sol: [S(`Add ${dx} to x and ${dy} to y`, "M1"),
+                S(`(${nf(x + dx)}, ${nf(y + dy)})`, "A1")] };
+      }
+      const q = x >= 0 && y >= 0 ? "first" : x < 0 && y >= 0 ? "second" : x < 0 ? "third" : "fourth";
+      return { q: `In which quadrant does the point (${nf(x)}, ${nf(y)}) lie?`, a: `the ${q} quadrant`,
+        sol: [S(`x is ${x >= 0 ? "positive" : "negative"} and y is ${y >= 0 ? "positive" : "negative"}`, "M1"),
+              S(`so it is in the ${q} quadrant`, "A1")] };
+    }
+  },
+  angleTypes: {
+    name: "Types of angle", grades: [3, 4, 5, 6],
+    gen(r, d) {
+      const a = d === 1 ? pick(r, [45, 90, 120, 180]) : ri(r, 5, 355);
+      const kind = a < 90 ? "acute" : a === 90 ? "a right angle" : a < 180 ? "obtuse"
+        : a === 180 ? "a straight line" : "reflex";
+      if (d === 3) {
+        const b = ri(r, 20, 150);
+        return { q: `Two angles on a straight line are ${b}° and x°. Find x.`, a: `${180 - b}°`,
+          sol: [S("Angles on a straight line add to 180°", "M1"),
+                S(`180 − ${b} = ${180 - b}°`, "A1")] };
+      }
+      return { q: `Is an angle of ${a}° acute, obtuse or reflex?`,
+        a: kind.replace(/^a /, ""),
+        sol: [S("Acute < 90°, obtuse between 90° and 180°, reflex above 180°", "M1"),
+              S(`${a}° is ${kind}`, "A1")] };
+    }
+  },
+  readTable: {
+    name: "Reading charts and tables", grades: [2, 3, 4, 5, 6],
+    gen(r, d) {
+      const items = ["Apples", "Bananas", "Oranges", "Pears", "Mangoes"];
+      const n = d === 1 ? 3 : d === 2 ? 4 : 5;
+      const rows = items.slice(0, n).map((x) => [x, ri(r, 2, 20)]);
+      const table = rows.map(([x, v]) => `${x}: ${v}`).join("\n");
+      const total = rows.reduce((t, [, v]) => t + v, 0);
+      const most = rows.reduce((a, b) => (b[1] > a[1] ? b : a));
+      if (d === 3)
+        return { q: `The table shows fruit sold one morning.\n${table}\nHow many more ${most[0].toLowerCase()} were sold than the least popular fruit?`,
+          a: String(most[1] - rows.reduce((a, b) => (b[1] < a[1] ? b : a))[1]),
+          sol: [S(`Most: ${most[0]} (${most[1]}), least: ${rows.reduce((a, b) => (b[1] < a[1] ? b : a))[0]} (${rows.reduce((a, b) => (b[1] < a[1] ? b : a))[1]})`, "M1"),
+                S(`${most[1]} − ${rows.reduce((a, b) => (b[1] < a[1] ? b : a))[1]} = ${most[1] - rows.reduce((a, b) => (b[1] < a[1] ? b : a))[1]}`, "A1")] };
+      if (r() < 0.5)
+        return { q: `The table shows fruit sold one morning.\n${table}\nHow many pieces of fruit were sold altogether?`,
+          a: String(total),
+          sol: [S(rows.map(([, v]) => v).join(" + "), "M1"), S(`= ${total}`, "A1")] };
+      return { q: `The table shows fruit sold one morning.\n${table}\nWhich fruit sold the most?`, a: most[0],
+        sol: [S(`The largest number is ${most[1]}`, "M1"), S(`so ${most[0]}`, "A1")] };
+    }
+  },
+  chanceLanguage: {
+    name: "The language of chance", grades: [2, 3, 4, 5],
+    gen(r, d) {
+      const events = [
+        ["the sun will rise tomorrow", "certain"],
+        ["a fair coin lands on heads", "an even chance"],
+        ["you roll a 7 on an ordinary dice", "impossible"],
+        ["it snows in Muscat in July", "impossible"],
+        ["you roll an even number on a dice", "an even chance"],
+        ["a baby born today is a girl", "an even chance"],
+        ["you pick a red ball from a bag of 9 red and 1 blue", "likely"],
+        ["you pick the blue ball from a bag of 9 red and 1 blue", "unlikely"]
+      ];
+      const pool = d === 1 ? events.slice(0, 4) : d === 2 ? events.slice(0, 6) : events;
+      const [e, ans] = pick(r, pool);
+      return { q: `Choose the best word: impossible, unlikely, an even chance, likely or certain.\n${e[0].toUpperCase() + e.slice(1)}.`,
+        a: ans,
+        sol: [S("Place the event on the likelihood scale from impossible to certain", "M1"), S(ans, "A1")] };
+    }
+  },
+  simpleProbability: {
+    name: "Probability of single events", grades: [5, 6, 7, 8],
+    gen(r, d) {
+      const red = ri(r, 1, 6), blue = ri(r, 1, 6), green = d === 1 ? 0 : ri(r, 1, 6);
+      const total = red + blue + green;
+      const want = pick(r, green ? ["red", "blue", "green"] : ["red", "blue"]);
+      const n = want === "red" ? red : want === "blue" ? blue : green;
+      const g = gcd(n, total);
+      return { q: `A bag holds ${red} red, ${blue} blue${green ? " and " + green + " green" : ""} counters.\nOne counter is taken at random. Find the probability that it is ${want}.`,
+        a: frac(n / g, total / g),
+        sol: [S(`Total counters = ${total}`, "M1"),
+              S(`P(${want}) = ${frac(n, total)}${g > 1 ? " = " + frac(n / g, total / g) : ""}`, "A1")] };
+    }
+  },
+  modeMedianRange: {
+    name: "Mode, median and range", grades: [5, 6, 7, 8],
+    gen(r, d) {
+      const n = d === 1 ? 5 : d === 2 ? 7 : 9;
+      const vals = [];
+      for (let i = 0; i < n - 1; i++) vals.push(ri(r, 1, 20));
+      vals.push(vals[ri(r, 0, n - 2)]);            // guarantee a mode
+      const sorted = [...vals].sort((a, b) => a - b);
+      const counts = {};
+      sorted.forEach((v) => { counts[v] = (counts[v] || 0) + 1; });
+      const mode = Object.keys(counts).reduce((a, b) => (counts[b] > counts[a] ? b : a));
+      const median = sorted[(n - 1) / 2];
+      const range = sorted[n - 1] - sorted[0];
+      const ask = d === 1 ? "mode" : d === 2 ? "median" : "range";
+      const ans = ask === "mode" ? mode : ask === "median" ? median : range;
+      return { q: `Find the ${ask} of this data:\n${vals.join(", ")}`, a: String(ans),
+        sol: [S(`In order: ${sorted.join(", ")}`, "M1"),
+              S(ask === "mode" ? `${mode} appears most often`
+                : ask === "median" ? `the middle value is ${median}`
+                : `${sorted[n - 1]} − ${sorted[0]} = ${range}`, "A1")] };
+    }
+  },
+
+  // ============ Lower Secondary and IGCSE ============
+
+  substitution: {
+    name: "Substitution into formulae", grades: [7, 8, 9],
+    gen(r, d) {
+      const a = ri(r, 2, 9), b = ri(r, 2, 9), x = ri(r, 2, 9);
+      if (d === 1)
+        return { q: `Find the value of ${a}x + ${b} when x = ${x}`, a: String(a * x + b),
+          sol: [S(`${a} × ${x} = ${a * x}`, "M1"), S(`${a * x} + ${b} = ${a * x + b}`, "A1")] };
+      if (d === 2) {
+        const y = ri(r, 2, 9);
+        return { q: `Find the value of ${a}x − ${b}y when x = ${x} and y = ${y}`, a: nf(a * x - b * y),
+          sol: [S(`${a} × ${x} = ${a * x},  ${b} × ${y} = ${b * y}`, "M1"),
+                S(`${a * x} − ${b * y} = ${nf(a * x - b * y)}`, "A1")] };
+      }
+      return { q: `The formula for the area of a trapezium is A = ⁅1/2⁆(a + b)h.\nFind A when a = ${a}, b = ${b} and h = ${x * 2}`,
+        a: String(((a + b) * x * 2) / 2),
+        sol: [S(`a + b = ${a + b}`, "M1"),
+              S(`⁅1/2⁆ × ${a + b} × ${x * 2} = ${((a + b) * x * 2) / 2}`, "A1")] };
+    }
+  },
+  simplifyExpressions: {
+    name: "Simplifying expressions", grades: [7, 8, 9],
+    gen(r, d) {
+      const a = ri(r, 2, 9), b = ri(r, 2, 9), c = ri(r, 2, 9), e = ri(r, 2, 9);
+      if (d === 1)
+        return { q: `Simplify:  ${a}x + ${b}x`, a: `${a + b}x`,
+          sol: [S(`${a} + ${b} = ${a + b}`, "M1"), S(`= ${a + b}x`, "A1")] };
+      if (d === 2)
+        return { q: `Simplify:  ${a}x + ${b}y + ${c}x − ${Math.min(b, e)}y`,
+          a: `${a + c}x + ${b - Math.min(b, e)}y`.replace(" + 0y", ""),
+          sol: [S(`x terms: ${a}x + ${c}x = ${a + c}x`, "M1"),
+                S(`y terms: ${b}y − ${Math.min(b, e)}y = ${b - Math.min(b, e)}y`, "A1")] };
+      return { q: `Simplify:  ${a}x${sup(2)} × ${b}x${sup(3)}`, a: `${a * b}x${sup(5)}`,
+        sol: [S(`${a} × ${b} = ${a * b}`, "M1"),
+              S(`x${sup(2)} × x${sup(3)} = x${sup(5)}, so ${a * b}x${sup(5)}`, "A1")] };
+    }
+  },
+  angleFacts: {
+    name: "Angle facts", grades: [6, 7, 8],
+    gen(r, d) {
+      if (d === 1) {
+        const a = ri(r, 20, 150);
+        return { q: `Two angles on a straight line are ${a}° and x°.\nFind x, giving a reason.`,
+          a: `x = ${180 - a}°`,
+          sol: [S("Angles on a straight line add to 180°", "M1"), S(`x = 180 − ${a} = ${180 - a}°`, "A1")] };
+      }
+      if (d === 2) {
+        const a = ri(r, 40, 120), b = ri(r, 40, Math.max(41, 340 - a - 40));
+        return { q: `Three angles at a point are ${a}°, ${b}° and x°.\nFind x, giving a reason.`,
+          a: `x = ${360 - a - b}°`,
+          sol: [S("Angles at a point add to 360°", "M1"),
+                S(`x = 360 − ${a} − ${b} = ${360 - a - b}°`, "A1")] };
+      }
+      const a = ri(r, 40, 140);
+      const kind = pick(r, ["corresponding", "alternate", "co-interior"]);
+      const ans = kind === "co-interior" ? 180 - a : a;
+      return { q: `A pair of parallel lines is crossed by a straight line.\nOne angle is ${a}°. Find the ${kind} angle x.`,
+        a: `x = ${ans}°`,
+        sol: [S(`${kind[0].toUpperCase() + kind.slice(1)} angles are ${kind === "co-interior" ? "supplementary" : "equal"}`, "M1"),
+              S(`x = ${ans}°`, "A1")] };
+    }
+  },
+  polygonAngles: {
+    name: "Angles in polygons", grades: [7, 8, 9],
+    gen(r, d) {
+      // Exterior-angle questions only work when n divides 360 exactly.
+      const n = pick(r, d === 1 ? [3, 4, 5, 6, 7, 9, 11] : d === 2 ? [5, 6, 8, 9, 10, 12]
+        : [15, 18, 20, 24, 30, 36]);
+      if (d === 1)
+        return { q: `Find the sum of the interior angles of a polygon with ${n} sides.`,
+          a: `${(n - 2) * 180}°`,
+          sol: [S(`(n − 2) × 180 with n = ${n}`, "M1"), S(`${n - 2} × 180 = ${(n - 2) * 180}°`, "A1")] };
+      if (d === 2)
+        return { q: `Find the size of each exterior angle of a regular polygon with ${n} sides.`,
+          a: `${360 / n}°`,
+          sol: [S(`360 ÷ ${n}`, "M1"), S(`= ${360 / n}°`, "A1")] };
+      return { q: `Each exterior angle of a regular polygon is ${360 / n}°.\nHow many sides does it have?`,
+        a: String(n),
+        sol: [S(`360 ÷ ${360 / n}`, "M1"), S(`= ${n} sides`, "A1")] };
+    }
+  },
+  percentChange: {
+    name: "Percentage change", grades: [8, 9, 10],
+    gen(r, d) {
+      const base = ri(r, 2, 40) * 25;
+      const pct = pick(r, [5, 10, 12, 15, 20, 25]);
+      if (d === 1) {
+        const up = r() < 0.5;
+        // Work in whole units of 1% so the answer never carries binary rounding.
+        const part = (base * pct) / 100;
+        const ans = up ? base + part : base - part;
+        return { q: `${up ? "Increase" : "Decrease"} ${base} by ${pct}%`, a: money(ans),
+          sol: [S(`${pct}% of ${base} = ${money(part)}`, "M1"),
+                S(`${base} ${up ? "+" : "−"} ${money(part)} = ${money(ans)}`, "A1")] };
+      }
+      if (d === 2) {
+        const rise = (base * pct) / 100;
+        const now = base + rise;
+        return { q: `A price rises from ${money(base)} to ${money(now)}.\nFind the percentage increase.`, a: `${pct}%`,
+          sol: [S(`Increase = ${money(now)} − ${money(base)} = ${money(rise)}`, "M1"),
+                S(`${frac(money(rise), money(base))} × 100 = ${pct}%`, "A1")] };
+      }
+      const yrs = ri(r, 2, 4);
+      const amt = +(base * Math.pow(1 + pct / 100, yrs)).toFixed(2);
+      return { q: `${base} rials is invested at ${pct}% compound interest for ${yrs} years.\nFind the value at the end, to 2 decimal places.`,
+        a: `${amt} rials`,
+        sol: [S(`Multiplier = 1.${String(pct).padStart(2, "0")}`, "M1"),
+              S(`${base} × 1.${String(pct).padStart(2, "0")}${sup(yrs)} = ${amt}`, "A1")] };
+    }
+  },
+  speedDistanceTime: {
+    name: "Speed, distance and time", grades: [8, 9, 10],
+    gen(r, d) {
+      const speed = ri(r, 2, 12) * 5, time = ri(r, 2, 6);
+      const dist = speed * time;
+      if (d === 1)
+        return { q: `A car travels at ${speed} km/h for ${time} hours.\nHow far does it go?`,
+          a: `${dist} km`,
+          sol: [S("distance = speed × time", "M1"), S(`${speed} × ${time} = ${dist} km`, "A1")] };
+      if (d === 2)
+        return { q: `A car travels ${dist} km in ${time} hours.\nFind its average speed.`,
+          a: `${speed} km/h`,
+          sol: [S("speed = distance ÷ time", "M1"), S(`${dist} ÷ ${time} = ${speed} km/h`, "A1")] };
+      return { q: `A car travels ${dist} km at an average speed of ${speed} km/h.\nHow long does the journey take?`,
+        a: `${time} hours`,
+        sol: [S("time = distance ÷ speed", "M1"), S(`${dist} ÷ ${speed} = ${time} hours`, "A1")] };
+    }
+  },
+  prismVolume: {
+    name: "Volume and surface area of a prism", grades: [8, 9, 10],
+    gen(r, d) {
+      const b = ri(r, 3, 12), h = ri(r, 3, 12), len = ri(r, 4, 15);
+      if (d === 1) {
+        const area = (b * h) / 2;
+        return { q: `A triangular prism has a cross-section of area ${area} cm² and length ${len} cm.\nFind its volume.`,
+          a: `${area * len} cm³`,
+          sol: [S("Volume = cross-section area × length", "M1"),
+                S(`${area} × ${len} = ${area * len} cm³`, "A1")] };
+      }
+      if (d === 2)
+        return { q: `A prism has a right-angled triangular cross-section with base ${b} cm and height ${h} cm, and is ${len} cm long.\nFind its volume.`,
+          a: `${((b * h) / 2) * len} cm³`,
+          sol: [S(`Cross-section = ⁅1/2⁆ × ${b} × ${h} = ${(b * h) / 2} cm²`, "M1"),
+                S(`${(b * h) / 2} × ${len} = ${((b * h) / 2) * len} cm³`, "A1")] };
+      const a = ri(r, 2, 8);
+      return { q: `A cube has surface area ${6 * a * a} cm².\nFind the length of one edge.`,
+        a: `${a} cm`,
+        sol: [S(`One face = ${6 * a * a} ÷ 6 = ${a * a} cm²`, "M1"),
+              S(`Edge = ${rad(a * a)} = ${a} cm`, "A1")] };
+    }
+  },
+  bounds: {
+    name: "Upper and lower bounds", grades: [9, 10],
+    gen(r, d) {
+      const unit = d === 1 ? 1 : d === 2 ? 10 : 0.1;
+      const n = d === 3 ? +(ri(r, 20, 99) / 10).toFixed(1) : ri(r, 2, 40) * unit;
+      const half = unit / 2;
+      const lower = +(n - half).toFixed(2), upper = +(n + half).toFixed(2);
+      return { q: `A length is ${n} cm, correct to the nearest ${unit} cm.\nWrite down the lower and upper bounds.`,
+        a: `${lower} cm ≤ length < ${upper} cm`,
+        sol: [S(`Half of ${unit} is ${half}`, "M1"),
+              S(`${n} − ${half} = ${lower},  ${n} + ${half} = ${upper}`, "A1")] };
+    }
+  },
+  surds: {
+    name: "Surds", grades: [9, 10, 11],
+    gen(r, d) {
+      if (d === 1) {
+        const k = pick(r, [2, 3, 5, 6, 7]), sq = pick(r, [4, 9, 16, 25]);
+        return { q: `Simplify:  ${rad(k * sq)}`, a: `${Math.sqrt(sq)}${rad(k)}`,
+          sol: [S(`${k * sq} = ${sq} × ${k}`, "M1"),
+                S(`${rad(sq)} × ${rad(k)} = ${Math.sqrt(sq)}${rad(k)}`, "A1")] };
+      }
+      if (d === 2) {
+        const k = pick(r, [2, 3, 5]), a = ri(r, 2, 6), b = ri(r, 2, 6);
+        return { q: `Simplify:  ${a}${rad(k)} + ${b}${rad(k)}`, a: `${a + b}${rad(k)}`,
+          sol: [S(`${a} + ${b} = ${a + b}`, "M1"), S(`= ${a + b}${rad(k)}`, "A1")] };
+      }
+      const k = pick(r, [2, 3, 5, 7]), a = ri(r, 2, 9);
+      return { q: `Rationalise the denominator:  ${frac(a, rad(k))}`, a: frac(`${a}${rad(k)}`, k),
+        sol: [S(`Multiply top and bottom by ${rad(k)}`, "M1"),
+              S(`${frac(`${a}${rad(k)}`, k)}`, "A1")] };
+    }
+  },
+  arithmeticSeries: {
+    name: "Arithmetic progressions", grades: [11, 12],
+    gen(r, d) {
+      const a = ri(r, 2, 12), diff = ri(r, 2, 9), n = ri(r, 5, 20);
+      if (d === 1)
+        return { q: `An arithmetic progression has first term ${a} and common difference ${diff}.\nFind the ${n}th term.`,
+          a: String(a + (n - 1) * diff),
+          sol: [S(`uₙ = a + (n − 1)d`, "M1"),
+                S(`${a} + ${n - 1} × ${diff} = ${a + (n - 1) * diff}`, "A1")] };
+      const sum = (n / 2) * (2 * a + (n - 1) * diff);
+      if (d === 2)
+        return { q: `An arithmetic progression has first term ${a} and common difference ${diff}.\nFind the sum of the first ${n} terms.`,
+          a: String(sum),
+          sol: [S(`Sₙ = ⁅n/2⁆(2a + (n − 1)d)`, "M1"),
+                S(`${frac(n, 2)}(2 × ${a} + ${n - 1} × ${diff}) = ${sum}`, "A1")] };
+      const last = a + (n - 1) * diff;
+      return { q: `An arithmetic progression begins ${a}, ${a + diff}, ${a + 2 * diff}, …\nThe last term is ${last}. How many terms are there?`,
+        a: String(n),
+        sol: [S(`${last} = ${a} + (n − 1) × ${diff}`, "M1"),
+              S(`n − 1 = ${n - 1}, so n = ${n}`, "A1")] };
+    }
+  },
+  geometricSeries: {
+    name: "Geometric progressions", grades: [11, 12],
+    gen(r, d) {
+      const a = ri(r, 2, 9), ratio = pick(r, [2, 3]), n = ri(r, 4, 8);
+      if (d === 1)
+        return { q: `A geometric progression has first term ${a} and common ratio ${ratio}.\nFind the ${n}th term.`,
+          a: String(a * Math.pow(ratio, n - 1)),
+          sol: [S(`uₙ = ar${sup("n")}⁻¹`, "M1"),
+                S(`${a} × ${ratio}${sup(n - 1)} = ${a * Math.pow(ratio, n - 1)}`, "A1")] };
+      if (d === 2) {
+        const sum = (a * (Math.pow(ratio, n) - 1)) / (ratio - 1);
+        return { q: `A geometric progression has first term ${a} and common ratio ${ratio}.\nFind the sum of the first ${n} terms.`,
+          a: String(sum),
+          sol: [S(`Sₙ = ${frac(`a(r${sup("n")} − 1)`, "r − 1")}`, "M1"),
+                S(`${frac(`${a}(${ratio}${sup(n)} − 1)`, ratio - 1)} = ${sum}`, "A1")] };
+      }
+      const den = ri(r, 2, 5);
+      const sInf = a / (1 - 1 / den);
+      const clean = Number.isInteger(sInf) ? String(sInf) : frac(a * den, den - 1);
+      return { q: `A geometric progression has first term ${a} and common ratio ${frac(1, den)}.\nFind the sum to infinity.`,
+        a: clean,
+        sol: [S(`S∞ = ${frac("a", "1 − r")}`, "M1"),
+              S(`${frac(a, `1 − ${frac(1, den)}`)} = ${clean}`, "A1")] };
+    }
+  },
+  compositeFunctions: {
+    name: "Composite and inverse functions", grades: [10, 11, 12],
+    gen(r, d) {
+      const a = ri(r, 2, 6), b = ri(r, 1, 9), x = ri(r, 2, 8);
+      if (d === 1)
+        return { q: `f(x) = ${a}x + ${b}.  Find f(${x}).`, a: String(a * x + b),
+          sol: [S(`${a} × ${x} + ${b}`, "M1"), S(`= ${a * x + b}`, "A1")] };
+      if (d === 2) {
+        const c = ri(r, 2, 5);
+        return { q: `f(x) = ${a}x + ${b} and g(x) = x + ${c}.\nFind fg(${x}).`,
+          a: String(a * (x + c) + b),
+          sol: [S(`g(${x}) = ${x} + ${c} = ${x + c}`, "M1"),
+                S(`f(${x + c}) = ${a} × ${x + c} + ${b} = ${a * (x + c) + b}`, "A1")] };
+      }
+      return { q: `f(x) = ${a}x + ${b}.  Find f⁻¹(x).`, a: `${frac(`x − ${b}`, a)}`,
+        sol: [S(`Let y = ${a}x + ${b}`, "M1"),
+              S(`x = ${frac(`y − ${b}`, a)}, so f⁻¹(x) = ${frac(`x − ${b}`, a)}`, "A1")] };
+    }
+  },
+  circularMeasure: {
+    name: "Radians, arc length and sector area", grades: [11, 12],
+    gen(r, d) {
+      const rad2 = ri(r, 3, 12);
+      const den = pick(r, [2, 3, 4, 6]);
+      const theta = frac("π", den);
+      const arc = rad2 / den;
+      if (d === 1)
+        return { q: `Convert ${180 / den}° into radians, in terms of π.`, a: theta,
+          sol: [S(`Multiply by ${frac("π", 180)}`, "M1"),
+                S(`${180 / den} × ${frac("π", 180)} = ${theta}`, "A1")] };
+      if (d === 2)
+        return { q: `A sector has radius ${rad2} cm and angle ${theta} radians.\nFind the arc length, in terms of π.`,
+          a: `${piTerm(rad2, den)} cm`,
+          sol: [S("s = rθ", "M1"),
+                S(`${rad2} × ${theta} = ${piTerm(rad2, den)} cm`, "A1")] };
+      return { q: `A sector has radius ${rad2} cm and angle ${theta} radians.\nFind its area, in terms of π.`,
+        a: `${piTerm(rad2 * rad2, 2 * den)} cm²`,
+        sol: [S("A = ⁅1/2⁆r²θ", "M1"),
+              S(`⁅1/2⁆ × ${rad2}² × ${theta} = ${piTerm(rad2 * rad2, 2 * den)} cm²`, "A1")] };
+    }
+  },
+  sineCosineRule: {
+    name: "The sine and cosine rules", grades: [10, 11],
+    gen(r, d) {
+      if (d === 1) {
+        const A = ri(r, 30, 70), B = ri(r, 30, 70), a = ri(r, 5, 15);
+        const b = +((a * Math.sin(B * Math.PI / 180)) / Math.sin(A * Math.PI / 180)).toFixed(2);
+        return { q: `In triangle ABC, angle A = ${A}°, angle B = ${B}° and a = ${a} cm.\nFind b, correct to 2 decimal places.`,
+          a: `${b} cm`,
+          sol: [S(`${frac("a", "sin A")} = ${frac("b", "sin B")}`, "M1"),
+                S(`b = ${frac(`${a} sin ${B}°`, `sin ${A}°`)} = ${b} cm`, "A1")] };
+      }
+      if (d === 2) {
+        const b = ri(r, 5, 12), c = ri(r, 5, 12), A = ri(r, 30, 120);
+        const a = +Math.sqrt(b * b + c * c - 2 * b * c * Math.cos(A * Math.PI / 180)).toFixed(2);
+        return { q: `In triangle ABC, b = ${b} cm, c = ${c} cm and angle A = ${A}°.\nFind a, correct to 2 decimal places.`,
+          a: `${a} cm`,
+          sol: [S("a² = b² + c² − 2bc cos A", "M1"),
+                S(`a² = ${b}² + ${c}² − 2(${b})(${c})cos ${A}° , so a = ${a} cm`, "A1")] };
+      }
+      const b = ri(r, 4, 12), c = ri(r, 4, 12), A = ri(r, 30, 150);
+      const area = +(0.5 * b * c * Math.sin(A * Math.PI / 180)).toFixed(2);
+      return { q: `A triangle has sides ${b} cm and ${c} cm with an included angle of ${A}°.\nFind its area, correct to 2 decimal places.`,
+        a: `${area} cm²`,
+        sol: [S("Area = ⁅1/2⁆bc sin A", "M1"),
+              S(`⁅1/2⁆ × ${b} × ${c} × sin ${A}° = ${area} cm²`, "A1")] };
+    }
+  },
+  vectors2D: {
+    name: "Vectors", grades: [10, 11, 12],
+    gen(r, d) {
+      const a = ri(r, -6, 8), b = ri(r, -6, 8), c = ri(r, -6, 8), e = ri(r, -6, 8);
+      const col = (x, y) => `(${nf(x)}, ${nf(y)})`;
+      if (d === 1)
+        return { q: `a = ${col(a, b)} and b = ${col(c, e)}.\nFind a + b.`, a: col(a + c, b + e),
+          sol: [S("Add the components", "M1"), S(`${col(a + c, b + e)}`, "A1")] };
+      if (d === 2) {
+        const k = ri(r, 2, 5);
+        return { q: `a = ${col(a, b)}.  Find ${k}a.`, a: col(a * k, b * k),
+          sol: [S(`Multiply each component by ${k}`, "M1"), S(col(a * k, b * k), "A1")] };
+      }
+      const t = pick(r, [[3, 4, 5], [6, 8, 10], [5, 12, 13], [8, 15, 17]]);
+      return { q: `Find the magnitude of the vector (${t[0]}, ${t[1]}).`, a: String(t[2]),
+        sol: [S(`|v| = ${rad(`${t[0]}² + ${t[1]}²`)}`, "M1"),
+              S(`= ${rad(t[0] * t[0] + t[1] * t[1])} = ${t[2]}`, "A1")] };
+    }
+  },
+  completeSquare: {
+    name: "Completing the square", grades: [10, 11],
+    gen(r, d) {
+      const p = ri(r, 1, 8) * (r() < 0.5 ? -1 : 1), q = ri(r, -9, 9);
+      const b = -2 * p, c = p * p + q;
+      const expr = poly([[1, 2], [b, 1], [c, 0]]);
+      if (d === 1 || d === 2)
+        return { q: `Write ${expr} in the form (x + a)² + b`,
+          a: `(x ${p < 0 ? "+ " + -p : "− " + p})${sup(2)} ${q < 0 ? "− " + -q : "+ " + q}`,
+          sol: [S(`Half of ${nf(b)} is ${nf(-p)}`, "M1"),
+                S(`(x ${p < 0 ? "+ " + -p : "− " + p})${sup(2)} ${q < 0 ? "− " + -q : "+ " + q}`, "A1")] };
+      return { q: `Find the minimum value of ${expr} and the value of x at which it occurs.`,
+        a: `minimum ${nf(q)} at x = ${nf(p)}`,
+        sol: [S(`Complete the square: (x ${p < 0 ? "+ " + -p : "− " + p})${sup(2)} ${q < 0 ? "− " + -q : "+ " + q}`, "M1"),
+              S(`The square is least when x = ${nf(p)}, giving ${nf(q)}`, "A1")] };
+    }
+  },
+  polynomialTheorems: {
+    name: "Factor and remainder theorems", grades: [12],
+    gen(r, d) {
+      const root = ri(r, 1, 4) * (r() < 0.5 ? -1 : 1);
+      const a = ri(r, 2, 6), b = ri(r, -6, 6);
+      // f(x) = x³ + ax² + bx + c, built so f(root) is known
+      const c = ri(r, -9, 9);
+      const f = (x) => x * x * x + a * x * x + b * x + c;
+      const expr = poly([[1, 3], [a, 2], [b, 1], [c, 0]]);
+      if (d === 1 || d === 2)
+        return { q: `f(x) = ${expr}\nFind the remainder when f(x) is divided by (x ${root < 0 ? "+ " + -root : "− " + root}).`,
+          a: nf(f(root)),
+          sol: [S(`By the remainder theorem the remainder is f(${nf(root)})`, "M1"),
+                S(`f(${nf(root)}) = ${nf(f(root))}`, "A1")] };
+      return { q: `f(x) = ${expr}\nShow whether (x ${root < 0 ? "+ " + -root : "− " + root}) is a factor of f(x).`,
+        a: f(root) === 0 ? "Yes — f(" + nf(root) + ") = 0" : "No — f(" + nf(root) + ") = " + nf(f(root)),
+        sol: [S(`By the factor theorem, test f(${nf(root)})`, "M1"),
+              S(`f(${nf(root)}) = ${nf(f(root))}, so it is ${f(root) === 0 ? "" : "not "}a factor`, "A1")] };
+    }
+  },
+  modulusFunction: {
+    name: "The modulus function", grades: [12],
+    gen(r, d) {
+      const a = ri(r, 2, 6), b = ri(r, 1, 9);
+      if (d === 1) {
+        const x = ri(r, -6, 6);
+        return { q: `Find the value of |${a}x − ${b}| when x = ${nf(x)}`, a: String(Math.abs(a * x - b)),
+          sol: [S(`${a} × ${nf(x)} − ${b} = ${nf(a * x - b)}`, "M1"),
+                S(`|${nf(a * x - b)}| = ${Math.abs(a * x - b)}`, "A1")] };
+      }
+      const k = ri(r, 1, 9) + b;
+      const x1 = (k + b) / a, x2 = (b - k) / a;
+      const nice = (v) => (Number.isInteger(v) ? String(v) : v.toFixed(2));
+      return { q: `Solve:  |${a}x − ${b}| = ${k}`, a: `x = ${nice(x1)} or x = ${nf(nice(x2))}`,
+        sol: [S(`${a}x − ${b} = ${k}  or  ${a}x − ${b} = ${nf(-k)}`, "M1"),
+              S(`x = ${nice(x1)}  or  x = ${nf(nice(x2))}`, "A1")] };
+    }
+  },
+  normalDistribution: {
+    name: "The normal distribution", grades: [12],
+    gen(r, d) {
+      // Keep the mean well clear of three standard deviations so the value
+      // asked about is never negative — these model heights, marks and times.
+      const sd = ri(r, 2, 8), mean = ri(r, 8, 20) * 5;
+      const x = mean + ri(r, -3, 3) * sd;
+      const z = (x - mean) / sd;
+      if (d === 1 || d === 2)
+        return { q: `X ~ N(${mean}, ${sd * sd}).  Find the standardised value z when X = ${nf(x)}.`,
+          a: `z = ${nf(z)}`,
+          sol: [S(`z = ${frac(`x − μ`, "σ")}`, "M1"),
+                S(`z = ${frac(`${nf(x)} − ${mean}`, sd)} = ${nf(z)}`, "A1")] };
+      const k = ri(r, 1, 2);
+      return { q: `X ~ N(${mean}, ${sd * sd}).  Between which two values do the middle ${k === 1 ? "68" : "95"}% of the data lie?`,
+        a: `${mean - k * sd} and ${mean + k * sd}`,
+        sol: [S(`${k === 1 ? "68" : "95"}% lies within ${k} standard deviation${k > 1 ? "s" : ""} of the mean`, "M1"),
+              S(`${mean} ± ${k} × ${sd} → ${mean - k * sd} to ${mean + k * sd}`, "A1")] };
+    }
+  },
+  discreteRandomVariable: {
+    name: "Discrete random variables", grades: [11, 12],
+    gen(r, d) {
+      const n = 4;
+      const vals = [1, 2, 3, 4];
+      const den = pick(r, [8, 10, 12, 16, 20]);
+      const nums = [];
+      let left = den;
+      for (let i = 0; i < n - 1; i++) {
+        const v = ri(r, 1, Math.max(1, left - (n - 1 - i)));
+        nums.push(v); left -= v;
+      }
+      nums.push(left);
+      const table = vals.map((v, i) => `x = ${v}: P = ${frac(nums[i], den)}`).join("\n");
+      const ex = nums.reduce((t, p, i) => t + p * vals[i], 0);
+      const g = gcd(ex, den);
+      if (d === 1)
+        return { q: `A discrete random variable X has this distribution:\n${table}\nShow that the probabilities sum to 1.`,
+          a: `${nums.join(" + ")} = ${den}, so the total is ${frac(den, den)} = 1`,
+          sol: [S(`${nums.map((x) => frac(x, den)).join(" + ")}`, "M1"),
+                S(`= ${frac(den, den)} = 1`, "A1")] };
+      return { q: `A discrete random variable X has this distribution:\n${table}\nFind E(X).`,
+        a: g === den ? String(ex / den) : frac(ex / g, den / g),
+        sol: [S(`E(X) = Σ x P(X = x)`, "M1"),
+              S(vals.map((v, i) => `${v} × ${frac(nums[i], den)}`).join(" + "), "M1"),
+              S(`= ${g === den ? ex / den : frac(ex / g, den / g)}`, "A1")] };
+    }
+  },
+  compassDirections: {
+    name: "Position and direction", grades: [1, 2, 3, 4],
+    gen(r, d) {
+      const dirs = ["north", "east", "south", "west"];
+      if (d === 1) {
+        const from = ri(r, 0, 3), quarter = pick(r, [1, 2, 3]);
+        const turn = quarter === 1 ? "a quarter turn" : quarter === 2 ? "a half turn" : "three quarter turns";
+        return { q: `You are facing ${dirs[from]}.\nYou make ${turn} clockwise. Which way are you facing now?`,
+          a: dirs[(from + quarter) % 4],
+          sol: [S(`Clockwise goes north → east → south → west`, "M1"),
+                S(`${quarter} quarter turn(s) from ${dirs[from]} is ${dirs[(from + quarter) % 4]}`, "A1")] };
+      }
+      const right = ri(r, 1, 5), up = ri(r, 1, 5);
+      if (d === 2)
+        return { q: `A counter starts at (0, 0) and moves ${right} squares east and ${up} squares north.\nWhere does it finish?`,
+          a: `(${right}, ${up})`,
+          sol: [S(`East adds to x, north adds to y`, "M1"), S(`(${right}, ${up})`, "A1")] };
+      // Keep the finish inside the first quadrant — Stage 1-4 grids have no
+      // negative coordinates.
+      const x = ri(r, 1, 6), y = up + ri(r, 1, 6);
+      return { q: `A counter moves from (${x}, ${y}) to (${x + right}, ${y - up}).\nDescribe the move.`,
+        a: `${right} square${right > 1 ? "s" : ""} east and ${up} square${up > 1 ? "s" : ""} south`,
+        sol: [S(`x goes up by ${right}, so ${right} east`, "M1"),
+              S(`y goes down by ${up}, so ${up} south`, "A1")] };
+    }
+  },
+  productQuotientRule: {
+    name: "Product and quotient rules", grades: [12],
+    gen(r, d) {
+      const a = ri(r, 2, 5), n = ri(r, 2, 4);
+      if (d === 1 || d === 2)
+        return { q: `Differentiate:  y = x${sup(n)}(${a}x + 1)`,
+          a: `${(n + 1) * a}x${sup(n)} + ${n}x${sup(n - 1)}`,
+          sol: [S(`Expand first: y = ${a}x${sup(n + 1)} + x${sup(n)}`, "M1"),
+                S(`${frac("dy", "dx")} = ${(n + 1) * a}x${sup(n)} + ${n}x${sup(n - 1)}`, "A1")] };
+      return { q: `Differentiate using the quotient rule:  y = ${frac(`x${sup(2)}`, `x + ${a}`)}`,
+        a: frac(`x${sup(2)} + ${2 * a}x`, `(x + ${a})${sup(2)}`),
+        sol: [S(`u = x², v = x + ${a};  u′ = 2x, v′ = 1`, "M1"),
+              S(`${frac("vu′ − uv′", "v²")} = ${frac(`2x(x + ${a}) − x${sup(2)}`, `(x + ${a})${sup(2)}`)}`, "M1"),
+              S(`= ${frac(`x${sup(2)} + ${2 * a}x`, `(x + ${a})${sup(2)}`)}`, "A1")] };
     }
   }
 };
