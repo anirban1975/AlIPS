@@ -1,5 +1,5 @@
 // AlIPS Math Curriculum Browser — app logic.
-// State: view (student/teacher), grade, search query.
+// State: view (student/teacher), grade, stream (track index), month, search query.
 
 (function () {
   const params = new URLSearchParams(location.search);
@@ -7,6 +7,8 @@
   const state = {
     view: params.get("view") || safeGet("alips-view") || "student",
     grade: parseInt(params.get("grade"), 10) || 1,
+    track: 0,
+    month: params.get("month") || "",
     query: ""
   };
 
@@ -16,6 +18,12 @@
   function safeSet(key, value) {
     try { localStorage.setItem(key, value); } catch { /* private mode */ }
   }
+
+  const gradeData = () => CURRICULUM.find((g) => g.id === state.grade) || CURRICULUM[0];
+  const trackData = () => {
+    const g = gradeData();
+    return g.tracks[Math.min(state.track, g.tracks.length - 1)];
+  };
 
   // ---------- Rendering ----------
 
@@ -38,6 +46,7 @@
       btn.className = grade.id === state.grade ? "active" : "";
       btn.addEventListener("click", () => {
         state.grade = grade.id;
+        state.track = 0;
         render();
       });
       li.appendChild(btn);
@@ -45,31 +54,80 @@
     });
   }
 
+  // Stream selector — only for grades that run more than one syllabus.
+  function renderTrackNav() {
+    const bar = document.getElementById("track-bar");
+    const tracks = gradeData().tracks;
+    bar.innerHTML = "";
+    bar.classList.toggle("hidden", tracks.length < 2);
+    if (tracks.length < 2) return;
+    tracks.forEach((t, i) => {
+      const btn = document.createElement("button");
+      btn.className = "track-btn" + (i === state.track ? " active" : "");
+      btn.textContent = t.label;
+      btn.title = t.stage;
+      btn.addEventListener("click", () => { state.track = i; render(); });
+      bar.appendChild(btn);
+    });
+  }
+
+  // Month filter — the annual plan says when each topic is timetabled.
+  function renderMonthNav() {
+    const bar = document.getElementById("month-bar");
+    const here = new Set();
+    trackData().strands.forEach((s) => s.topics.forEach((t) => { if (t.m) here.add(t.m); }));
+    const months = MONTHS.filter((m) => here.has(m));
+    bar.innerHTML = "";
+    bar.classList.toggle("hidden", months.length === 0);
+    if (!months.length) return;
+
+    const mk = (value, text) => {
+      const btn = document.createElement("button");
+      btn.className = "month-btn" + (state.month === value ? " active" : "");
+      btn.textContent = text;
+      btn.addEventListener("click", () => {
+        state.month = state.month === value ? "" : value;
+        render();
+      });
+      return btn;
+    };
+    bar.appendChild(mk("", UI_STRINGS.allMonths));
+    months.forEach((m) => bar.appendChild(mk(m, m)));
+  }
+
   function badgeFor(tag) {
     const span = document.createElement("span");
     span.className = "badge badge-" + tag;
     span.textContent =
       tag === "cambridge" ? UI_STRINGS.cambridge :
-      tag === "oman" ? UI_STRINGS.oman : UI_STRINGS.bothCurricula;
+      tag === "oman" ? UI_STRINGS.oman :
+      tag === "ged" ? UI_STRINGS.ged : UI_STRINGS.bothCurricula;
     return span;
   }
 
   function topicMatches(topic) {
+    if (state.month && topic.m !== state.month) return false;
     if (!state.query) return true;
-    return topic.n.toLowerCase().includes(state.query.toLowerCase());
+    const q = state.query.toLowerCase();
+    return topic.n.toLowerCase().includes(q) ||
+      (topic.s || "").toLowerCase().includes(q);
   }
 
   function renderContent() {
-    const grade = CURRICULUM.find((g) => g.id === state.grade) || CURRICULUM[0];
+    const grade = gradeData();
+    const track = trackData();
 
     document.getElementById("grade-title").textContent = UI_STRINGS.gradePrefix + " " + grade.id;
-    document.getElementById("grade-stage").textContent = grade.stage;
+    document.getElementById("grade-stage").textContent = track.stage;
+    const bookLine = document.getElementById("grade-book");
+    bookLine.textContent = track.book ? "Course book: " + track.book : "";
+    bookLine.classList.toggle("hidden", !track.book);
 
     const container = document.getElementById("strands");
     container.innerHTML = "";
     let shown = 0;
 
-    grade.strands.forEach((strand) => {
+    track.strands.forEach((strand) => {
       const topics = strand.topics.filter(topicMatches);
       if (topics.length === 0) return;
 
@@ -93,6 +151,13 @@
         const h4 = document.createElement("h4");
         h4.textContent = topic.n;
         head.appendChild(h4);
+        if (topic.m) {
+          const when = document.createElement("span");
+          when.className = "month-tag";
+          when.textContent = topic.m;
+          when.title = "Timetabled in " + topic.m;
+          head.appendChild(when);
+        }
         head.appendChild(badgeFor(topic.c));
         card.appendChild(head);
 
@@ -131,6 +196,8 @@
   function render() {
     applyStrings();
     renderGradeNav();
+    renderTrackNav();
+    renderMonthNav();
     renderViewToggle();
     renderContent();
   }

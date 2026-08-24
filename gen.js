@@ -235,7 +235,7 @@ const GENERATORS = {
     }
   },
   negativeNumbers: {
-    name: "Negative numbers", grades: [7, 8],
+    name: "Negative numbers", grades: [6, 7],
     gen(r, d) {
       const a = ri(r, -9 - d * 3, 9 + d * 3), b = ri(r, 1, 9 + d * 3);
       const op = pick(r, d === 3 ? ["−", "+", "×"] : ["−", "+"]);
@@ -249,7 +249,7 @@ const GENERATORS = {
     }
   },
   powersRoots: {
-    name: "Powers and roots", grades: [7, 8, 9],
+    name: "Powers and roots", grades: [7, 8],
     gen(r, d) {
       if (d === 1) { const a = ri(r, 2, 12); return { q: `Work out ${a}²`, a: String(a * a), sol: [S(`${a} × ${a} = ${a * a}`, "B1")] }; }
       if (d === 2) {
@@ -277,7 +277,7 @@ const GENERATORS = {
     }
   },
   anglesTriangle: {
-    name: "Angles in a triangle", grades: [6, 7, 8],
+    name: "Angles in a triangle", grades: [6, 7],
     gen(r, d) {
       const a = ri(r, 20, 80), b = ri(r, 20, Math.min(150 - a, 100));
       return { q: `Two angles of a triangle are ${a}° and ${b}°. Find the third angle.`, a: `${180 - a - b}°`,
@@ -285,7 +285,7 @@ const GENERATORS = {
     }
   },
   circleArea: {
-    name: "Circumference and area of circles", grades: [8, 9, 10],
+    name: "Circumference and area of circles", grades: [7, 8, 9],
     gen(r, d) {
       const rad = ri(r, 2, 6 + d * 3);
       if (r() < 0.5)
@@ -314,7 +314,7 @@ const GENERATORS = {
     }
   },
   sequenceNth: {
-    name: "nth term of a sequence", grades: [8, 9, 10],
+    name: "nth term of a sequence", grades: [7, 8, 9],
     gen(r, d) {
       const m = ri(r, 2, 3 + d * 2), c = ri(r, -5, 9);
       const terms = [1, 2, 3, 4].map((n) => m * n + c);
@@ -327,7 +327,7 @@ const GENERATORS = {
     }
   },
   expandBrackets: {
-    name: "Expanding brackets", grades: [8, 9, 10],
+    name: "Expanding brackets", grades: [7, 8, 9],
     gen(r, d) {
       if (d === 1) {
         const a = ri(r, 2, 7), b = ri(r, 1, 9);
@@ -344,7 +344,7 @@ const GENERATORS = {
     }
   },
   factorise: {
-    name: "Factorising", grades: [9, 10, 11],
+    name: "Factorising", grades: [8, 9, 10],
     gen(r, d) {
       if (d === 1) {
         const a = ri(r, 2, 6), b = ri(r, 2, 9);
@@ -360,7 +360,7 @@ const GENERATORS = {
     }
   },
   simultaneous: {
-    name: "Simultaneous equations", grades: [9, 10, 11],
+    name: "Simultaneous equations", grades: [8, 9, 10],
     gen(r, d) {
       const x = ri(r, 1, 6), y = ri(r, 1, 6);
       const a1 = ri(r, 1, d), b1 = ri(r, 1, 3), a2 = ri(r, 1, 3), b2 = d === 1 ? b1 : ri(r, 1, 3);
@@ -377,7 +377,7 @@ const GENERATORS = {
     }
   },
   straightLine: {
-    name: "Straight-line graphs", grades: [9, 10, 11],
+    name: "Straight-line graphs", grades: [8, 9, 10],
     gen(r, d) {
       const m = ri(r, 1, 2 + d) * (d === 3 && r() < 0.5 ? -1 : 1), c = ri(r, -6, 8);
       const line = `y = ${m === 1 ? "" : m === -1 ? "−" : nf(m)}x ${c >= 0 ? "+ " + c : "− " + -c}`;
@@ -388,7 +388,7 @@ const GENERATORS = {
     }
   },
   pythagoras: {
-    name: "Pythagoras' theorem", grades: [9, 10],
+    name: "Pythagoras' theorem", grades: [8, 9, 10],
     gen(r, d) {
       const t = pick(r, [[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25],
                          [6, 8, 10], [9, 12, 15], [20, 21, 29], [9, 40, 41], [12, 35, 37]]);
@@ -402,7 +402,7 @@ const GENERATORS = {
     }
   },
   standardForm: {
-    name: "Standard form", grades: [9, 10],
+    name: "Standard form", grades: [8, 9, 10],
     gen(r, d) {
       const a = ri(r, 11, 99) / 10, p = ri(r, d, d * 3) * (d === 3 && r() < 0.5 ? -1 : 1);
       const val = a * Math.pow(10, p);
@@ -414,7 +414,7 @@ const GENERATORS = {
     }
   },
   inequality: {
-    name: "Inequalities", grades: [8, 9, 10],
+    name: "Inequalities", grades: [7, 8, 9],
     gen(r, d) {
       const a = ri(r, 2, 2 + d), b = ri(r, 1, 9), x = ri(r, 1, 8);
       const c = a * x + b;
@@ -425,7 +425,7 @@ const GENERATORS = {
     }
   },
   quadraticSolve: {
-    name: "Solving quadratics", grades: [10, 11],
+    name: "Solving quadratics", grades: [9, 10, 11],
     gen(r, d) {
       const p = ri(r, 1, 5 + d), q0 = ri(r, 1, 5 + d) * (d >= 2 && r() < 0.5 ? -1 : 1);
       if (p === q0) return this.gen(r, d);
@@ -440,7 +440,7 @@ const GENERATORS = {
     }
   },
   trigRightAngle: {
-    name: "Right-angled trigonometry", grades: [10, 11],
+    name: "Right-angled trigonometry", grades: [9, 10],
     gen(r, d) {
       const angle = pick(r, [25, 30, 35, 40, 50, 55, 60]);
       const adj = ri(r, 4, 8 + d * 4);
@@ -455,7 +455,7 @@ const GENERATORS = {
     }
   },
   indices: {
-    name: "Laws of indices", grades: [10, 11],
+    name: "Laws of indices", grades: [8, 9, 10],
     gen(r, d) {
       const m = ri(r, 2, 5 + d), n = ri(r, 2, 4 + d);
       if (d < 3)
@@ -605,3 +605,72 @@ const GRADE_GENS = {};
 for (let g = 1; g <= 12; g++) GRADE_GENS[g] = [];
 for (const [id, def] of Object.entries(GENERATORS))
   for (const g of def.grades) GRADE_GENS[g].push(id);
+
+// ---------- Multiple-choice options ----------
+// Distractors come from the same generator at the same difficulty, so a wrong
+// option always has the same shape as the right one — the answer to a question
+// the learner could plausibly have solved instead. Where a generator's answer
+// space is too small to yield three distinct others, numeric near-misses
+// (off by one, doubled, halved, sign flipped) fill the gaps.
+
+const OPTION_LETTERS = ["A", "B", "C", "D", "E"];
+
+// Shift the first number in an answer, keeping any words or units around it.
+function nearMiss(answer, r) {
+  const plain = String(answer);
+  const m = plain.match(/(?:−|-)?\d+(?:\.\d+)?/);
+  if (!m) return null;
+  const v = parseFloat(m[0].replace("−", "-"));
+  if (!isFinite(v)) return null;
+  const dp = (m[0].split(".")[1] || "").length;
+  const cands = [v + 1, v - 1, v + 2, v - 2, v * 2, -v];
+  if (v !== 0 && Math.abs(v) % 2 === 0) cands.push(v / 2);
+  if (Math.abs(v) >= 10) cands.push(v + 10, v - 10);
+  const c = cands[Math.floor(r() * cands.length)];
+  if (!isFinite(c) || c === v) return null;
+  const shown = nf(dp ? c.toFixed(dp) : String(c));
+  return plain.slice(0, m.index) + shown + plain.slice(m.index + m[0].length);
+}
+
+// A coarse signature of an answer's form. One generator can answer in several
+// forms ("x = 3" at one difficulty, "log (x²y)" at another); an option of the
+// wrong form gives the answer away, so matching forms are preferred.
+const shapeOf = (s) => {
+  const t = mathPlain(String(s));
+  return (/=/.test(t) ? "e" : "") +
+         (/[A-Za-z]/.test(t) ? "a" : "") +
+         (/\d/.test(t) ? "n" : "");
+};
+
+// Returns { options, correct } or null when three distinct distractors are not
+// available — the caller should then fall back to a written-answer question.
+function makeOptions(topicId, diff, item, r, want) {
+  const g = GENERATORS[topicId];
+  if (!g) return null;
+  const n = Math.min(want || 4, OPTION_LETTERS.length);
+  const shape = shapeOf(item.a);
+  const seen = new Set([item.a]);
+  const same = [], other = [];
+
+  // Same generator, same difficulty first; widen the difficulty if it runs dry.
+  for (let i = 0; i < 40 && same.length < n - 1; i++) {
+    const c = g.gen(r, i < 25 ? diff : (i % 3) + 1);
+    if (!c || c.a === undefined || seen.has(c.a)) continue;
+    seen.add(c.a);
+    (shapeOf(c.a) === shape ? same : other).push(c.a);
+  }
+  for (let i = 0; i < 25 && same.length < n - 1; i++) {
+    const p = nearMiss(item.a, r);
+    if (p && !seen.has(p)) { seen.add(p); same.push(p); }
+  }
+  // Three same-shape options beat four where the odd one out is a giveaway.
+  const wrong = (same.length >= 2 ? same : same.concat(other)).slice(0, n - 1);
+  if (wrong.length < 2) return null;   // too few to make an honest question
+
+  const options = [item.a, ...wrong];
+  for (let i = options.length - 1; i > 0; i--) {
+    const j = Math.floor(r() * (i + 1));
+    [options[i], options[j]] = [options[j], options[i]];
+  }
+  return { options, correct: options.indexOf(item.a) };
+}

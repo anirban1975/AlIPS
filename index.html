@@ -33,12 +33,20 @@
         <div>
           <h2 id="grade-title"></h2>
           <p id="grade-stage" class="stage-label"></p>
+          <p id="grade-book" class="book-label"></p>
         </div>
         <input id="search" type="search" data-i18n-placeholder="searchPlaceholder">
       </div>
 
+      <!-- Stream selector: only Grades 10-12 run more than one syllabus -->
+      <div id="track-bar" class="track-bar hidden" role="group" aria-label="Stream"></div>
+
+      <!-- Month filter, from the annual plan -->
+      <div id="month-bar" class="month-bar" role="group" aria-label="Month"></div>
+
       <div class="legend">
         <span class="badge badge-cambridge" data-i18n="cambridge"></span>
+        <span class="badge badge-ged" data-i18n="ged"></span>
         <span class="badge badge-oman" data-i18n="oman"></span>
         <span class="badge badge-both" data-i18n="bothCurricula"></span>
       </div>
