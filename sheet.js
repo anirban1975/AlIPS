@@ -765,6 +765,57 @@
     return wrap;
   }
 
+  // Two overlapping circles inside the universal-set rectangle, with room to
+  // write in each region. SVG so it stays crisp when printed.
+  function vennSVG(v) {
+    const wrap = el("div", "diagram-block");
+    const ns = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("viewBox", "0 0 520 290");
+    svg.setAttribute("class", "venn-svg");
+    const mk = (tag, attrs, text) => {
+      const n = document.createElementNS(ns, tag);
+      Object.keys(attrs).forEach((k) => n.setAttribute(k, attrs[k]));
+      if (text !== undefined) n.textContent = text;
+      return n;
+    };
+    // universal set
+    svg.appendChild(mk("rect", { x: 4, y: 4, width: 512, height: 282, fill: "none",
+      stroke: "#000", "stroke-width": 1.5 }));
+    svg.appendChild(mk("circle", { cx: 195, cy: 160, r: 108, fill: "none",
+      stroke: "#000", "stroke-width": 1.5 }));
+    svg.appendChild(mk("circle", { cx: 325, cy: 160, r: 108, fill: "none",
+      stroke: "#000", "stroke-width": 1.5 }));
+    svg.appendChild(mk("text", { x: 120, y: 34, "text-anchor": "middle",
+      class: "venn-label" }, v.a));
+    svg.appendChild(mk("text", { x: 400, y: 34, "text-anchor": "middle",
+      class: "venn-label" }, v.b));
+    wrap.appendChild(svg);
+    return wrap;
+  }
+
+  // A criterion against its negation, both ways — four boxes to sort into.
+  function carrollTable(c) {
+    const wrap = el("div", "diagram-block");
+    const t = el("table", "carroll");
+    const head = el("tr");
+    head.appendChild(el("th", "corner", ""));
+    c.cols.forEach((x) => head.appendChild(el("th", "", x)));
+    t.appendChild(head);
+    c.rows.forEach((rowName) => {
+      const tr = el("tr");
+      tr.appendChild(el("th", "rowhead", rowName));
+      c.cols.forEach(() => tr.appendChild(el("td", "", "")));
+      t.appendChild(tr);
+    });
+    wrap.appendChild(t);
+    return wrap;
+  }
+
+  // Any diagram an item carries, or null.
+  const diagramFor = (item) =>
+    item.venn ? vennSVG(item.venn) : item.carroll ? carrollTable(item.carroll) : null;
+
   // A handwriting row: one solid model numeral, then hollow numerals to trace
   // over, then empty squares to write in unaided.
   function traceGrid(t) {
@@ -794,8 +845,10 @@
     if (p.marks > 0) row.appendChild(el("span", "pmarks", `[${p.marks}]`));
     box.appendChild(row);
 
-    // A tracing item brings its own handwriting grid instead of working space.
+    // A tracing grid or a sorting diagram replaces the ruled working space.
     if (p.item.trace) { box.appendChild(traceGrid(p.item.trace)); return; }
+    const dg = diagramFor(p.item);
+    if (dg) { box.appendChild(dg); return; }
 
     if (p.type === "MCQ" && p.options) {
       const opts = el("div", "mcq-opts");
@@ -904,10 +957,13 @@
         setMath(span, item.q);
         box.appendChild(span);
       }
-      // A tracing item brings its own handwriting grid and needs no ruled space.
+      // A tracing grid or sorting diagram replaces the ruled working space.
       if (item.trace) box.appendChild(traceGrid(item.trace));
+      const dg = diagramFor(item);
+      if (dg) box.appendChild(dg);
       sheet.appendChild(box);
-      if (!item.trace && spec.space > 0) sheet.appendChild(el("div", "space-" + spec.space));
+      if (!item.trace && !dg && spec.space > 0)
+        sheet.appendChild(el("div", "space-" + spec.space));
     });
 
     if (spec.rubric) sheet.appendChild(rubricTable(spec, model));
@@ -1128,6 +1184,8 @@ td.right { text-align: right; }
           h += `<p><b>Q${i + 1}.</b> ${mathWord(item.q)}</p>`;
         }
         if (item.trace) { h += wordTrace(item.trace); return; }
+        const dg = wordDiagram(item);
+        if (dg) { h += dg; return; }
         if (spec.space > 0) h += spacer(spec.space === 1 ? 26 : spec.space === 2 ? 56 : 96);
       });
     }
@@ -1197,6 +1255,8 @@ td.right { text-align: right; }
     let h = layRow(`&nbsp;&nbsp;&nbsp;${label}${mathWord(p.item.q)}`,
       p.marks > 0 ? `[${p.marks}]` : "");
     if (p.item.trace) return h + wordTrace(p.item.trace);
+    const dg = wordDiagram(p.item);
+    if (dg) return h + dg;
     if (p.type === "MCQ" && p.options) {
       h += `<table class="lay" style="margin-left:22pt"><tr>`;
       p.options.forEach((o, i) => {
@@ -1209,6 +1269,58 @@ td.right { text-align: right; }
     const base = TYPES[p.type] ? TYPES[p.type].space : 1;
     const room = Math.max(base, p.marks >= 4 ? 3 : p.marks >= 3 ? 2 : base);
     return h + (room > 0 ? spacer(room >= 3 ? 90 : room === 2 ? 56 : 28) : "");
+  }
+
+  // Word's HTML importer ignores SVG, so the Venn diagram is drawn on a canvas
+  // and embedded as a PNG. The Carroll diagram is a table, which Word handles
+  // natively.
+  function vennPNG(v) {
+    const w = 520, h = 290, scale = 2;
+    const c = document.createElement("canvas");
+    c.width = w * scale;
+    c.height = h * scale;
+    const x = c.getContext("2d");
+    if (!x) return "";
+    x.scale(scale, scale);
+    x.fillStyle = "#fff";
+    x.fillRect(0, 0, w, h);
+    x.strokeStyle = "#000";
+    x.lineWidth = 1.5;
+    x.strokeRect(4, 4, w - 8, h - 8);
+    [[195, 160], [325, 160]].forEach(([cx, cy]) => {
+      x.beginPath();
+      x.arc(cx, cy, 108, 0, Math.PI * 2);
+      x.stroke();
+    });
+    x.fillStyle = "#000";
+    x.font = "bold 17px Arial";
+    x.textAlign = "center";
+    x.fillText(v.a, 120, 34, 210);
+    x.fillText(v.b, 400, 34, 210);
+    try { return c.toDataURL("image/png"); } catch { return ""; }
+  }
+
+  function wordDiagram(item) {
+    if (item.venn) {
+      const src = vennPNG(item.venn);
+      return src
+        ? `<p style="margin:6pt 0 6pt 14pt"><img src="${src}" width="440" alt="Venn diagram"></p>`
+        : "";
+    }
+    if (item.carroll) {
+      const c = item.carroll;
+      let h = `<table class="tpl" style="margin:6pt 0 6pt 14pt;width:auto">`;
+      h += `<tr><td style="border:none">&nbsp;</td>`;
+      c.cols.forEach((x) => { h += `<th style="width:150pt">${esc(x)}</th>`; });
+      h += `</tr>`;
+      c.rows.forEach((rowName) => {
+        h += `<tr><th style="width:110pt">${esc(rowName)}</th>`;
+        c.cols.forEach(() => { h += `<td style="height:62pt">&nbsp;</td>`; });
+        h += `</tr>`;
+      });
+      return h + `</table>`;
+    }
+    return "";
   }
 
   // Word has no text-stroke, so the guide numerals print in light grey — the

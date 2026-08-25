@@ -52,6 +52,54 @@ function numberWords(n) {
   const h = ONES[Math.floor(n / 100)] + " hundred";
   return n % 100 ? h + " and " + numberWords(n % 100) : h;
 }
+// Two sorting properties and a set of numbers that fills every region — a Venn
+// or Carroll diagram with an empty region teaches the child nothing.
+const SORT_RULES = [
+  { name: "Even", not: "Odd", test: (n) => n % 2 === 0 },
+  { name: "Greater than 10", not: "10 or less", test: (n) => n > 10 },
+  { name: "A multiple of 3", not: "Not a multiple of 3", test: (n) => n % 3 === 0 },
+  { name: "A multiple of 5", not: "Not a multiple of 5", test: (n) => n % 5 === 0 },
+  { name: "Less than 15", not: "15 or more", test: (n) => n < 15 },
+  { name: "A two-digit number", not: "A one-digit number", test: (n) => n >= 10 },
+  { name: "A multiple of 4", not: "Not a multiple of 4", test: (n) => n % 4 === 0 },
+  { name: "A square number", not: "Not a square number", test: (n) => Number.isInteger(Math.sqrt(n)) }
+];
+
+function sortingSets(r, d) {
+  const pool = d === 1 ? SORT_RULES.slice(0, 3) : d === 2 ? SORT_RULES.slice(0, 6) : SORT_RULES;
+  const hi = d === 1 ? 20 : d === 2 ? 30 : 50;
+  const want = d === 1 ? 8 : d === 2 ? 10 : 12;
+
+  for (let attempt = 0; attempt < 60; attempt++) {
+    const a = pick(r, pool);
+    let b = pick(r, pool);
+    if (b.name === a.name) continue;
+    const regions = { both: [], onlyA: [], onlyB: [], neither: [] };
+    const items = [];
+    const seen = new Set();
+    for (let i = 0; i < want * 6 && items.length < want; i++) {
+      const n = ri(r, 1, hi);
+      if (seen.has(n)) continue;
+      seen.add(n);
+      items.push(n);
+      const inA = a.test(n), inB = b.test(n);
+      (inA && inB ? regions.both : inA ? regions.onlyA : inB ? regions.onlyB : regions.neither).push(n);
+    }
+    // Every region must have something in it, or the diagram is not worth drawing.
+    if (Object.values(regions).every((g) => g.length)) {
+      const asc = (x, y) => x - y;
+      return {
+        a, b, items,
+        both: regions.both.sort(asc), onlyA: regions.onlyA.sort(asc),
+        onlyB: regions.onlyB.sort(asc), neither: regions.neither.sort(asc)
+      };
+    }
+  }
+  // Fallback that is guaranteed to fill all four regions.
+  const a = SORT_RULES[0], b = SORT_RULES[1];
+  return { a, b, items: [4, 7, 12, 15], both: [12], onlyA: [4], onlyB: [15], neither: [7] };
+}
+
 // An exact multiple of π: 3 π, ⁅11/3⁆π, π — never a recurring decimal.
 function piTerm(n, d) {
   const g = gcd(n, d);
@@ -632,6 +680,62 @@ const GENERATORS = {
   // Handwriting practice, not a question: the sheet prints large hollow
   // numerals in a grid for the child to trace over, then empty squares to
   // write in. sheet.js renders `trace` instead of a question line.
+  // ---- Sorting diagrams -------------------------------------------------
+  // A Venn diagram sorts by two properties into overlapping circles; a Carroll
+  // diagram sorts by the same two properties into a grid of a property against
+  // its negation. Both print an empty diagram plus the numbers to place, so
+  // they are worksheets to fill in rather than questions to answer.
+  vennDiagram: {
+    name: "Venn diagrams", grades: [1, 2, 3, 4],
+    gen(r, d) {
+      const s = sortingSets(r, d);
+      return {
+        q: `Sort these numbers into the Venn diagram:\n${s.items.join(",  ")}`,
+        a: `${s.a.name} only: ${s.onlyA.join(", ") || "none"}  ·  ` +
+           `Both: ${s.both.join(", ") || "none"}  ·  ` +
+           `${s.b.name} only: ${s.onlyB.join(", ") || "none"}  ·  ` +
+           `Neither: ${s.neither.join(", ") || "none"}`,
+        venn: { a: s.a.name, b: s.b.name, items: s.items },
+        sol: [S(`Test each number against “${s.a.name}” and “${s.b.name}”`, "M1"),
+              S(`A number that is both goes in the overlap; one that is neither goes outside both circles`, "M1"),
+              S(`${s.a.name} only: ${s.onlyA.join(", ") || "none"};  both: ${s.both.join(", ") || "none"};  ` +
+                `${s.b.name} only: ${s.onlyB.join(", ") || "none"};  neither: ${s.neither.join(", ") || "none"}`, "A1")]
+      };
+    }
+  },
+  carrollDiagram: {
+    name: "Carroll diagrams", grades: [1, 2, 3, 4],
+    gen(r, d) {
+      const s = sortingSets(r, d);
+      return {
+        q: `Sort these numbers into the Carroll diagram:\n${s.items.join(",  ")}`,
+        a: `${s.a.name} & ${s.b.name}: ${s.both.join(", ") || "none"}  ·  ` +
+           `${s.a.name} & ${s.b.not}: ${s.onlyA.join(", ") || "none"}  ·  ` +
+           `${s.a.not} & ${s.b.name}: ${s.onlyB.join(", ") || "none"}  ·  ` +
+           `${s.a.not} & ${s.b.not}: ${s.neither.join(", ") || "none"}`,
+        carroll: {
+          rows: [s.a.name, s.a.not],
+          cols: [s.b.name, s.b.not],
+          items: s.items
+        },
+        sol: [S(`Each number belongs in exactly one box`, "M1"),
+              S(`Ask two questions: is it ${s.a.name.toLowerCase()}? is it ${s.b.name.toLowerCase()}?`, "M1"),
+              S(`${s.a.name} & ${s.b.name}: ${s.both.join(", ") || "none"};  ` +
+                `${s.a.name} & ${s.b.not}: ${s.onlyA.join(", ") || "none"};  ` +
+                `${s.a.not} & ${s.b.name}: ${s.onlyB.join(", ") || "none"};  ` +
+                `${s.a.not} & ${s.b.not}: ${s.neither.join(", ") || "none"}`, "A1")]
+      };
+    }
+  },
+  // The syllabus line "Venn diagrams and Carroll diagrams" covers both, so this
+  // alternates between them and a worksheet gets a mix of the two.
+  sortingDiagrams: {
+    name: "Venn and Carroll diagrams", grades: [1, 2, 3, 4],
+    gen(r, d) {
+      return r() < 0.5 ? GENERATORS.vennDiagram.gen(r, d)
+                       : GENERATORS.carrollDiagram.gen(r, d);
+    }
+  },
   traceNumbers: {
     name: "Tracing numbers", grades: [1, 2],
     gen(r, d) {

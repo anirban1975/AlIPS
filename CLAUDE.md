@@ -19,7 +19,7 @@ department's request (v0.4). Do not re-introduce bilingual strings.
   slide deck (present mode, Word and PowerPoint export)
 - `zip.js` — minimal STORE-method ZIP writer, used to build a real `.pptx`
   in the browser with no library and no build step
-- `gen.js` — question engine: seeded RNG (`mulberry32`) + 104 generators in
+- `gen.js` — question engine: seeded RNG (`mulberry32`) + 107 generators in
   `GENERATORS`, mapped to grades via `GRADE_GENS`
 - `lessons.js` — topic content library (concept, worked example, key points,
   resource links) used to draft lesson plans and slides
@@ -143,6 +143,31 @@ text-stroke at all, so `wordTrace()` prints light-grey numerals in a bordered
 table. A tracing item brings its own grid, so no ruled working space is added
 after it, and it is never turned into an MCQ.
 
+## Sorting diagrams (v1.5)
+
+"Venn diagrams and Carroll diagrams" is a sorting exercise, not a question, so
+like tracing it prints a diagram to fill in. A generator returns `venn` or
+`carroll` instead of relying on the question line:
+
+```js
+venn:    { a: "Even", b: "A multiple of 3", items: [...] }
+carroll: { rows: ["Even", "Odd"], cols: ["Less than 15", "15 or more"], items: [...] }
+```
+
+`sortingSets()` in `gen.js` picks two properties from `SORT_RULES` and builds
+the number set so **every region is non-empty** — a Venn with an empty overlap
+teaches nothing. It retries until all four regions fill, with a guaranteed
+fallback.
+
+`vennSVG()` draws two overlapping circles inside the universal-set rectangle;
+`carrollTable()` draws the criterion against its negation both ways. Word's
+HTML importer ignores SVG, so `vennPNG()` redraws the Venn on a canvas and
+embeds it as a PNG; the Carroll diagram is a table, which Word handles natively.
+
+`sortingDiagrams` alternates between the two, because the syllabus line names
+both; `vennDiagram` alone serves "Venn diagrams" (Grade 7) and "Set notation
+and Venn diagrams" (Grade 9).
+
 ## Teacher-configurable rubrics (v0.6)
 
 Nothing about marks or difficulty is hardcoded any more — `DEFAULT_PART_RUBRIC`
@@ -176,7 +201,7 @@ generator by word overlap: every significant word of the shorter name must
 match, and a tie counts as no match, because a wrong lesson is worse than none.
 `TOPIC_ALIASES` covers wording that will never align on its own ("Finding
 totals" -> Addition within 20, "Tracing numbers 1 to 10" -> Reading and writing
-numbers). **625 of the 896 sub-topics reach a generator**; extend both
+numbers). **631 of the 896 sub-topics reach a generator**; extend both
 `GENERATORS` and `TOPIC_ALIASES` together whenever a gap is reported.
 
 **Sub-topic level, not unit level.** The AS, A Level and GED Advance tracks

@@ -388,6 +388,40 @@ table.rubric-edit button.x {
   font-size: 0.9em;
 }
 
+/* ---------- Sorting diagrams (Venn and Carroll) ---------- */
+.sheet .diagram-block {
+  margin: 8px 0 10px;
+  padding-inline-start: 22px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.sheet .venn-svg {
+  width: 100%;
+  max-width: 470px;
+  height: auto;
+}
+.sheet .venn-svg .venn-label {
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.sheet table.carroll {
+  border-collapse: collapse;
+  max-width: 470px;
+}
+.sheet table.carroll th,
+.sheet table.carroll td {
+  border: 1px solid #000;
+  padding: 6px 8px;
+  font-size: 0.9em;
+}
+.sheet table.carroll th { font-weight: 700; text-align: center; background: #f2f2f2; }
+.sheet table.carroll th.rowhead { text-align: start; width: 30%; }
+.sheet table.carroll th.corner { border: none; background: none; }
+.sheet table.carroll td { height: 62px; }
+
 /* Multiple-choice options — two columns, so four options take two lines and a
    long option can still run the full width. */
 .sheet .mcq-opts {

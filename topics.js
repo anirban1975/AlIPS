@@ -489,6 +489,10 @@ const TOPIC_ALIASES = {
   "the normal approximation to the binomial distribution": "normalDistribution",
   "working with normal distributions": "normalDistribution",
   "displacement or translation vectors": "vectors2D",
+  "venn diagrams and carroll diagrams": "sortingDiagrams",
+  "venn diagrams": "vennDiagram",
+  "venn diagrams and probabilities": "vennDiagram",
+  "set notation and venn diagrams": "vennDiagram",
   // Senior wording
   "logarithms in other bases": "logarithms",
   "the laws of logarithms": "logarithms",
