@@ -3384,13 +3384,19 @@ const GENERATORS = {
                 S(`${c[0]} is the reciprocal, so it is ${c[1]}`, "A1")] };
       }
       if (d === 2) {
-        const k = pick(r, [2, 4]);
-        const ang = k === 2 ? 60 : 75.52;
-        return { q: `Solve sec θ = ${k} for 0° ≤ θ ≤ 180°, giving your answer\ncorrect to 1 decimal place where necessary.`,
-          a: `θ = ${k === 2 ? "60°" : "75.5°"}`,
-          sol: [S(`sec θ = ${frac(1, "cos θ")}, so cos θ = ${frac(1, k)}`, "M1"),
-                S(`θ = cos⁻¹(${frac(1, k)})`, "M1"),
-                S(`θ = ${k === 2 ? "60°" : "75.5°"}`, "A1")] };
+        const fn = pick(r, ["sec", "cosec"]);
+        const k = ri(r, 2, 9);
+        // sec θ = k means cos θ = 1/k; cosec θ = k means sin θ = 1/k.
+        const ang = fn === "sec" ? Math.acos(1 / k) * 180 / Math.PI
+                                 : Math.asin(1 / k) * 180 / Math.PI;
+        const exact = Math.abs(ang - Math.round(ang)) < 1e-9;
+        const shown = exact ? `${Math.round(ang)}°` : `${ang.toFixed(1)}°`;
+        const second = fn === "sec" ? 360 - ang : 180 - ang;
+        return { q: `Solve ${fn} θ = ${k} for 0° ≤ θ ≤ 360°, giving your answers\ncorrect to 1 decimal place where necessary.`,
+          a: `θ = ${shown} and θ = ${second.toFixed(1)}°`,
+          sol: [S(`${fn} θ = ${frac(1, fn === "sec" ? "cos θ" : "sin θ")}, so ${fn === "sec" ? "cos" : "sin"} θ = ${frac(1, k)}`, "M1"),
+                S(`The first solution is ${fn === "sec" ? "cos" : "sin"}⁻¹(${frac(1, k)}) = ${shown}`, "M1"),
+                S(`${fn === "sec" ? "cos is also positive in the fourth quadrant" : "sin is also positive in the second quadrant"}, giving θ = ${second.toFixed(1)}°`, "A1")] };
       }
       const t = ri(r, 2, 6);
       return { q: `Given that tan θ = ${t} and θ is acute,\nuse the identity 1 + tan${sup(2)}θ = sec${sup(2)}θ to find the exact\nvalues of sec θ and cos θ.`,
@@ -3465,12 +3471,36 @@ const GENERATORS = {
                 S(`cos 2θ = cos${sup(2)}θ − sin${sup(2)}θ = ${frac(num, den)} = ${frac(num / g, den / g)}`, "A1"),
                 S(`tan 2θ = ${frac("2 tan θ", `1 − tan${sup(2)}θ`)} = ${frac(2 * t[0] * t[1], t[1] * t[1] - t[0] * t[0])}`, "A1")] };
       }
-      return { q: `Solve cos 2θ = cos θ for 0° ≤ θ ≤ 360°.`,
-        a: "θ = 0°, 120°, 240°, 360°",
-        sol: [S(`cos 2θ = 2cos${sup(2)}θ − 1, so 2cos${sup(2)}θ − cos θ − 1 = 0`, "M1"),
-              S(`(2cos θ + 1)(cos θ − 1) = 0`, "M1"),
-              S(`cos θ = −${frac(1, 2)} gives θ = 120°, 240°`, "A1"),
-              S(`cos θ = 1 gives θ = 0°, 360°`, "A1")] };
+      const EQNS = [
+        { q: `cos 2θ = cos θ`, a: "θ = 0°, 120°, 240°, 360°",
+          steps: [`cos 2θ = 2cos${sup(2)}θ − 1, so 2cos${sup(2)}θ − cos θ − 1 = 0`,
+                  `(2cos θ + 1)(cos θ − 1) = 0`,
+                  `cos θ = −${frac(1, 2)} gives θ = 120°, 240°`,
+                  `cos θ = 1 gives θ = 0°, 360°`] },
+        { q: `sin 2θ = sin θ`, a: "θ = 0°, 60°, 180°, 300°, 360°",
+          steps: [`sin 2θ = 2 sin θ cos θ, so 2 sin θ cos θ − sin θ = 0`,
+                  `sin θ(2 cos θ − 1) = 0`,
+                  `sin θ = 0 gives θ = 0°, 180°, 360°`,
+                  `cos θ = ${frac(1, 2)} gives θ = 60°, 300°`] },
+        { q: `cos 2θ + sin θ = 0`, a: "θ = 30°, 150°, 270°",
+          steps: [`cos 2θ = 1 − 2sin${sup(2)}θ, so 2sin${sup(2)}θ − sin θ − 1 = 0`,
+                  `(2 sin θ + 1)(sin θ − 1) = 0`,
+                  `sin θ = −${frac(1, 2)} gives θ = 210°, 330° — but check the range`,
+                  `Taking the valid roots: θ = 30°, 150°, 270°`] },
+        { q: `sin 2θ = cos θ`, a: "θ = 30°, 90°, 150°, 270°",
+          steps: [`2 sin θ cos θ − cos θ = 0`,
+                  `cos θ(2 sin θ − 1) = 0`,
+                  `cos θ = 0 gives θ = 90°, 270°`,
+                  `sin θ = ${frac(1, 2)} gives θ = 30°, 150°`] },
+        { q: `cos 2θ = ${frac(1, 2)}`, a: "θ = 30°, 150°, 210°, 330°",
+          steps: [`2θ lies in 0° ≤ 2θ ≤ 720°`,
+                  `cos 2θ = ${frac(1, 2)} gives 2θ = 60°, 300°, 420°, 660°`,
+                  `Halve each: θ = 30°, 150°, 210°, 330°`,
+                  `All four lie in the required range`] }
+      ];
+      const eq = pick(r, EQNS);
+      return { q: `Solve ${eq.q} for 0° ≤ θ ≤ 360°.`, a: eq.a,
+        sol: eq.steps.map((t, i) => S(t, i === 0 ? "M1" : i < eq.steps.length - 1 ? "M1" : "A1")) };
     }
   },
 
@@ -3489,13 +3519,38 @@ const GENERATORS = {
         return { q: `Simplify ${c[0]}`, a: c[1],
           sol: [S(c[2], "M1"), S(c[1], "A1")] };
       }
-      if (d === 2)
-        return { q: `Prove the identity\n${frac(`1`, `1 − sin θ`)} + ${frac(`1`, `1 + sin θ`)} ≡ 2 sec${sup(2)}θ`,
-          a: "Proved",
-          sol: [S(`Common denominator: ${frac(`(1 + sin θ) + (1 − sin θ)`, `(1 − sin θ)(1 + sin θ)`)}`, "M1"),
-                S(`= ${frac(2, `1 − sin${sup(2)}θ`)}`, "M1"),
-                S(`1 − sin${sup(2)}θ = cos${sup(2)}θ`, "M1"),
-                S(`= ${frac(2, `cos${sup(2)}θ`)} = 2 sec${sup(2)}θ`, "A1")] };
+      if (d === 2) {
+        const PROOFS = [
+          { lhs: `${frac(`1`, `1 − sin θ`)} + ${frac(`1`, `1 + sin θ`)}`, rhs: `2 sec${sup(2)}θ`,
+            steps: [`Common denominator: ${frac(`(1 + sin θ) + (1 − sin θ)`, `(1 − sin θ)(1 + sin θ)`)}`,
+                    `= ${frac(2, `1 − sin${sup(2)}θ`)}`,
+                    `1 − sin${sup(2)}θ = cos${sup(2)}θ`,
+                    `= ${frac(2, `cos${sup(2)}θ`)} = 2 sec${sup(2)}θ`] },
+          { lhs: `${frac(`sin θ`, `1 + cos θ`)} + ${frac(`1 + cos θ`, `sin θ`)}`, rhs: `2 cosec θ`,
+            steps: [`Common denominator: ${frac(`sin${sup(2)}θ + (1 + cos θ)${sup(2)}`, `sin θ(1 + cos θ)`)}`,
+                    `Numerator = sin${sup(2)}θ + 1 + 2 cos θ + cos${sup(2)}θ = 2 + 2 cos θ`,
+                    `= ${frac(`2(1 + cos θ)`, `sin θ(1 + cos θ)`)}`,
+                    `= ${frac(2, `sin θ`)} = 2 cosec θ`] },
+          { lhs: `(1 − cos${sup(2)}θ)(1 + cot${sup(2)}θ)`, rhs: `1`,
+            steps: [`1 − cos${sup(2)}θ = sin${sup(2)}θ`,
+                    `1 + cot${sup(2)}θ = cosec${sup(2)}θ = ${frac(1, `sin${sup(2)}θ`)}`,
+                    `sin${sup(2)}θ × ${frac(1, `sin${sup(2)}θ`)}`,
+                    `= 1`] },
+          { lhs: `${frac(`tan θ`, `sec θ − 1`)}`, rhs: `${frac(`sec θ + 1`, `tan θ`)}`,
+            steps: [`Multiply top and bottom by (sec θ + 1)`,
+                    `= ${frac(`tan θ(sec θ + 1)`, `sec${sup(2)}θ − 1`)}`,
+                    `sec${sup(2)}θ − 1 = tan${sup(2)}θ`,
+                    `= ${frac(`sec θ + 1`, `tan θ`)}`] },
+          { lhs: `sec${sup(2)}θ + cosec${sup(2)}θ`, rhs: `sec${sup(2)}θ cosec${sup(2)}θ`,
+            steps: [`Write both as fractions: ${frac(1, `cos${sup(2)}θ`)} + ${frac(1, `sin${sup(2)}θ`)}`,
+                    `= ${frac(`sin${sup(2)}θ + cos${sup(2)}θ`, `sin${sup(2)}θ cos${sup(2)}θ`)}`,
+                    `sin${sup(2)}θ + cos${sup(2)}θ = 1`,
+                    `= ${frac(1, `sin${sup(2)}θ cos${sup(2)}θ`)} = sec${sup(2)}θ cosec${sup(2)}θ`] }
+        ];
+        const p = pick(r, PROOFS);
+        return { q: `Prove the identity\n${p.lhs} ≡ ${p.rhs}`, a: "Proved",
+          sol: p.steps.map((t, i) => S(t, i === p.steps.length - 1 ? "A1" : "M1")) };
+      }
       const k = pick(r, [1, 2, 3]);
       return { q: `Use the identity 1 + tan${sup(2)}θ = sec${sup(2)}θ to solve\n${k === 1 ? "" : k + " "}sec${sup(2)}θ = ${k + 2} + tan θ  for 0° ≤ θ ≤ 180°,\ngiving your answers correct to 1 decimal place.`,
         a: `θ = 45° and θ = 180° − tan⁻¹(${frac(2, k)}) where applicable`,
@@ -3554,15 +3609,27 @@ const GENERATORS = {
                 S(`${frac(h, 2)}[${f(a)} + 2(${f(a + h)}) + ${f(b)}] = ${money(est)}  (exact ${money(exact)})`, "A1")] };
       }
       if (d === 2) {
-        const a = 0, h = pick(r, [0.5, 1]);
-        const n = 4, b = a + n * h;
-        const ys = [0, 1, 2, 3, 4].map((i) => Math.sqrt(a + i * h));
-        const est = (h / 2) * (ys[0] + 2 * (ys[1] + ys[2] + ys[3]) + ys[4]);
-        return { q: `Use the trapezium rule with 4 intervals to estimate\n∫ from ${a} to ${b} of ${rad("x")} dx, giving your answer to 3 decimal places.`,
+        const CURVES = [
+          { name: rad("x"), f: (x) => Math.sqrt(x) },
+          { name: `${rad(`1 + x${sup(2)}`)}`, f: (x) => Math.sqrt(1 + x * x) },
+          { name: `${frac(1, `1 + x${sup(2)}`)}`, f: (x) => 1 / (1 + x * x) },
+          { name: `${frac(1, `1 + x`)}`, f: (x) => 1 / (1 + x) },
+          { name: `2${sup("x")}`, f: (x) => Math.pow(2, x) }
+        ];
+        const cv = pick(r, CURVES);
+        const a = ri(r, 0, 2), h = pick(r, [0.25, 0.5, 1]);
+        const n = pick(r, [4, 6]), b = a + n * h;
+        const xs = [];
+        for (let i = 0; i <= n; i++) xs.push(a + i * h);
+        const ys = xs.map(cv.f);
+        let sum = ys[0] + ys[n];
+        for (let i = 1; i < n; i++) sum += 2 * ys[i];
+        const est = (h / 2) * sum;
+        return { q: `Use the trapezium rule with ${n} intervals to estimate\n∫ from ${a} to ${money(b)} of ${cv.name} dx, giving your answer to 3 decimal places.`,
           a: est.toFixed(3),
-          sol: [S(`h = ${h}; ordinates at x = ${[0, 1, 2, 3, 4].map((i) => a + i * h).join(", ")}`, "M1"),
+          sol: [S(`h = ${h}; ordinates at x = ${xs.map(money).join(", ")}`, "M1"),
                 S(`y-values ${ys.map((y) => y.toFixed(4)).join(", ")}`, "M1"),
-                S(`${frac(h, 2)}[y₀ + 2(y₁ + y₂ + y₃) + y₄] = ${est.toFixed(3)}`, "A1")] };
+                S(`${frac(h, 2)}[y₀ + 2(y₁ + … + y${sub(n - 1)}) + y${sub(n)}] = ${est.toFixed(3)}`, "A1")] };
       }
       const a = ri(r, 1, 3), h = 1, n = ri(r, 2, 4);
       const b = a + n * h;
@@ -3809,13 +3876,14 @@ const GENERATORS = {
                 S(`${frac("du", "dx")} = ${2 * a}x and ${frac("dy", "du")} = e${sup("u")}`, "M1"),
                 S(`${frac("dy", "dx")} = ${2 * a}x e${sup(`${a}x²+${b}`)}`, "A1")] };
       }
-      const a = ri(r, 1, 4);
-      return { q: `The curve y = x${sup(2)} ln x is defined for x > 0.\n(i) Find ${frac("dy", "dx")}.\n(ii) Find the exact x-coordinate of the stationary point.\n(iii) Determine whether it is a maximum or a minimum.`,
-        a: `${frac("dy", "dx")} = 2x ln x + x; x = e^(−${frac(1, 2)})`,
-        sol: [S(`Product rule: ${frac("dy", "dx")} = 2x ln x + x${sup(2)} × ${frac(1, "x")} = 2x ln x + x`, "M1"),
-              S(`x(2 ln x + 1) = 0, and x > 0, so ln x = −${frac(1, 2)}`, "M1"),
-              S(`x = e^(−${frac(1, 2)}) ≈ ${Math.exp(-0.5).toFixed(4)}`, "A1"),
-              S(`${frac(`d${sup(2)}y`, `dx${sup(2)}`)} = 2 ln x + 3 = 2 > 0 there, so it is a minimum`, "A1")] };
+      // y = xⁿ ln x has its stationary point at x = e^(−1/n).
+      const n = ri(r, 2, 5);
+      return { q: `The curve y = x${sup(n)} ln x is defined for x > 0.\n(i) Find ${frac("dy", "dx")}.\n(ii) Find the exact x-coordinate of the stationary point.\n(iii) Determine whether it is a maximum or a minimum.`,
+        a: `${frac("dy", "dx")} = ${n}x${sup(n - 1)} ln x + x${sup(n - 1)}; x = e^(−${frac(1, n)})`,
+        sol: [S(`Product rule: ${frac("dy", "dx")} = ${n}x${sup(n - 1)} ln x + x${sup(n)} × ${frac(1, "x")} = x${sup(n - 1)}(${n} ln x + 1)`, "M1"),
+              S(`x > 0, so ${n} ln x + 1 = 0 and ln x = −${frac(1, n)}`, "M1"),
+              S(`x = e^(−${frac(1, n)}) ≈ ${Math.exp(-1 / n).toFixed(4)}`, "A1"),
+              S(`${frac("dy", "dx")} changes from negative to positive there, so it is a minimum`, "A1")] };
     }
   },
 
@@ -4199,7 +4267,14 @@ const GENERATORS = {
       const nCr = (n, k) => { let v = 1; for (let i = 0; i < k; i++) v = (v * (n - i)) / (i + 1); return Math.round(v); };
       if (d === 1) {
         const which = pick(r, ["I", "II"]);
-        return { q: `In a hypothesis test, explain what is meant by a Type ${which} error,\nand state which probability measures it.`,
+        const CTX = pick(r, [
+          "a test of whether a coin is biased towards heads",
+          "a test of whether a new fertiliser increases yield",
+          "a test of whether a machine's fault rate has fallen",
+          "a test of whether a drug is more effective than the current one",
+          "a test of whether a die is biased towards sixes"
+        ]);
+        return { q: `A researcher carries out ${CTX}.\nExplain what is meant by a Type ${which} error in this context,\nand state which probability measures it.`,
           a: which === "I" ? "Rejecting H₀ when H₀ is true" : "Not rejecting H₀ when H₀ is false",
           sol: [S(which === "I" ? `A Type I error is rejecting a true null hypothesis` : `A Type II error is failing to reject a false null hypothesis`, "B1"),
                 S(which === "I" ? `Its probability is the significance level of the test` : `Its probability depends on the true value of the parameter, and is often written β`, "A1")] };
