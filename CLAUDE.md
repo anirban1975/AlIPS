@@ -5,12 +5,13 @@ Interactive math app for grades 1–12 at Al Injaz International Private School
 curriculum. **The app is English-only** — Arabic was removed at the
 department's request (v0.4). Do not re-introduce bilingual strings.
 
-## Current state (v1.1)
+## Current state (v1.6)
 
 - `index.html` / `app.js` — curriculum browser: grades 1–12 → stream → strands →
   topics, built from the department's Annual Syllabus 2026-27. Stream selector
-  for Grades 10–12 (IGCSE/GED, GED Advance/Basic), month filter, Student &
-  Teacher views, search
+  for Grades 10–12 (IGCSE/GED, GED Advance/Basic) and search. **One view of the
+  whole syllabus** — there is no Student/Teacher toggle and no month filter
+  (removed at the department's request, v1.6); teaching notes always show
 - `worksheets.html` / `sheet.css` / `sheet.js` — teacher tool: worksheet and
   exam-paper generator built to the department's Word templates
 - `topics.js` — the syllabus topic list and topic→generator matching, shared by
@@ -19,7 +20,7 @@ department's request (v0.4). Do not re-introduce bilingual strings.
   slide deck (present mode, Word and PowerPoint export)
 - `zip.js` — minimal STORE-method ZIP writer, used to build a real `.pptx`
   in the browser with no library and no build step
-- `gen.js` — question engine: seeded RNG (`mulberry32`) + 107 generators in
+- `gen.js` — question engine: seeded RNG (`mulberry32`) + 182 generators in
   `GENERATORS`, mapped to grades via `GRADE_GENS`
 - `lessons.js` — topic content library (concept, worked example, key points,
   resource links) used to draft lesson plans and slides
@@ -116,8 +117,9 @@ The **worksheet generator** lists the department's sub-topics grouped by strand,
 with a **Stream** selector on Grades 10-12. A sub-topic with no generator cannot
 make a worksheet, so it is shown struck through and disabled rather than left
 out — a teacher sees the whole syllabus and exactly what is covered. "Only
-sub-topics with questions" (on by default) hides them. The printed `Topic:` line
-uses the syllabus wording, and blueprint rows pick from the same list.
+sub-topics with questions" (**off by default** since v1.6, so the dropdown is
+the syllabus) hides them. The printed `Topic:` line uses the syllabus wording,
+and blueprint rows pick from the same list.
 
 Topic keys are `<trackKey>|<sub-topic name>`, unique per syllabus. `genOf(key)`
 resolves the generator and falls back to treating the key as a generator id, so
@@ -193,16 +195,32 @@ and `DEFAULT_BANDS` in `sheet.js` are only starting values.
 `plan.html` drafts a lesson from one topic and renders it two ways from a single
 model, so the printed plan and the presented slides always match.
 
-**The topic list is the curriculum, not the generator list.** All 725 syllabus
-topics are selectable, grouped by strand and labelled with the month they are
-timetabled; Grades 10-12 get a **Stream** selector (IGCSE/GED, AS/GED
-Advance/Basic). `matchGenerator()` in `topics.js` links a topic to a question
+**The topic list is the curriculum, not the generator list.** All 896 syllabus
+sub-topics are selectable, grouped by strand; Grades 10-12 get a **Stream**
+selector (IGCSE/GED, AS/GED Advance/Basic). `matchGenerator()` in `topics.js` links a topic to a question
 generator by word overlap: every significant word of the shorter name must
 match, and a tie counts as no match, because a wrong lesson is worse than none.
 `TOPIC_ALIASES` covers wording that will never align on its own ("Finding
 totals" -> Addition within 20, "Tracing numbers 1 to 10" -> Reading and writing
-numbers). **631 of the 896 sub-topics reach a generator**; extend both
-`GENERATORS` and `TOPIC_ALIASES` together whenever a gap is reported.
+numbers). **894 of the 896 sub-topics reach a generator** — the two that do not
+are "Past paper booklet solving" and "Mock examinations", which are revision
+slots in the annual plan rather than topics. Extend both `GENERATORS` and
+`TOPIC_ALIASES` together whenever a gap is reported.
+
+**An alias must name a topic that exists.** A key with a typo is a dead entry
+that silently never fires, so check every new key against the live syllabus:
+
+```
+node -e 'const fs=require("fs"),vm=require("vm");const c={console};vm.createContext(c);
+for(const f of ["data.js","gen.js","topics.js"])vm.runInContext(fs.readFileSync(f,"utf8"),c);
+const{CURRICULUM,TOPIC_ALIASES,GENERATORS}=vm.runInContext("({CURRICULUM,TOPIC_ALIASES,GENERATORS})",c);
+const norm=s=>s.toLowerCase().replace(/[^a-z0-9 ]+/g," ").replace(/\s+/g," ").trim();
+const live=new Set();CURRICULUM.forEach(g=>g.tracks.forEach(t=>t.strands.forEach(
+  s=>s.topics.forEach(x=>live.add(norm(x.n))))));
+Object.entries(TOPIC_ALIASES).forEach(([k,v])=>{
+  if(!GENERATORS[v])console.log("NO GENERATOR:",k,"->",v);
+  else if(!live.has(k))console.log("DEAD ALIAS (no such topic):",k);});'
+```
 
 **Sub-topic level, not unit level.** The AS, A Level and GED Advance tracks
 originally listed each annual-plan *unit* as one topic ("Series", "Algebra"),
@@ -365,5 +383,8 @@ user and git-ignored.
 5. ~~v0.5 Page borders, Word export, worksheet score/reward/signature block~~ — done
 6. ~~v0.8 Lesson planner + slides (present mode, .pptx), proper maths notation,
    guided-learning/practice page removed~~ — done
-7. More generators (statistics tables, geometry with diagrams, word problems)
+7. ~~v1.6 Every syllabus sub-topic reaches a generator; Student view and
+   monthwise segregation removed~~ — done
 8. Editable starter/plenary text and per-topic keyword lists
+9. Diagram-bearing generators (constructions, histograms, transformations
+   drawn on a printed grid)

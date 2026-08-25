@@ -114,6 +114,15 @@ const money = (v) => {
   return s.replace(/\.00$/, "").replace(/(\.\d)0$/, "$1");
 };
 
+// Print a complex number the way a paper does: no "1i", no "+ 0i", and a bare
+// imaginary number when the real part is zero.
+function cplx(re, im) {
+  const imPart = im === 1 ? "i" : im === -1 ? "−i" : `${Math.abs(im)}i`;
+  if (im === 0) return nf(re);
+  if (re === 0) return (im < 0 ? "−" : "") + (Math.abs(im) === 1 ? "i" : `${Math.abs(im)}i`);
+  return `${nf(re)} ${im < 0 ? "− " : "+ "}${Math.abs(im) === 1 ? "i" : `${Math.abs(im)}i`}`;
+}
+
 const ORDINALS = ["", "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth"];
 const ordinalWord = (n) => ORDINALS[n] || n + "th";
 
@@ -127,6 +136,16 @@ function term(c, p, first) {
   else body = (ac === 1 ? "" : ac) + "x" + sup(p);
   return (first && c < 0 ? "−" : sign) + body;
 }
+// Abramowitz & Stegun 7.1.26 — enough accuracy for a printed mark scheme.
+function erfApprox(x) {
+  const s = x < 0 ? -1 : 1;
+  const z = Math.abs(x);
+  const t = 1 / (1 + 0.3275911 * z);
+  const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t
+    - 0.284496736) * t + 0.254829592) * t * Math.exp(-z * z);
+  return s * y;
+}
+
 function poly(terms) {
   let s = "", first = true;
   for (const [c, p] of terms) {
@@ -2000,7 +2019,2494 @@ const GENERATORS = {
               S(`${frac("vu′ − uv′", "v²")} = ${frac(`2x(x + ${a}) − x${sup(2)}`, `(x + ${a})${sup(2)}`)}`, "M1"),
               S(`= ${frac(`x${sup(2)} + ${2 * a}x`, `(x + ${a})${sup(2)}`)}`, "A1")] };
     }
+  },
+
+  // ---------- Patterns, shape and measure ----------
+
+  shapePatterns: {
+    name: "Patterns and pictures", grades: [1, 2, 3, 7],
+    gen(r, d) {
+      if (d === 1) {
+        const shapes = pick(r, [["●", "▲"], ["■", "★"], ["●", "■"], ["▲", "★"]]);
+        const seq = [];
+        for (let i = 0; i < 7; i++) seq.push(shapes[i % 2]);
+        return { q: `Look at the pattern.\n${seq.join("  ")}  ___\nDraw the shape that comes next.`,
+          a: shapes[7 % 2],
+          sol: [S("The pattern repeats every 2 shapes", "M1"), S(`So the next shape is ${shapes[1]}`, "A1")] };
+      }
+      if (d === 2) {
+        const start = ri(r, 2, 9), step = ri(r, 2, 6);
+        const seq = [start, start + step, start + 2 * step, start + 3 * step];
+        return { q: `${seq.join(", ")}, ___, ___\nWrite the next two numbers and say what the rule is.`,
+          a: `${start + 4 * step}, ${start + 5 * step} — add ${step} each time`,
+          sol: [S(`${seq[1]} − ${seq[0]} = ${step}, so the rule is add ${step}`, "M1"),
+                S(`${seq[3]} + ${step} = ${start + 4 * step}, then ${start + 5 * step}`, "A1")] };
+      }
+      // A growing pattern of squares: pattern n uses a·n + b tiles.
+      const a = ri(r, 2, 4), b = ri(r, 1, 4), n = ri(r, 8, 20);
+      const first = [1, 2, 3, 4].map((k) => a * k + b);
+      return { q: `A pattern is made from square tiles.\nPattern 1 uses ${first[0]} tiles, pattern 2 uses ${first[1]},\npattern 3 uses ${first[2]} and pattern 4 uses ${first[3]}.\nHow many tiles does pattern ${n} use?`,
+        a: `${a * n + b} tiles`,
+        sol: [S(`Each new pattern adds ${a} tiles`, "M1"),
+              S(`Tiles = ${a} × pattern number + ${b}`, "M1"),
+              S(`${a} × ${n} + ${b} = ${a * n + b}`, "A1")] };
+    }
+  },
+
+  compoundArea: {
+    name: "Compound and irregular shapes", grades: [4, 5, 6, 7],
+    gen(r, d) {
+      if (d === 1) {
+        const a = ri(r, 3, 9), b = ri(r, 2, 6), c = ri(r, 2, 7), e = ri(r, 2, 6);
+        return { q: `An L-shape is made from two rectangles.\nRectangle A is ${a} cm by ${b} cm.\nRectangle B is ${c} cm by ${e} cm.\nWork out the total area of the L-shape.`,
+          a: `${a * b + c * e} cm${sup(2)}`,
+          sol: [S(`Rectangle A: ${a} × ${b} = ${a * b} cm${sup(2)}`, "M1"),
+                S(`Rectangle B: ${c} × ${e} = ${c * e} cm${sup(2)}`, "M1"),
+                S(`${a * b} + ${c * e} = ${a * b + c * e} cm${sup(2)}`, "A1")] };
+      }
+      if (d === 2) {
+        // L-shape cut from a W × H rectangle: perimeter is the same as the rectangle's.
+        const W = ri(r, 8, 15), H = ri(r, 6, 12), w = ri(r, 2, W - 4), h = ri(r, 2, H - 3);
+        return { q: `An L-shaped garden is a rectangle ${W} m by ${H} m\nwith a rectangle ${w} m by ${h} m cut out of one corner.\nWork out the perimeter of the garden.`,
+          a: `${2 * (W + H)} m`,
+          sol: [S(`The two cut edges (${w} m and ${h} m) replace the two they hide`, "M1"),
+                S(`So the perimeter is the same as the whole rectangle`, "M1"),
+                S(`2 × (${W} + ${H}) = ${2 * (W + H)} m`, "A1")] };
+      }
+      const W = ri(r, 10, 18), H = ri(r, 8, 14);
+      // Four corners must still leave a sheet behind, so keep them small.
+      const s = ri(r, 2, Math.max(2, Math.floor(Math.min(W, H) / 4)));
+      return { q: `A rectangular sheet of card measures ${W} cm by ${H} cm.\nA square of side ${s} cm is cut from each of the four corners.\nWork out the area of card that is left.`,
+        a: `${W * H - 4 * s * s} cm${sup(2)}`,
+        sol: [S(`Whole sheet: ${W} × ${H} = ${W * H} cm${sup(2)}`, "M1"),
+              S(`Four corners: 4 × ${s}${sup(2)} = ${4 * s * s} cm${sup(2)}`, "M1"),
+              S(`${W * H} − ${4 * s * s} = ${W * H - 4 * s * s} cm${sup(2)}`, "A1")] };
+    }
+  },
+
+  netsOfSolids: {
+    name: "3D shapes and nets", grades: [4, 5, 6, 7],
+    gen(r, d) {
+      const SOLIDS = [
+        { n: "cube", f: 6, e: 12, v: 8, net: "six squares" },
+        { n: "cuboid", f: 6, e: 12, v: 8, net: "six rectangles in three matching pairs" },
+        { n: "square-based pyramid", f: 5, e: 8, v: 5, net: "one square and four triangles" },
+        { n: "triangular prism", f: 5, e: 9, v: 6, net: "two triangles and three rectangles" },
+        { n: "tetrahedron", f: 4, e: 6, v: 4, net: "four triangles" }
+      ];
+      const s = pick(r, SOLIDS);
+      if (d === 1) {
+        const what = pick(r, ["faces", "edges", "vertices"]);
+        const val = what === "faces" ? s.f : what === "edges" ? s.e : s.v;
+        return { q: `How many ${what} does a ${s.n} have?`, a: String(val),
+          sol: [S(`Count the ${what} of a ${s.n}`, "M1"), S(String(val), "A1")] };
+      }
+      if (d === 2)
+        return { q: `A net is made from ${s.net}.\nWhich solid does the net fold up to make?`, a: s.n,
+          sol: [S(`${s.net} — that is the net of a ${s.n}`, "M1"), S(s.n, "A1")] };
+      const a = ri(r, 3, 8), b = ri(r, 2, 7), c = ri(r, 2, 6);
+      return { q: `The net of a cuboid is made from six rectangles:\ntwo ${a} cm by ${b} cm, two ${a} cm by ${c} cm and two ${b} cm by ${c} cm.\nWork out the total area of the net.`,
+        a: `${2 * (a * b + a * c + b * c)} cm${sup(2)}`,
+        sol: [S(`2 × ${a} × ${b} = ${2 * a * b} cm${sup(2)}`, "M1"),
+              S(`2 × ${a} × ${c} = ${2 * a * c} cm${sup(2)} and 2 × ${b} × ${c} = ${2 * b * c} cm${sup(2)}`, "M1"),
+              S(`Total ${2 * (a * b + a * c + b * c)} cm${sup(2)}`, "A1")] };
+    }
+  },
+
+  rotationalSymmetry: {
+    name: "Rotational symmetry and symmetry in 3D", grades: [4, 5, 6, 7, 8],
+    gen(r, d) {
+      if (d === 1) {
+        const SH = [["square", 4], ["equilateral triangle", 3], ["regular pentagon", 5],
+          ["regular hexagon", 6], ["rectangle", 2], ["regular octagon", 8]];
+        const s = pick(r, SH);
+        return { q: `What is the order of rotational symmetry of a ${s[0]}?`, a: String(s[1]),
+          sol: [S(`A ${s[0]} looks the same ${s[1]} times in a full turn`, "M1"), S(String(s[1]), "A1")] };
+      }
+      if (d === 2) {
+        const n = ri(r, 5, 12);
+        return { q: `A regular polygon has ${n} sides.\nWrite down its order of rotational symmetry and its number of lines of symmetry.`,
+          a: `Order ${n}, ${n} lines of symmetry`,
+          sol: [S(`A regular ${n}-sided polygon has ${n} equal sides and angles`, "M1"),
+                S(`Order of rotational symmetry ${n}; ${n} lines of symmetry`, "A1")] };
+      }
+      const SOL = [["cube", 9], ["cuboid with all edges different", 3], ["square-based pyramid", 4],
+        ["triangular prism with an equilateral cross-section", 4], ["cylinder", "infinitely many"]];
+      const s = pick(r, SOL);
+      return { q: `How many planes of symmetry does a ${s[0]} have?`, a: String(s[1]),
+        sol: [S(`A plane of symmetry cuts the solid into two mirror halves`, "M1"),
+              S(`A ${s[0]} has ${s[1]}`, "A1")] };
+    }
+  },
+
+  reflectionCoords: {
+    name: "Reflections on a coordinate grid", grades: [6, 7, 8, 10],
+    gen(r, d) {
+      const x = ri(r, 1, 6) * (r() < 0.5 ? -1 : 1), y = ri(r, 1, 6) * (r() < 0.5 ? -1 : 1);
+      if (d === 1) {
+        const ax = pick(r, ["x-axis", "y-axis"]);
+        const im = ax === "x-axis" ? [x, -y] : [-x, y];
+        return { q: `The point P has coordinates (${nf(x)}, ${nf(y)}).\nP is reflected in the ${ax}. Write down the coordinates of the image.`,
+          a: `(${nf(im[0])}, ${nf(im[1])})`,
+          sol: [S(`Reflecting in the ${ax} changes the sign of the ${ax === "x-axis" ? "y" : "x"}-coordinate`, "M1"),
+                S(`(${nf(im[0])}, ${nf(im[1])})`, "A1")] };
+      }
+      if (d === 2) {
+        const k = ri(r, 1, 5), vertical = r() < 0.5;
+        const im = vertical ? [2 * k - x, y] : [x, 2 * k - y];
+        return { q: `The point A(${nf(x)}, ${nf(y)}) is reflected in the line ${vertical ? "x" : "y"} = ${k}.\nFind the coordinates of the image of A.`,
+          a: `(${nf(im[0])}, ${nf(im[1])})`,
+          sol: [S(`A is ${Math.abs((vertical ? x : y) - k)} from the mirror line`, "M1"),
+                S(`The image is the same distance on the other side`, "M1"),
+                S(`(${nf(im[0])}, ${nf(im[1])})`, "A1")] };
+      }
+      return { q: `The point B(${nf(x)}, ${nf(y)}) is reflected in the line y = x,\nand the image is then reflected in the x-axis.\nFind the coordinates of the final image, and describe the single\ntransformation that has the same effect.`,
+        a: `(${nf(y)}, ${nf(-x)}) — a rotation of 90° clockwise about the origin`,
+        sol: [S(`Reflection in y = x swaps the coordinates: (${nf(y)}, ${nf(x)})`, "M1"),
+              S(`Reflection in the x-axis: (${nf(y)}, ${nf(-x)})`, "A1"),
+              S(`Two reflections in lines through O give a rotation about O — here 90° clockwise`, "B1")] };
+    }
+  },
+
+  rotationCoords: {
+    name: "Rotation about a point", grades: [6, 7, 8, 10],
+    gen(r, d) {
+      const x = ri(r, 1, 6) * (r() < 0.5 ? -1 : 1), y = ri(r, 1, 6) * (r() < 0.5 ? -1 : 1);
+      if (d === 1)
+        return { q: `The point P(${nf(x)}, ${nf(y)}) is rotated 180° about the origin.\nWrite down the coordinates of the image.`,
+          a: `(${nf(-x)}, ${nf(-y)})`,
+          sol: [S(`A half turn about O sends (x, y) to (−x, −y)`, "M1"),
+                S(`(${nf(-x)}, ${nf(-y)})`, "A1")] };
+      if (d === 2) {
+        const cw = r() < 0.5;
+        const im = cw ? [y, -x] : [-y, x];
+        return { q: `The point A(${nf(x)}, ${nf(y)}) is rotated 90° ${cw ? "clockwise" : "anticlockwise"}\nabout the origin. Find the coordinates of the image.`,
+          a: `(${nf(im[0])}, ${nf(im[1])})`,
+          sol: [S(`90° ${cw ? "clockwise" : "anticlockwise"} about O sends (x, y) to (${cw ? "y, −x" : "−y, x"})`, "M1"),
+                S(`(${nf(im[0])}, ${nf(im[1])})`, "A1")] };
+      }
+      const cx = ri(r, 1, 4), cy = ri(r, 1, 4);
+      const im = [cx + (y - cy), cy - (x - cx)];   // 90° clockwise about (cx, cy)
+      return { q: `The point A(${nf(x)}, ${nf(y)}) is rotated 90° clockwise about the point (${cx}, ${cy}).\nFind the coordinates of the image of A.`,
+        a: `(${nf(im[0])}, ${nf(im[1])})`,
+        sol: [S(`Move the centre to O: A becomes (${nf(x - cx)}, ${nf(y - cy)})`, "M1"),
+              S(`Rotate 90° clockwise: (${nf(y - cy)}, ${nf(-(x - cx))})`, "M1"),
+              S(`Move back: (${nf(im[0])}, ${nf(im[1])})`, "A1")] };
+    }
+  },
+
+  enlargement: {
+    name: "Enlargement and scale factor", grades: [7, 8, 9, 10],
+    gen(r, d) {
+      if (d === 1) {
+        const k = ri(r, 2, 5), a = ri(r, 2, 9), b = ri(r, 2, 9);
+        return { q: `A rectangle measures ${a} cm by ${b} cm.\nIt is enlarged by scale factor ${k}.\nWrite down the measurements of the enlarged rectangle.`,
+          a: `${a * k} cm by ${b * k} cm`,
+          sol: [S(`Multiply every length by ${k}`, "M1"),
+                S(`${a} × ${k} = ${a * k} cm and ${b} × ${k} = ${b * k} cm`, "A1")] };
+      }
+      if (d === 2) {
+        const k = ri(r, 2, 4), x = ri(r, 1, 5), y = ri(r, 1, 5);
+        return { q: `The point P(${x}, ${y}) is mapped to P′ by an enlargement,\ncentre the origin, scale factor ${k}.\nFind the coordinates of P′, and the scale factor that maps P′ back to P.`,
+          a: `P′(${x * k}, ${y * k}); scale factor ${frac(1, k)}`,
+          sol: [S(`Enlargement centre O multiplies both coordinates by ${k}`, "M1"),
+                S(`P′(${x * k}, ${y * k})`, "A1"),
+                S(`The inverse enlargement has scale factor ${frac(1, k)}`, "B1")] };
+      }
+      const k = ri(r, 2, 5), A = ri(r, 3, 12) * 2;
+      return { q: `Shape B is an enlargement of shape A with scale factor ${k}.\nThe area of shape A is ${A} cm${sup(2)}.\nFind the area of shape B, and explain why the area factor is not ${k}.`,
+        a: `${A * k * k} cm${sup(2)} — the area factor is ${k}${sup(2)} = ${k * k}`,
+        sol: [S(`Every length is multiplied by ${k}, so the area is multiplied by ${k}${sup(2)}`, "M1"),
+              S(`${A} × ${k * k} = ${A * k * k} cm${sup(2)}`, "A1"),
+              S(`Area involves two lengths, so the factor is squared`, "B1")] };
+    }
+  },
+
+  scaleDrawing: {
+    name: "Scale drawings", grades: [6, 7, 8, 9],
+    gen(r, d) {
+      if (d === 1) {
+        const s = pick(r, [100, 200, 500, 1000]), cm = ri(r, 2, 12);
+        const m = (cm * s) / 100;
+        return { q: `A plan is drawn to a scale of 1 : ${s}.\nA wall is ${cm} cm long on the plan.\nHow long is the wall in real life? Give your answer in metres.`,
+          a: `${m} m`,
+          sol: [S(`Real length = ${cm} × ${s} = ${cm * s} cm`, "M1"),
+                S(`${cm * s} ÷ 100 = ${m} m`, "A1")] };
+      }
+      if (d === 2) {
+        const s = pick(r, [50, 100, 200, 250]), m = ri(r, 2, 20);
+        const cm = (m * 100) / s;
+        return { q: `A map has a scale of 1 : ${s}.\nA path is ${m} m long in real life.\nHow long is the path on the map, in centimetres?`,
+          a: `${cm} cm`,
+          sol: [S(`${m} m = ${m * 100} cm`, "M1"),
+                S(`${m * 100} ÷ ${s} = ${cm} cm`, "A1")] };
+      }
+      const km = ri(r, 2, 9), cm = ri(r, 2, 8);
+      const s = (km * 100000) / cm;
+      return { q: `Two towns are ${km} km apart. On a map they are ${cm} cm apart.\nWrite the scale of the map in the form 1 : n.`,
+        a: `1 : ${s}`,
+        sol: [S(`${km} km = ${km * 100000} cm`, "M1"),
+              S(`${km * 100000} ÷ ${cm} = ${s}`, "M1"),
+              S(`Scale 1 : ${s}`, "A1")] };
+    }
+  },
+
+  bearings: {
+    name: "Bearings", grades: [8, 9, 10],
+    gen(r, d) {
+      if (d === 1) {
+        const DIRS = [["north", "000°"], ["north-east", "045°"], ["east", "090°"],
+          ["south-east", "135°"], ["south", "180°"], ["south-west", "225°"],
+          ["west", "270°"], ["north-west", "315°"]];
+        const c = pick(r, DIRS);
+        return { q: `B is due ${c[0]} of A.\nWrite down the bearing of B from A as a three-figure bearing.`,
+          a: c[1],
+          sol: [S(`Bearings are measured clockwise from north`, "M1"), S(c[1], "A1")] };
+      }
+      if (d === 2) {
+        const b = ri(r, 1, 35) * 10;
+        const back = (b + 180) % 360;
+        const pad = (n) => String(n).padStart(3, "0");
+        return { q: `The bearing of Q from P is ${pad(b)}°.\nWork out the bearing of P from Q.`,
+          a: `${pad(back)}°`,
+          sol: [S(b < 180 ? `Add 180°: ${b} + 180 = ${b + 180}` : `Subtract 180°: ${b} − 180 = ${b - 180}`, "M1"),
+                S(`${pad(back)}°`, "A1")] };
+      }
+      const start = ri(r, 2, 33) * 10, turn = ri(r, 3, 15) * 10;
+      const cw = r() < 0.5;
+      const end = ((cw ? start + turn : start - turn) % 360 + 360) % 360;
+      const pad = (n) => String(n).padStart(3, "0");
+      return { q: `A ship sails on a bearing of ${pad(start)}°.\nIt then turns ${turn}° ${cw ? "clockwise" : "anticlockwise"} and sails on.\nFind the ship's new bearing, and the bearing of its starting point\nfrom its new course direction.`,
+        a: `${pad(end)}°; back bearing ${pad((end + 180) % 360)}°`,
+        sol: [S(`${cw ? `${start} + ${turn}` : `${start} − ${turn}`} = ${nf(cw ? start + turn : start - turn)}`, "M1"),
+              S(`Bearings run from 000° to 359°, so the new bearing is ${pad(end)}°`, "A1"),
+              S(`Back bearing = ${pad(end)} ${end < 180 ? "+" : "−"} 180 = ${pad((end + 180) % 360)}°`, "B1")] };
+    }
+  },
+
+  primeFactorisation: {
+    name: "Factor trees, HCF and LCM", grades: [5, 6, 7, 8],
+    gen(r, d) {
+      const asProduct = (n) => {
+        const out = [];
+        let m = n;
+        for (let p = 2; p * p <= m; p++) while (m % p === 0) { out.push(p); m /= p; }
+        if (m > 1) out.push(m);
+        return out;
+      };
+      const show = (list) => {
+        const counts = {};
+        list.forEach((p) => { counts[p] = (counts[p] || 0) + 1; });
+        return Object.keys(counts).map(Number).sort((a, b) => a - b)
+          .map((p) => (counts[p] === 1 ? String(p) : p + sup(counts[p]))).join(" × ");
+      };
+      if (d === 1) {
+        const n = pick(r, [12, 18, 20, 24, 28, 30, 36, 40, 45, 48, 50, 60, 72]);
+        return { q: `Draw a factor tree for ${n} and write ${n} as a product of its prime factors.`,
+          a: show(asProduct(n)),
+          sol: [S(`Split ${n} into factors again and again until every branch is prime`, "M1"),
+                S(`${n} = ${asProduct(n).join(" × ")} = ${show(asProduct(n))}`, "A1")] };
+      }
+      const a = pick(r, [12, 16, 18, 24, 30, 36, 40, 42, 48, 54, 60]);
+      let b = pick(r, [15, 20, 24, 27, 32, 45, 50, 56, 63, 70, 84]);
+      if (b === a) b += 6;
+      const h = gcd(a, b), l = (a * b) / h;
+      if (d === 2)
+        return { q: `Find the highest common factor (HCF) of ${a} and ${b}.`, a: String(h),
+          sol: [S(`${a} = ${show(asProduct(a))} and ${b} = ${show(asProduct(b))}`, "M1"),
+                S(`Multiply the prime factors they share`, "M1"), S(`HCF = ${h}`, "A1")] };
+      return { q: `Write ${a} and ${b} as products of their prime factors,\nthen use them to find the HCF and the LCM of ${a} and ${b}.`,
+        a: `${a} = ${show(asProduct(a))}, ${b} = ${show(asProduct(b))}; HCF ${h}, LCM ${l}`,
+        sol: [S(`${a} = ${show(asProduct(a))}, ${b} = ${show(asProduct(b))}`, "M1"),
+              S(`HCF: the lowest power of each shared prime → ${h}`, "A1"),
+              S(`LCM: the highest power of every prime → ${l}`, "A1")] };
+    }
+  },
+
+  recurringDecimals: {
+    name: "Terminating and recurring decimals", grades: [7, 8, 9],
+    gen(r, d) {
+      if (d === 1) {
+        const den = pick(r, [2, 3, 4, 5, 6, 8, 9, 10, 11, 20, 25]);
+        const num = ri(r, 1, den - 1);
+        let m = den;
+        while (m % 2 === 0) m /= 2;
+        while (m % 5 === 0) m /= 5;
+        const terminates = m === 1;
+        return { q: `Does ${frac(num, den)} give a terminating or a recurring decimal?\nExplain how you can tell without dividing.`,
+          a: terminates ? "Terminating" : "Recurring",
+          sol: [S(`A fraction in its simplest form terminates only if its denominator's prime factors are 2s and 5s`, "M1"),
+                S(`${den} ${terminates ? "has only 2s and 5s" : "has a prime factor other than 2 or 5"}, so ${frac(num, den)} is ${terminates ? "terminating" : "recurring"}`, "A1")] };
+      }
+      if (d === 2) {
+        const den = pick(r, [3, 6, 7, 9, 11]);
+        const num = ri(r, 1, den - 1);
+        const dec = (num / den).toFixed(6);
+        return { q: `Write ${frac(num, den)} as a decimal, using dot notation for the recurring part.`,
+          a: `${dec.slice(0, 6)}…  (the digits repeat)`,
+          sol: [S(`${num} ÷ ${den} = ${dec}…`, "M1"),
+                S(`Put a dot over the first and last digit of the repeating block`, "A1")] };
+      }
+      const digits = pick(r, [1, 2, 4, 5, 7, 8]);
+      const num = digits, den = 9;
+      const g = gcd(num, den);
+      return { q: `Use algebra to write 0.${digits}${digits}${digits}… as a fraction in its simplest form.`,
+        a: frac(num / g, den / g),
+        sol: [S(`Let x = 0.${digits}${digits}${digits}… , so 10x = ${digits}.${digits}${digits}…`, "M1"),
+              S(`10x − x = ${digits}, so 9x = ${digits}`, "M1"),
+              S(`x = ${frac(num, den)} = ${frac(num / g, den / g)}`, "A1")] };
+    }
+  },
+
+  functionMachine: {
+    name: "Function machines, inputs and outputs", grades: [6, 7, 8],
+    gen(r, d) {
+      const a = ri(r, 2, 6), b = ri(r, 1, 12), x = ri(r, 2, 12);
+      if (d === 1)
+        return { q: `A function machine multiplies by ${a} and then adds ${b}.\nThe input is ${x}. What is the output?`,
+          a: String(a * x + b),
+          sol: [S(`${x} × ${a} = ${a * x}`, "M1"), S(`${a * x} + ${b} = ${a * x + b}`, "A1")] };
+      if (d === 2) {
+        const out = a * x + b;
+        return { q: `A function machine multiplies by ${a} and then adds ${b}.\nThe output is ${out}. What was the input?`,
+          a: String(x),
+          sol: [S(`Work backwards: ${out} − ${b} = ${out - b}`, "M1"),
+                S(`${out - b} ÷ ${a} = ${x}`, "A1")] };
+      }
+      return { q: `A function machine subtracts ${b} and then multiplies by ${a}.\nWrite the rule as a function f(x), and write down its inverse f⁻¹(x).`,
+        a: `f(x) = ${a}(x − ${b}); f⁻¹(x) = ${frac("x", a)} + ${b}`,
+        sol: [S(`Subtract ${b} then multiply by ${a}: f(x) = ${a}(x − ${b})`, "M1"),
+              S(`Undo in reverse order: divide by ${a}, then add ${b}`, "M1"),
+              S(`f⁻¹(x) = ${frac("x", a)} + ${b}`, "A1")] };
+    }
+  },
+
+  twoWayTables: {
+    name: "Two-way tables", grades: [7, 8, 9],
+    gen(r, d) {
+      const bg = ri(r, 4, 14), bn = ri(r, 3, 12), gg = ri(r, 5, 15), gn = ri(r, 2, 10);
+      const total = bg + bn + gg + gn;
+      const table = `\n            Walk   Bus   Total\nBoys          ${bg}     ${bn}     ${bg + bn}\nGirls         ${gg}     ${gn}     ${gg + gn}\nTotal        ${bg + gg}    ${bn + gn}     ${total}`;
+      if (d === 1)
+        return { q: `The two-way table shows how ${total} learners travel to school.${table}\nHow many girls travel by bus?`,
+          a: String(gn),
+          sol: [S(`Read the Girls row and the Bus column`, "M1"), S(String(gn), "A1")] };
+      if (d === 2)
+        return { q: `The two-way table shows how ${total} learners travel to school.${table}\nHow many learners walk to school, and what fraction of the whole\ngroup is that? Give the fraction in its simplest form.`,
+          a: `${bg + gg}; ${frac((bg + gg) / gcd(bg + gg, total), total / gcd(bg + gg, total))}`,
+          sol: [S(`${bg} + ${gg} = ${bg + gg} walk`, "M1"),
+                S(`${frac(bg + gg, total)} = ${frac((bg + gg) / gcd(bg + gg, total), total / gcd(bg + gg, total))}`, "A1")] };
+      const g1 = gcd(gn, total);
+      return { q: `The two-way table shows how ${total} learners travel to school.${table}\nOne learner is chosen at random.\nFind the probability that the learner is a girl who travels by bus,\nand the probability that a learner chosen from the bus users is a girl.`,
+        a: `${frac(gn / g1, total / g1)} and ${frac(gn / gcd(gn, bn + gn), (bn + gn) / gcd(gn, bn + gn))}`,
+        sol: [S(`P(girl and bus) = ${frac(gn, total)} = ${frac(gn / g1, total / g1)}`, "A1"),
+              S(`Bus users total ${bn + gn}, of whom ${gn} are girls`, "M1"),
+              S(`P(girl | bus) = ${frac(gn / gcd(gn, bn + gn), (bn + gn) / gcd(gn, bn + gn))}`, "A1")] };
+    }
+  },
+
+  pieChart: {
+    name: "Pie charts", grades: [6, 7, 8],
+    gen(r, d) {
+      const total = pick(r, [30, 36, 40, 45, 60, 72, 90, 120]);
+      if (d === 1) {
+        const n = ri(r, 3, Math.floor(total / 3));
+        return { q: `${total} learners were asked to name their favourite sport.\n${n} of them chose football.\nWork out the angle for football on a pie chart.`,
+          a: `${(360 * n) / total}°`,
+          sol: [S(`Each learner is 360 ÷ ${total} = ${360 / total}°`, "M1"),
+                S(`${n} × ${360 / total} = ${(360 * n) / total}°`, "A1")] };
+      }
+      if (d === 2) {
+        const n = ri(r, 3, Math.floor(total / 3));
+        const ang = (360 * n) / total;
+        return { q: `A pie chart shows the favourite sports of ${total} learners.\nThe sector for cricket has an angle of ${ang}°.\nHow many learners chose cricket?`,
+          a: String(n),
+          sol: [S(`${ang} ÷ 360 = ${frac(ang, 360)} of the group`, "M1"),
+                S(`${frac(ang, 360)} × ${total} = ${n}`, "A1")] };
+      }
+      const p = pick(r, [10, 15, 20, 25, 30, 40]);
+      const ang = (360 * p) / 100;
+      const n = ri(r, 4, 30);
+      const tot = Math.round((n * 100) / p);
+      return { q: `On a pie chart, one sector represents ${p}% of the data.\nWrite down the angle of that sector.\nThe sector stands for ${n} people. How many people are in the whole survey?`,
+        a: `${ang}°; ${tot} people`,
+        sol: [S(`${p}% of 360° = ${ang}°`, "A1"),
+              S(`${n} is ${p}% of the total, so total = ${n} ÷ ${p / 100}`, "M1"),
+              S(`${tot} people`, "A1")] };
+    }
+  },
+
+  frequencyTableStats: {
+    name: "Calculations using frequency tables", grades: [7, 8, 9, 10],
+    gen(r, d) {
+      const vals = [0, 1, 2, 3, 4];
+      const fr = vals.map(() => ri(r, 2, 9));
+      const n = fr.reduce((a, b) => a + b, 0);
+      const sum = vals.reduce((a, v, i) => a + v * fr[i], 0);
+      const tbl = `\nScore      ${vals.join("     ")}\nFrequency  ${fr.join("     ")}`;
+      if (d === 1) {
+        const mode = vals[fr.indexOf(Math.max(...fr))];
+        return { q: `The table shows the scores of ${n} learners in a quiz.${tbl}\nWrite down the modal score and the total number of learners.`,
+          a: `Mode ${mode}; ${n} learners`,
+          sol: [S(`The highest frequency is ${Math.max(...fr)}`, "M1"),
+                S(`Mode = ${mode}; total = ${fr.join(" + ")} = ${n}`, "A1")] };
+      }
+      if (d === 2) {
+        const mean = sum / n;
+        return { q: `The table shows the scores of ${n} learners in a quiz.${tbl}\nCalculate the mean score, correct to 2 decimal places.`,
+          a: mean.toFixed(2),
+          sol: [S(`Σfx = ${vals.map((v, i) => `${v}×${fr[i]}`).join(" + ")} = ${sum}`, "M1"),
+                S(`Σf = ${n}`, "M1"),
+                S(`Mean = ${sum} ÷ ${n} = ${mean.toFixed(2)}`, "A1")] };
+      }
+      // Grouped data: estimated mean and modal class.
+      const width = pick(r, [10, 20]);
+      const gf = [0, 1, 2, 3].map(() => ri(r, 3, 12));
+      const gn = gf.reduce((a, b) => a + b, 0);
+      const mid = [0, 1, 2, 3].map((i) => i * width + width / 2);
+      const gsum = mid.reduce((a, m, i) => a + m * gf[i], 0);
+      const rows = [0, 1, 2, 3].map((i) => `${i * width} ≤ t < ${(i + 1) * width}   ${gf[i]}`).join("\n");
+      const modal = gf.indexOf(Math.max(...gf));
+      return { q: `The grouped table shows the times, t minutes, taken by ${gn} learners.\nTime (minutes)     Frequency\n${rows}\nWrite down the modal class and calculate an estimate of the mean time,\ncorrect to 1 decimal place. Explain why it is only an estimate.`,
+        a: `${modal * width} ≤ t < ${(modal + 1) * width}; mean ≈ ${(gsum / gn).toFixed(1)} minutes`,
+        sol: [S(`Modal class is the one with the highest frequency: ${modal * width} ≤ t < ${(modal + 1) * width}`, "B1"),
+              S(`Use midpoints ${mid.join(", ")}: Σfx = ${gsum}`, "M1"),
+              S(`${gsum} ÷ ${gn} = ${(gsum / gn).toFixed(1)} minutes`, "A1"),
+              S(`It is an estimate because the exact values within each class are not known`, "B1")] };
+    }
+  },
+
+  combinedProbability: {
+    name: "Probability of combined events", grades: [7, 8, 9, 10],
+    gen(r, d) {
+      if (d === 1) {
+        const total = pick(r, [10, 12, 15, 20]);
+        const a = ri(r, 2, 4), b = ri(r, 2, 4);
+        const g = gcd(a + b, total);
+        return { q: `A bag holds ${total} counters. ${a} are red and ${b} are blue.\nOne counter is taken at random.\nFind the probability that it is red or blue.`,
+          a: frac((a + b) / g, total / g),
+          sol: [S(`Red and blue cannot both happen, so add the probabilities`, "M1"),
+                S(`${frac(a, total)} + ${frac(b, total)} = ${frac(a + b, total)} = ${frac((a + b) / g, total / g)}`, "A1")] };
+      }
+      if (d === 2) {
+        const d1 = pick(r, [2, 3, 4, 5]), d2 = pick(r, [2, 3, 4, 5]);
+        const n1 = ri(r, 1, d1 - 1), n2 = ri(r, 1, d2 - 1);
+        const num = n1 * n2, den = d1 * d2, g = gcd(num, den);
+        return { q: `The probability that it rains on Monday is ${frac(n1, d1)}.\nThe probability that it rains on Tuesday is ${frac(n2, d2)}.\nThe two days are independent.\nFind the probability that it rains on both days.`,
+          a: frac(num / g, den / g),
+          sol: [S(`For independent events, multiply`, "M1"),
+                S(`${frac(n1, d1)} × ${frac(n2, d2)} = ${frac(num, den)} = ${frac(num / g, den / g)}`, "A1")] };
+      }
+      const total = pick(r, [8, 10, 12]);
+      const red = ri(r, 3, total - 3);
+      const other = total - red;
+      // Two taken without replacement — probability of at least one red.
+      const nBoth = other * (other - 1), dBoth = total * (total - 1);
+      const num = dBoth - nBoth, g = gcd(num, dBoth);
+      return { q: `A bag holds ${total} counters, of which ${red} are red.\nTwo counters are taken at random without replacement.\nDraw a tree diagram and find the probability that at least one is red.`,
+        a: frac(num / g, dBoth / g),
+        sol: [S(`P(no red) = ${frac(other, total)} × ${frac(other - 1, total - 1)} = ${frac(nBoth, dBoth)}`, "M1"),
+              S(`P(at least one red) = 1 − ${frac(nBoth, dBoth)}`, "M1"),
+              S(frac(num / g, dBoth / g), "A1")] };
+    }
+  },
+
+  experimentalProbability: {
+    name: "Experimental probability and relative frequency", grades: [7, 8, 9, 10],
+    gen(r, d) {
+      if (d === 1) {
+        const trials = pick(r, [20, 25, 40, 50, 100]);
+        const hits = ri(r, 3, Math.floor(trials / 2));
+        const g = gcd(hits, trials);
+        return { q: `A drawing pin is dropped ${trials} times.\nIt lands point up ${hits} times.\nWork out the relative frequency of landing point up.\nGive your answer as a fraction in its simplest form.`,
+          a: frac(hits / g, trials / g),
+          sol: [S(`Relative frequency = ${frac(hits, trials)}`, "M1"),
+                S(frac(hits / g, trials / g), "A1")] };
+      }
+      if (d === 2) {
+        const den = pick(r, [4, 5, 8, 10, 20]);
+        const num = ri(r, 1, den - 1);
+        const trials = den * ri(r, 5, 20);
+        return { q: `The probability that a seed germinates is ${frac(num, den)}.\n${trials} seeds are planted.\nHow many would you expect to germinate?`,
+          a: String((num * trials) / den),
+          sol: [S(`Expected number = probability × number of trials`, "M1"),
+                S(`${frac(num, den)} × ${trials} = ${(num * trials) / den}`, "A1")] };
+      }
+      const trials = pick(r, [60, 120, 180, 240]);
+      const obs = Math.round(trials / 6) + ri(r, -6, 6);
+      return { q: `A dice is rolled ${trials} times and a six comes up ${obs} times.\nCompare the experimental probability with the theoretical probability,\nand say whether you think the dice is fair. Justify your answer.`,
+        a: `Experimental ${(obs / trials).toFixed(3)}, theoretical ${(1 / 6).toFixed(3)}`,
+        sol: [S(`Experimental probability = ${obs} ÷ ${trials} = ${(obs / trials).toFixed(3)}`, "M1"),
+              S(`Theoretical probability = ${frac(1, 6)} = ${(1 / 6).toFixed(3)}`, "B1"),
+              S(`The two are ${Math.abs(obs / trials - 1 / 6) < 0.03 ? "close, so there is no evidence the dice is biased" : "not close, so the dice may be biased"}; more trials would give a better estimate`, "A1")] };
+    }
+  },
+
+  midpointSegment: {
+    name: "The midpoint and length of a line segment", grades: [8, 9, 10, 11],
+    gen(r, d) {
+      if (d === 1) {
+        const x1 = ri(r, -8, 8), y1 = ri(r, -8, 8);
+        const x2 = x1 + 2 * ri(r, 1, 6), y2 = y1 + 2 * ri(r, 1, 6);
+        return { q: `A is (${nf(x1)}, ${nf(y1)}) and B is (${nf(x2)}, ${nf(y2)}).\nFind the coordinates of the midpoint of AB.`,
+          a: `(${nf((x1 + x2) / 2)}, ${nf((y1 + y2) / 2)})`,
+          sol: [S(`Midpoint = (${frac("x₁ + x₂", 2)}, ${frac("y₁ + y₂", 2)})`, "M1"),
+                S(`(${nf((x1 + x2) / 2)}, ${nf((y1 + y2) / 2)})`, "A1")] };
+      }
+      if (d === 2) {
+        const TRIPLES = [[3, 4, 5], [6, 8, 10], [5, 12, 13], [8, 15, 17], [9, 12, 15], [7, 24, 25]];
+        const t = pick(r, TRIPLES);
+        const x1 = ri(r, -5, 5), y1 = ri(r, -5, 5);
+        return { q: `P is (${nf(x1)}, ${nf(y1)}) and Q is (${nf(x1 + t[0])}, ${nf(y1 + t[1])}).\nFind the length of PQ.`,
+          a: String(t[2]),
+          sol: [S(`Horizontal step ${t[0]}, vertical step ${t[1]}`, "M1"),
+                S(`PQ = ${rad(`${t[0]}${sup(2)} + ${t[1]}${sup(2)}`)} = ${rad(t[0] * t[0] + t[1] * t[1])}`, "M1"),
+                S(String(t[2]), "A1")] };
+      }
+      const mx = ri(r, -6, 6), my = ri(r, -6, 6);
+      const ax = ri(r, -8, 8), ay = ri(r, -8, 8);
+      return { q: `M(${nf(mx)}, ${nf(my)}) is the midpoint of AB, and A is (${nf(ax)}, ${nf(ay)}).\nFind the coordinates of B.`,
+        a: `(${nf(2 * mx - ax)}, ${nf(2 * my - ay)})`,
+        sol: [S(`M is halfway, so B = 2M − A`, "M1"),
+              S(`x: 2(${nf(mx)}) − (${nf(ax)}) = ${nf(2 * mx - ax)}`, "M1"),
+              S(`(${nf(2 * mx - ax)}, ${nf(2 * my - ay)})`, "A1")] };
+    }
+  },
+
+  similarShapes: {
+    name: "Similarity and congruence", grades: [9, 10, 11],
+    gen(r, d) {
+      if (d === 1) {
+        const k = ri(r, 2, 4), a = ri(r, 2, 8), b = ri(r, 3, 9);
+        return { q: `Triangle ABC is similar to triangle PQR.\nAB = ${a} cm and PQ = ${a * k} cm.\nBC = ${b} cm. Find the length of QR.`,
+          a: `${b * k} cm`,
+          sol: [S(`Scale factor = ${a * k} ÷ ${a} = ${k}`, "M1"),
+                S(`QR = ${b} × ${k} = ${b * k} cm`, "A1")] };
+      }
+      if (d === 2) {
+        const k = ri(r, 2, 4), A = ri(r, 4, 20);
+        return { q: `Two similar shapes have areas ${A} cm${sup(2)} and ${A * k * k} cm${sup(2)}.\nFind the linear scale factor between them, and the ratio of\ntheir corresponding sides.`,
+          a: `${k}; sides in the ratio 1 : ${k}`,
+          sol: [S(`Area factor = ${A * k * k} ÷ ${A} = ${k * k}`, "M1"),
+                S(`Linear factor = ${rad(k * k)} = ${k}`, "A1"),
+                S(`Sides are in the ratio 1 : ${k}`, "B1")] };
+      }
+      const k = ri(r, 2, 3), V = ri(r, 3, 15) * 2, A = ri(r, 5, 30);
+      return { q: `Two similar cones have heights in the ratio 1 : ${k}.\nThe smaller cone has surface area ${A} cm${sup(2)} and volume ${V} cm${sup(3)}.\nFind the surface area and the volume of the larger cone.`,
+        a: `${A * k * k} cm${sup(2)} and ${V * k * k * k} cm${sup(3)}`,
+        sol: [S(`Area factor = ${k}${sup(2)} = ${k * k}, so ${A} × ${k * k} = ${A * k * k} cm${sup(2)}`, "M1"),
+              S(`Volume factor = ${k}${sup(3)} = ${k * k * k}`, "M1"),
+              S(`${V} × ${k * k * k} = ${V * k * k * k} cm${sup(3)}`, "A1")] };
+    }
+  },
+
+  tallyCharts: {
+    name: "Collecting and organising data", grades: [2, 3, 4, 5, 6, 7],
+    gen(r, d) {
+      const tally = (n) => {
+        let s = "";
+        for (let i = 0; i < Math.floor(n / 5); i++) s += "卌 ";
+        s += "|".repeat(n % 5);
+        return s.trim();
+      };
+      const ITEMS = pick(r, [["Red", "Blue", "Green", "Yellow"],
+        ["Cat", "Dog", "Bird", "Fish"], ["Football", "Cricket", "Swimming", "Tennis"]]);
+      const f = ITEMS.map(() => ri(r, 2, 14));
+      const total = f.reduce((a, b) => a + b, 0);
+      const rows = ITEMS.map((it, i) => `${it.padEnd(10)} ${tally(f[i])}`).join("\n");
+      if (d === 1) {
+        const i = ri(r, 0, 3);
+        return { q: `A class made a tally chart.\n${rows}\nHow many chose ${ITEMS[i]}?`,
+          a: String(f[i]),
+          sol: [S(`Each 卌 stands for 5`, "M1"), S(String(f[i]), "A1")] };
+      }
+      if (d === 2)
+        return { q: `A class made a tally chart.\n${rows}\nComplete a frequency column, and write down how many\nlearners were asked altogether.`,
+          a: `${ITEMS.map((it, i) => `${it} ${f[i]}`).join(", ")}; ${total} altogether`,
+          sol: [S(`Count each set of tally marks`, "M1"),
+                S(`${f.join(" + ")} = ${total}`, "A1")] };
+      const hi = f.indexOf(Math.max(...f)), lo = f.indexOf(Math.min(...f));
+      return { q: `A class made a tally chart.\n${rows}\nWrite down the mode. How many more chose ${ITEMS[hi]} than ${ITEMS[lo]}?\nWhat fraction of the class chose ${ITEMS[hi]}? Give it in its simplest form.`,
+        a: `${ITEMS[hi]}; ${f[hi] - f[lo]} more; ${frac(f[hi] / gcd(f[hi], total), total / gcd(f[hi], total))}`,
+        sol: [S(`The largest frequency is ${f[hi]}, so the mode is ${ITEMS[hi]}`, "B1"),
+              S(`${f[hi]} − ${f[lo]} = ${f[hi] - f[lo]}`, "M1"),
+              S(`${frac(f[hi], total)} = ${frac(f[hi] / gcd(f[hi], total), total / gcd(f[hi], total))}`, "A1")] };
+    }
+  },
+
+  proportionOfWhole: {
+    name: "Proportion of the whole", grades: [5, 6, 7],
+    gen(r, d) {
+      if (d === 1) {
+        const total = pick(r, [12, 16, 20, 24, 30]);
+        const part = ri(r, 2, total - 2);
+        const g = gcd(part, total);
+        return { q: `A box holds ${total} pencils. ${part} of them are red.\nWhat fraction of the pencils are red?\nGive your answer in its simplest form.`,
+          a: frac(part / g, total / g),
+          sol: [S(`${frac(part, total)} are red`, "M1"),
+                S(`Divide top and bottom by ${g}: ${frac(part / g, total / g)}`, "A1")] };
+      }
+      if (d === 2) {
+        const total = pick(r, [20, 25, 40, 50]);
+        const part = ri(r, 3, total - 3);
+        return { q: `In a class of ${total} learners, ${part} walk to school.\nWhat percentage of the class walk to school?`,
+          a: `${(part * 100) / total}%`,
+          sol: [S(`${frac(part, total)} × 100`, "M1"),
+                S(`= ${(part * 100) / total}%`, "A1")] };
+      }
+      const den = pick(r, [4, 5, 8, 10]), num = ri(r, 1, den - 1);
+      const whole = den * ri(r, 3, 12);
+      return { q: `${frac(num, den)} of the books on a shelf are novels.\nThere are ${(num * whole) / den} novels.\nHow many books are on the shelf altogether?`,
+        a: String(whole),
+        sol: [S(`${frac(num, den)} of the total = ${(num * whole) / den}`, "M1"),
+              S(`${frac(1, den)} of the total = ${(num * whole) / den} ÷ ${num} = ${whole / den}`, "M1"),
+              S(`Total = ${whole / den} × ${den} = ${whole}`, "A1")] };
+    }
+  },
+
+  directProportion: {
+    name: "Direct and inverse proportion", grades: [6, 7, 8, 9],
+    gen(r, d) {
+      if (d === 1) {
+        const n = pick(r, [3, 4, 5, 6, 8]);
+        const unit = ri(r, 2, 9) * 5;
+        const m = n + ri(r, 1, 6);
+        return { q: `${n} identical notebooks cost ${money((n * unit) / 100)} rials.\nWork out the cost of ${m} of these notebooks.`,
+          a: `${money((m * unit) / 100)} rials`,
+          sol: [S(`One notebook costs ${money((n * unit) / 100)} ÷ ${n} = ${money(unit / 100)} rials`, "M1"),
+                S(`${m} × ${money(unit / 100)} = ${money((m * unit) / 100)} rials`, "A1")] };
+      }
+      if (d === 2) {
+        const k = ri(r, 2, 9), x1 = ri(r, 2, 8), x2 = ri(r, 3, 12);
+        return { q: `y is directly proportional to x.\nWhen x = ${x1}, y = ${k * x1}.\nFind the constant of proportionality and the value of y when x = ${x2}.`,
+          a: `k = ${k}; y = ${k * x2}`,
+          sol: [S(`y = kx, so ${k * x1} = k × ${x1}`, "M1"),
+                S(`k = ${k}, so y = ${k}x`, "A1"),
+                S(`When x = ${x2}, y = ${k} × ${x2} = ${k * x2}`, "A1")] };
+      }
+      const k = pick(r, [24, 36, 48, 60, 72, 120]);
+      const x1 = pick(r, [2, 3, 4, 6]), x2 = pick(r, [8, 10, 12]);
+      return { q: `y is inversely proportional to x.\nWhen x = ${x1}, y = ${k / x1}.\nFind a formula for y in terms of x, and the value of y when x = ${x2}.\nSay what happens to y when x is doubled.`,
+        a: `y = ${frac(k, "x")}; y = ${money(k / x2)}; y is halved`,
+        sol: [S(`y = ${frac("k", "x")}, so ${k / x1} = ${frac("k", x1)}`, "M1"),
+              S(`k = ${k}, giving y = ${frac(k, "x")}`, "A1"),
+              S(`When x = ${x2}, y = ${frac(k, x2)} = ${money(k / x2)}`, "A1"),
+              S(`Doubling x halves y`, "B1")] };
+    }
+  },
+
+  timeZones: {
+    name: "Time zones", grades: [5, 6, 7],
+    gen(r, d) {
+      const hhmm = (h, m) => `${String(((h % 24) + 24) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+      const CITIES = [["London", -4], ["Karachi", 1], ["Delhi", 1.5], ["Singapore", 4],
+        ["Cairo", -2], ["Sydney", 6], ["New York", -9]];
+      const c = pick(r, CITIES);
+      const h = ri(r, 6, 18), m = pick(r, [0, 15, 30, 45]);
+      const off = c[1];
+      const totalMin = h * 60 + m + off * 60;
+      const oh = Math.floor(((totalMin % 1440) + 1440) % 1440 / 60), om = ((totalMin % 60) + 60) % 60;
+      const offText = `${off > 0 ? "+" : "−"}${Math.abs(off) === Math.floor(Math.abs(off)) ? Math.abs(off) : Math.abs(off) + ""} hours`;
+      if (d === 1)
+        return { q: `The time in Muscat is ${hhmm(h, m)}.\n${c[0]} is ${offText.replace("+", "ahead of Muscat by ").replace("−", "behind Muscat by ")}.\nWhat is the time in ${c[0]}?`,
+          a: hhmm(oh, om),
+          sol: [S(`${hhmm(h, m)} ${off > 0 ? "+" : "−"} ${Math.abs(off)} hours`, "M1"),
+                S(hhmm(oh, om), "A1")] };
+      if (d === 2) {
+        const dep = ri(r, 5, 14), dur = ri(r, 2, 8);
+        const arrM = (dep + dur) * 60 + off * 60;
+        return { q: `A plane leaves Muscat at ${hhmm(dep, 0)} Muscat time.\nThe flight to ${c[0]} takes ${dur} hours.\n${c[0]} time is ${off >= 0 ? Math.abs(off) + " hours ahead of" : Math.abs(off) + " hours behind"} Muscat.\nAt what local time does the plane land in ${c[0]}?`,
+          a: hhmm(Math.floor((((arrM % 1440) + 1440) % 1440) / 60), ((arrM % 60) + 60) % 60),
+          sol: [S(`Arrival in Muscat time: ${hhmm(dep, 0)} + ${dur} h = ${hhmm(dep + dur, 0)}`, "M1"),
+                S(`Adjust by ${off >= 0 ? "+" : "−"}${Math.abs(off)} hours for the time zone`, "M1"),
+                S(hhmm(Math.floor((((arrM % 1440) + 1440) % 1440) / 60), ((arrM % 60) + 60) % 60), "A1")] };
+      }
+      const dep = ri(r, 4, 12), dur = ri(r, 3, 9);
+      const arr = dep + dur + off;
+      return { q: `A flight leaves Muscat at ${hhmm(dep, 0)} Muscat time and lands in ${c[0]}\nat ${hhmm(arr, 0)} local time. ${c[0]} time is ${off >= 0 ? Math.abs(off) + " hours ahead of" : Math.abs(off) + " hours behind"} Muscat.\nHow long was the flight?`,
+        a: `${dur} hours`,
+        sol: [S(`Convert the arrival time to Muscat time: ${hhmm(arr, 0)} ${off >= 0 ? "−" : "+"} ${Math.abs(off)} h = ${hhmm(dep + dur, 0)}`, "M1"),
+              S(`${hhmm(dep + dur, 0)} − ${hhmm(dep, 0)} = ${dur} hours`, "A1")] };
+    }
+  },
+
+  cumulativeFrequency: {
+    name: "Cumulative frequency, quartiles and percentiles", grades: [9, 10, 11, 12],
+    gen(r, d) {
+      // A list of 11 values, so the median and quartiles land on data points.
+      const data = [];
+      let v = ri(r, 4, 12);
+      for (let i = 0; i < 11; i++) { data.push(v); v += ri(r, 1, 6); }
+      if (d === 1)
+        return { q: `The ordered list shows the marks of 11 learners.\n${data.join(", ")}\nWrite down the median mark.`,
+          a: String(data[5]),
+          sol: [S(`With 11 values the median is the 6th`, "M1"), S(String(data[5]), "A1")] };
+      if (d === 2)
+        return { q: `The ordered list shows the marks of 11 learners.\n${data.join(", ")}\nFind the lower quartile, the upper quartile and the interquartile range.`,
+          a: `Q₁ = ${data[2]}, Q₃ = ${data[8]}, IQR = ${data[8] - data[2]}`,
+          sol: [S(`Q₁ is the 3rd value = ${data[2]}`, "M1"),
+                S(`Q₃ is the 9th value = ${data[8]}`, "M1"),
+                S(`IQR = ${data[8]} − ${data[2]} = ${data[8] - data[2]}`, "A1")] };
+      // Cumulative frequency table.
+      const width = 10;
+      const f = [0, 1, 2, 3, 4].map(() => ri(r, 4, 16));
+      const n = f.reduce((a, b) => a + b, 0);
+      let run = 0;
+      const cum = f.map((x) => (run += x));
+      const rows = f.map((x, i) => `t ≤ ${(i + 1) * width}       ${cum[i]}`).join("\n");
+      const halfway = n / 2;
+      const idx = cum.findIndex((c) => c >= halfway);
+      return { q: `The cumulative frequency table shows the times, t minutes,\ntaken by ${n} learners to finish a task.\nTime            Cumulative frequency\n${rows}\nUse the table to estimate the median, and state the class\nthat contains the median. Explain why the value is an estimate.`,
+        a: `Median lies in ${idx * width} < t ≤ ${(idx + 1) * width}`,
+        sol: [S(`The median is the ${halfway}th value`, "M1"),
+              S(`${cum.slice(0, idx + 1).join(", ")} — ${halfway} is first passed at t ≤ ${(idx + 1) * width}`, "M1"),
+              S(`Median lies in ${idx * width} < t ≤ ${(idx + 1) * width}`, "A1"),
+              S(`Only the class totals are known, not the individual times`, "B1")] };
+    }
+  },
+
+  boxPlots: {
+    name: "Box plots, outliers and skew", grades: [9, 10, 11, 12],
+    gen(r, d) {
+      const data = [];
+      let v = ri(r, 3, 10);
+      for (let i = 0; i < 11; i++) { data.push(v); v += ri(r, 1, 5); }
+      const min = data[0], q1 = data[2], med = data[5], q3 = data[8], max = data[10];
+      const iqr = q3 - q1;
+      if (d === 1)
+        return { q: `The ordered data shows 11 measurements.\n${data.join(", ")}\nWrite down the five-number summary needed to draw a box plot.`,
+          a: `${min}, ${q1}, ${med}, ${q3}, ${max}`,
+          sol: [S(`Minimum ${min}, maximum ${max}`, "B1"),
+                S(`Q₁ = ${q1}, median = ${med}, Q₃ = ${q3}`, "M1"),
+                S(`${min}, ${q1}, ${med}, ${q3}, ${max}`, "A1")] };
+      if (d === 2) {
+        const susp = q3 + iqr * 2;
+        return { q: `A data set has lower quartile ${q1} and upper quartile ${q3}.\nA value of ${susp} is recorded.\nUse the 1.5 × IQR rule to decide whether ${susp} is an outlier.`,
+          a: `Yes — it is above ${q3 + 1.5 * iqr}`,
+          sol: [S(`IQR = ${q3} − ${q1} = ${iqr}`, "M1"),
+                S(`Upper limit = ${q3} + 1.5 × ${iqr} = ${q3 + 1.5 * iqr}`, "M1"),
+                S(`${susp} > ${q3 + 1.5 * iqr}, so it is an outlier`, "A1")] };
+      }
+      const lower = med - q1, upper = q3 - med;
+      const skew = upper > lower ? "positive (right)" : upper < lower ? "negative (left)" : "no";
+      return { q: `A box plot has minimum ${min}, Q₁ = ${q1}, median = ${med},\nQ₃ = ${q3} and maximum ${max}.\nDescribe the skew of the distribution and justify your answer\nby comparing the two halves of the box.`,
+        a: `${skew} skew`,
+        sol: [S(`Median − Q₁ = ${lower}`, "M1"),
+              S(`Q₃ − median = ${upper}`, "M1"),
+              S(`${upper > lower ? "The upper half is longer" : upper < lower ? "The lower half is longer" : "The halves are equal"}, so the distribution has ${skew} skew`, "A1")] };
+    }
+  },
+
+  interestProfitLoss: {
+    name: "Interest, profit and loss", grades: [8, 9, 10],
+    gen(r, d) {
+      if (d === 1) {
+        const P = pick(r, [200, 400, 500, 800, 1200, 2000]);
+        const rate = pick(r, [2, 3, 4, 5, 6, 8]), yrs = ri(r, 2, 5);
+        const I = (P * rate * yrs) / 100;
+        return { q: `${P} rials is invested at ${rate}% simple interest per year for ${yrs} years.\nWork out the interest earned.`,
+          a: `${money(I)} rials`,
+          sol: [S(`Interest = ${frac("P × R × T", 100)}`, "M1"),
+                S(`${P} × ${rate} × ${yrs} ÷ 100 = ${money(I)} rials`, "A1")] };
+      }
+      if (d === 2) {
+        const P = pick(r, [500, 1000, 1500, 2000, 4000]);
+        const rate = pick(r, [2, 4, 5, 10]), yrs = ri(r, 2, 4);
+        const A = P * Math.pow(1 + rate / 100, yrs);
+        return { q: `${P} rials is invested at ${rate}% compound interest per year.\nFind the value of the investment after ${yrs} years, to the nearest rial,\nand state how much more it is than with simple interest.`,
+          a: `${Math.round(A)} rials, ${Math.round(A) - (P + (P * rate * yrs) / 100)} rials more`,
+          sol: [S(`Value = ${P} × (1 + ${rate / 100})${sup(yrs)}`, "M1"),
+                S(`= ${money(A)} ≈ ${Math.round(A)} rials`, "A1"),
+                S(`Simple interest gives ${P + (P * rate * yrs) / 100}, a difference of ${Math.round(A) - (P + (P * rate * yrs) / 100)} rials`, "A1")] };
+      }
+      const cost = pick(r, [40, 50, 60, 80, 120, 150, 250]);
+      const pct = pick(r, [10, 15, 20, 25, 30]);
+      const sell = cost * (1 + pct / 100);
+      return { q: `A shopkeeper sells an item for ${money(sell)} rials, making a profit of ${pct}%.\nWork out the price the shopkeeper paid for the item.`,
+        a: `${money(cost)} rials`,
+        sol: [S(`${money(sell)} is ${100 + pct}% of the cost price`, "M1"),
+              S(`Cost = ${money(sell)} ÷ ${(100 + pct) / 100}`, "M1"),
+              S(`${money(cost)} rials`, "A1")] };
+    }
+  },
+
+  growthDecay: {
+    name: "Exponential growth and decay", grades: [9, 10, 11],
+    gen(r, d) {
+      if (d === 1) {
+        const P = pick(r, [1000, 2000, 5000, 8000, 12000]);
+        const rate = pick(r, [3, 5, 10, 20]), yrs = ri(r, 2, 4);
+        const A = P * Math.pow(1 + rate / 100, yrs);
+        return { q: `The population of a town is ${P} and grows by ${rate}% each year.\nFind the population after ${yrs} years, to the nearest whole number.`,
+          a: String(Math.round(A)),
+          sol: [S(`Multiplier = 1 + ${frac(rate, 100)} = ${1 + rate / 100}`, "M1"),
+                S(`${P} × ${1 + rate / 100}${sup(yrs)} = ${money(A)}`, "M1"),
+                S(String(Math.round(A)), "A1")] };
+      }
+      if (d === 2) {
+        const P = pick(r, [12000, 15000, 20000, 25000]);
+        const rate = pick(r, [10, 15, 20, 25]), yrs = ri(r, 2, 4);
+        const A = P * Math.pow(1 - rate / 100, yrs);
+        return { q: `A car costs ${P} rials new and depreciates by ${rate}% each year.\nFind its value after ${yrs} years, to the nearest rial, and write down\nthe decay multiplier you used.`,
+          a: `${Math.round(A)} rials; multiplier ${1 - rate / 100}`,
+          sol: [S(`Multiplier = 1 − ${frac(rate, 100)} = ${1 - rate / 100}`, "M1"),
+                S(`${P} × ${1 - rate / 100}${sup(yrs)} = ${money(A)}`, "M1"),
+                S(`${Math.round(A)} rials`, "A1")] };
+      }
+      const P = pick(r, [400, 800, 1600, 3200]);
+      const half = pick(r, [2, 3, 4, 5]);
+      const n = ri(r, 2, 4);
+      return { q: `A radioactive sample of mass ${P} grams has a half-life of ${half} days.\nFind its mass after ${half * n} days, and find how many days it takes\nfor the mass to fall below ${P / 16} grams.`,
+        a: `${P / Math.pow(2, n)} g; ${half * 5} days`,
+        sol: [S(`${half * n} days is ${n} half-lives`, "M1"),
+              S(`${P} ÷ 2${sup(n)} = ${P / Math.pow(2, n)} g`, "A1"),
+              S(`${P / 16} g is 4 half-lives; below it needs a 5th, so ${half * 5} days`, "A1")] };
+    }
+  },
+
+  conversionGraphs: {
+    name: "Conversion graphs and real-life graphs", grades: [7, 8, 9, 10],
+    gen(r, d) {
+      if (d === 1) {
+        const rate = pick(r, [2.5, 4, 5, 8, 10]);
+        const x = ri(r, 3, 20);
+        return { q: `A conversion graph converts litres to a cost in rials.\nThe graph is a straight line through the origin, and 1 litre costs ${money(rate)} rials.\nUse it to find the cost of ${x} litres.`,
+          a: `${money(rate * x)} rials`,
+          sol: [S(`Cost = ${money(rate)} × ${x}`, "M1"), S(`${money(rate * x)} rials`, "A1")] };
+      }
+      if (d === 2) {
+        const rate = pick(r, [3, 4, 6, 8]);
+        const y = rate * ri(r, 3, 12);
+        return { q: `A conversion graph converts kilograms to pounds.\nThe line passes through the origin and (1, ${rate}).\nWrite down the gradient of the line, say what it means,\nand use the graph to convert ${y} pounds into kilograms.`,
+          a: `Gradient ${rate} — pounds per kilogram; ${y / rate} kg`,
+          sol: [S(`Gradient = ${rate}: each kilogram is ${rate} pounds`, "B1"),
+                S(`${y} ÷ ${rate} = ${y / rate}`, "M1"),
+                S(`${y / rate} kg`, "A1")] };
+      }
+      const d1 = ri(r, 20, 60), t1 = ri(r, 1, 2);
+      const rest = pick(r, [0.5, 1]);
+      const d2 = ri(r, 20, 60), t2 = ri(r, 1, 3);
+      return { q: `A distance–time graph shows a journey.\nStage 1: ${d1} km in ${t1} hour${t1 > 1 ? "s" : ""}.\nStage 2: a rest of ${rest} hour${rest > 1 ? "s" : ""}.\nStage 3: a further ${d2} km in ${t2} hour${t2 > 1 ? "s" : ""}.\nFind the speed on each moving stage, and the average speed\nfor the whole journey. Give answers to 1 decimal place.`,
+        a: `${(d1 / t1).toFixed(1)} km/h, ${(d2 / t2).toFixed(1)} km/h; average ${((d1 + d2) / (t1 + rest + t2)).toFixed(1)} km/h`,
+        sol: [S(`Stage 1: ${d1} ÷ ${t1} = ${(d1 / t1).toFixed(1)} km/h`, "M1"),
+              S(`Stage 3: ${d2} ÷ ${t2} = ${(d2 / t2).toFixed(1)} km/h`, "M1"),
+              S(`Average = ${d1 + d2} ÷ ${t1 + rest + t2} = ${((d1 + d2) / (t1 + rest + t2)).toFixed(1)} km/h`, "A1")] };
+    }
+  },
+
+  travelGraphs: {
+    name: "Speed–time graphs and acceleration", grades: [9, 10, 11],
+    gen(r, d) {
+      if (d === 1) {
+        const v = ri(r, 3, 20) * 2, t = ri(r, 2, 10);
+        return { q: `A car accelerates uniformly from rest to ${v} m/s in ${t} seconds.\nFind its acceleration.`,
+          a: `${money(v / t)} m/s${sup(2)}`,
+          sol: [S(`Acceleration = ${frac("change in speed", "time")}`, "M1"),
+                S(`${v} ÷ ${t} = ${money(v / t)} m/s${sup(2)}`, "A1")] };
+      }
+      if (d === 2) {
+        const v = ri(r, 4, 15) * 2, t = ri(r, 4, 20);
+        return { q: `On a speed–time graph, a train travels at a constant ${v} m/s for ${t} seconds.\nFind the distance travelled, and explain how the graph shows it.`,
+          a: `${v * t} m`,
+          sol: [S(`Distance is the area under a speed–time graph`, "B1"),
+                S(`Rectangle: ${v} × ${t}`, "M1"),
+                S(`${v * t} m`, "A1")] };
+      }
+      const v = ri(r, 5, 15) * 2, t1 = ri(r, 2, 8), t2 = ri(r, 5, 15), t3 = ri(r, 2, 8);
+      const dist = 0.5 * t1 * v + v * t2 + 0.5 * t3 * v;
+      const T = t1 + t2 + t3;
+      return { q: `A cyclist accelerates uniformly from rest to ${v} m/s in ${t1} s,\ntravels at ${v} m/s for ${t2} s, then decelerates uniformly to rest in ${t3} s.\nSketch the speed–time graph, find the total distance travelled,\nand find the average speed for the whole journey (2 d.p.).`,
+        a: `${money(dist)} m; ${(dist / T).toFixed(2)} m/s`,
+        sol: [S(`The graph is a trapezium with parallel sides ${t2} and ${T}, height ${v}`, "M1"),
+              S(`Area = ${frac(1, 2)}(${t2} + ${T}) × ${v} = ${money(dist)} m`, "A1"),
+              S(`Average speed = ${money(dist)} ÷ ${T} = ${(dist / T).toFixed(2)} m/s`, "A1")] };
+    }
+  },
+
+  tangentGradient: {
+    name: "Gradients of curves by drawing tangents", grades: [9, 10, 11],
+    gen(r, d) {
+      if (d === 1) {
+        const a = ri(r, 1, 4), b = a + ri(r, 1, 3);
+        return { q: `For the curve y = x${sup(2)}, find the gradient of the chord\njoining the points where x = ${a} and x = ${b}.`,
+          a: String(a + b),
+          sol: [S(`Points (${a}, ${a * a}) and (${b}, ${b * b})`, "M1"),
+                S(`Gradient = ${frac(`${b * b} − ${a * a}`, `${b} − ${a}`)} = ${frac(b * b - a * a, b - a)}`, "M1"),
+                S(String(a + b), "A1")] };
+      }
+      if (d === 2) {
+        const x1 = ri(r, -6, 0), y1 = ri(r, 1, 8);
+        const dx = ri(r, 2, 6), dy = dx * ri(r, 1, 4);
+        return { q: `A tangent is drawn to a curve at the point P.\nThe tangent passes through (${nf(x1)}, ${nf(y1)}) and (${nf(x1 + dx)}, ${nf(y1 + dy)}).\nEstimate the gradient of the curve at P.`,
+          a: String(dy / dx),
+          sol: [S(`Gradient = ${frac("rise", "run")} = ${frac(dy, dx)}`, "M1"),
+                S(String(dy / dx), "A1")] };
+      }
+      const v0 = ri(r, 10, 40), t = ri(r, 2, 8), rise = ri(r, 5, 30);
+      return { q: `A distance–time graph curves upwards. A tangent drawn at t = ${t} s\nrises ${rise} m over ${v0 / 10} s.\nEstimate the speed at t = ${t} s, say what the gradient of a\ndistance–time graph represents, and explain why a tangent\ngives only an estimate.`,
+        a: `${money(rise / (v0 / 10))} m/s`,
+        sol: [S(`Gradient of the tangent = ${rise} ÷ ${v0 / 10} = ${money(rise / (v0 / 10))}`, "M1"),
+              S(`On a distance–time graph the gradient is the speed`, "B1"),
+              S(`${money(rise / (v0 / 10))} m/s — an estimate, because the tangent is drawn by eye`, "A1")] };
+    }
+  },
+
+  trig3D: {
+    name: "Trigonometry in three dimensions", grades: [10, 11],
+    gen(r, d) {
+      if (d === 1) {
+        const a = ri(r, 3, 9), b = ri(r, 3, 9), c = ri(r, 3, 9);
+        const diag = Math.sqrt(a * a + b * b + c * c);
+        return { q: `A cuboid measures ${a} cm by ${b} cm by ${c} cm.\nFind the length of the longest diagonal, correct to 3 significant figures.`,
+          a: `${diag.toPrecision(3)} cm`,
+          sol: [S(`Base diagonal = ${rad(`${a}${sup(2)} + ${b}${sup(2)}`)} = ${rad(a * a + b * b)}`, "M1"),
+                S(`Space diagonal = ${rad(`${a * a + b * b} + ${c}${sup(2)}`)} = ${rad(a * a + b * b + c * c)}`, "M1"),
+                S(`${diag.toPrecision(3)} cm`, "A1")] };
+      }
+      if (d === 2) {
+        const a = ri(r, 4, 10), b = ri(r, 4, 10), h = ri(r, 3, 9);
+        const base = Math.sqrt(a * a + b * b);
+        const ang = Math.atan(h / base) * 180 / Math.PI;
+        return { q: `A cuboid has base ${a} cm by ${b} cm and height ${h} cm.\nFind the angle between the longest diagonal and the base,\ncorrect to 1 decimal place.`,
+          a: `${ang.toFixed(1)}°`,
+          sol: [S(`Base diagonal = ${rad(a * a + b * b)} = ${base.toFixed(3)} cm`, "M1"),
+                S(`tan θ = ${frac(h, base.toFixed(3))}`, "M1"),
+                S(`θ = ${ang.toFixed(1)}°`, "A1")] };
+      }
+      const s = ri(r, 4, 12) * 2, h = ri(r, 5, 15);
+      const halfDiag = (s * Math.SQRT2) / 2;
+      const ang = Math.atan(h / halfDiag) * 180 / Math.PI;
+      const slant = Math.sqrt(h * h + (s / 2) * (s / 2));
+      return { q: `A pyramid has a square base of side ${s} cm and its apex is ${h} cm\nvertically above the centre of the base.\nFind the angle between an edge from the apex to a corner and the base,\nand the angle between a sloping face and the base. Give both to 1 d.p.`,
+        a: `${ang.toFixed(1)}° and ${(Math.atan(h / (s / 2)) * 180 / Math.PI).toFixed(1)}°`,
+        sol: [S(`Half the base diagonal = ${frac(`${s}${rad(2)}`, 2)} = ${halfDiag.toFixed(3)} cm`, "M1"),
+              S(`tan θ = ${frac(h, halfDiag.toFixed(3))}, so θ = ${ang.toFixed(1)}°`, "A1"),
+              S(`For a face, use half the base side: tan φ = ${frac(h, s / 2)}, so φ = ${(Math.atan(h / (s / 2)) * 180 / Math.PI).toFixed(1)}° (slant height ${slant.toFixed(2)} cm)`, "A1")] };
+    }
+  },
+
+  scatterGraphs: {
+    name: "Scatter graphs and correlation", grades: [6, 7, 8, 9],
+    gen(r, d) {
+      if (d === 1) {
+        const CASES = [
+          ["the number of hours revised and the test mark", "positive"],
+          ["the age of a car and its value", "negative"],
+          ["a person's shoe size and their test mark", "no"],
+          ["the temperature and the number of cold drinks sold", "positive"],
+          ["the outside temperature and the amount of heating used", "negative"]
+        ];
+        const c = pick(r, CASES);
+        return { q: `A scatter graph is drawn of ${c[0]}.\nWhat type of correlation would you expect? Explain your answer.`,
+          a: `${c[1]} correlation`,
+          sol: [S(`Decide whether one goes up as the other goes up`, "M1"),
+                S(`${c[1]} correlation`, "A1")] };
+      }
+      if (d === 2) {
+        const m = ri(r, 2, 6), c = ri(r, 5, 30), x = ri(r, 3, 12);
+        return { q: `A line of best fit on a scatter graph has equation y = ${m}x + ${c}.\nUse it to estimate y when x = ${x}, and say whether your\nestimate is interpolation or extrapolation if the data covers 1 ≤ x ≤ 15.`,
+          a: `${m * x + c}; interpolation`,
+          sol: [S(`y = ${m} × ${x} + ${c}`, "M1"),
+                S(String(m * x + c), "A1"),
+                S(`${x} is inside the range of the data, so it is interpolation`, "B1")] };
+      }
+      const x1 = ri(r, 1, 4), y1 = ri(r, 10, 25);
+      const m = ri(r, 2, 5);
+      const x2 = x1 + ri(r, 4, 8);
+      const y2 = y1 + m * (x2 - x1);
+      const xf = x2 + ri(r, 8, 15);
+      const cInt = y1 - m * x1;
+      const line = `y = ${m}x ${cInt < 0 ? "− " + -cInt : "+ " + cInt}`;
+      return { q: `A line of best fit passes through (${x1}, ${y1}) and (${x2}, ${y2}).\nFind its equation. Use it to predict y when x = ${xf},\nand explain why this prediction is unreliable.`,
+        a: `${line}; y = ${nf(m * xf + cInt)}`,
+        sol: [S(`Gradient = ${frac(y2 - y1, x2 - x1)} = ${m}`, "M1"),
+              S(line, "A1"),
+              S(`When x = ${xf}, y = ${nf(m * xf + cInt)}`, "A1"),
+              S(`x = ${xf} is well outside the data, so this is extrapolation`, "B1")] };
+    }
+  },
+
+  dataTypes: {
+    name: "Types of data", grades: [7, 8, 11, 12],
+    gen(r, d) {
+      if (d === 1) {
+        const CASES = [["the number of learners in a class", "discrete"],
+          ["the height of a plant", "continuous"], ["the time taken to run 100 m", "continuous"],
+          ["the number of goals scored", "discrete"], ["the mass of a parcel", "continuous"],
+          ["the shoe sizes sold in a shop", "discrete"]];
+        const c = pick(r, CASES);
+        return { q: `Is ${c[0]} discrete or continuous data? Explain your answer.`,
+          a: c[1],
+          sol: [S(`${c[1] === "discrete" ? "It can only take separate, countable values" : "It can take any value in a range and is measured, not counted"}`, "M1"),
+                S(c[1], "A1")] };
+      }
+      if (d === 2) {
+        const CASES = [["eye colour", "qualitative (categorical)"],
+          ["the mass of a parcel", "quantitative"], ["favourite subject", "qualitative (categorical)"],
+          ["the number of cars in a car park", "quantitative"]];
+        const c = pick(r, CASES);
+        const src = pick(r, [["data you collect yourself by measuring", "primary"],
+          ["data taken from a published census report", "secondary"]]);
+        return { q: `(i) Is ${c[0]} qualitative or quantitative data?\n(ii) Is ${src[0]} primary or secondary data?`,
+          a: `(i) ${c[1]}  (ii) ${src[1]}`,
+          sol: [S(`Qualitative data describes a quality; quantitative data is a number`, "M1"),
+                S(`(i) ${c[1]}`, "A1"),
+                S(`(ii) ${src[1]} — ${src[1] === "primary" ? "collected first hand" : "collected by someone else"}`, "A1")] };
+      }
+      const n = ri(r, 40, 200);
+      return { q: `A survey records the times, in seconds, of ${n} runners.\nSay whether the data is discrete or continuous, and whether it should\nbe grouped or left ungrouped. Name a suitable diagram for displaying it\nand justify your choice.`,
+        a: "Continuous; grouped; a histogram or cumulative frequency curve",
+        sol: [S(`Times are measured, so the data is continuous`, "B1"),
+              S(`With ${n} values there are too many different times to list, so group them`, "B1"),
+              S(`A histogram (or cumulative frequency curve) suits grouped continuous data`, "A1")] };
+    }
+  },
+
+  samplingMethods: {
+    name: "Sampling methods and questionnaires", grades: [7, 8, 9, 12],
+    gen(r, d) {
+      if (d === 1) {
+        const CASES = [
+          ["every learner's name is put in a hat and 20 names are drawn out", "simple random sampling"],
+          ["every 10th person on an alphabetical list is chosen", "systematic sampling"],
+          ["the sample has the same proportion of boys and girls as the school", "stratified sampling"],
+          ["the first 30 people the researcher meets are asked", "opportunity (convenience) sampling"],
+          ["a whole class is chosen at random and every learner in it is asked", "cluster sampling"]
+        ];
+        const c = pick(r, CASES);
+        return { q: `A researcher chooses a sample so that ${c[0]}.\nName this sampling method.`, a: c[1],
+          sol: [S(`Match the description to the standard method`, "M1"), S(c[1], "A1")] };
+      }
+      if (d === 2) {
+        const pop = pick(r, [200, 400, 500, 800, 1000]);
+        const grp = ri(r, 4, 20) * 10;
+        const n = pick(r, [40, 50, 100]);
+        return { q: `A school has ${pop} learners, of whom ${grp} are in Grade 10.\nA stratified sample of ${n} learners is taken.\nHow many Grade 10 learners should be in the sample?`,
+          a: String(Math.round((grp / pop) * n)),
+          sol: [S(`${frac(grp, pop)} of the school is in Grade 10`, "M1"),
+                S(`${frac(grp, pop)} × ${n} = ${money((grp / pop) * n)}`, "M1"),
+                S(String(Math.round((grp / pop) * n)), "A1")] };
+      }
+      const BAD = pick(r, [
+        `"You do agree that the school day is too long, don't you?"`,
+        `"How much sport do you do?    ☐ a lot   ☐ some   ☐ not much"`,
+        `"Do you like maths and science?    ☐ Yes   ☐ No"`
+      ]);
+      return { q: `A questionnaire contains this question:\n${BAD}\nGive one reason why the question is unsuitable, and write an\nimproved version. Also state one advantage and one disadvantage\nof taking a sample rather than surveying the whole population.`,
+        a: "The question is biased or ambiguous; a sample is quicker and cheaper but may not represent the population",
+        sol: [S(`${BAD.includes("don't you") ? "It is a leading question" : BAD.includes("a lot") ? "The response options are vague and overlap in meaning" : "It asks two things at once, so one answer cannot cover both"}`, "B1"),
+              S(`Rewrite with a neutral wording and clear, non-overlapping response boxes`, "B1"),
+              S(`A sample is quicker and cheaper to collect; but it may be biased and not represent the whole population`, "A1")] };
+    }
+  },
+
+  constructionSteps: {
+    name: "Constructions and loci", grades: [7, 8, 9],
+    gen(r, d) {
+      if (d === 1) {
+        const CASES = [
+          ["set the compasses to more than half of AB, draw arcs from A and from B on both sides, and join where the arcs cross",
+            "the perpendicular bisector of AB"],
+          ["draw an arc from the vertex cutting both arms, then draw equal arcs from those two points and join the crossing point to the vertex",
+            "the bisector of the angle"],
+          ["draw an arc from P cutting the line twice, then draw equal arcs from those two points and join P to where they cross",
+            "the perpendicular from P to the line"]
+        ];
+        const c = pick(r, CASES);
+        return { q: `A construction is made as follows:\n${c[0]}.\nWhat has been constructed?`, a: c[1],
+          sol: [S(`The arcs are all the same radius, so every point found is equidistant`, "M1"), S(c[1], "A1")] };
+      }
+      if (d === 2) {
+        const cm = ri(r, 3, 8);
+        const CASES = [
+          [`a point that is always ${cm} cm from a fixed point A`, `a circle of radius ${cm} cm, centre A`],
+          [`a point that is always the same distance from A as from B`, `the perpendicular bisector of AB`],
+          [`a point that is always the same distance from two lines that meet`, `the bisector of the angle between them`],
+          [`a point that is always ${cm} cm from a straight line`, `two lines parallel to it, one ${cm} cm each side`]
+        ];
+        const c = pick(r, CASES);
+        return { q: `Describe fully the locus of ${c[0]}.`, a: c[1],
+          sol: [S(`A locus is the set of all points obeying the rule`, "M1"), S(c[1], "A1")] };
+      }
+      const a = ri(r, 3, 7), b = ri(r, 4, 9);
+      return { q: `A rectangular garden ABCD measures ${b} m by ${a} m.\nA tree is to be planted less than ${a} m from corner A and\nnearer to side AB than to side AD.\nDescribe the construction you would use and shade the region\nwhere the tree can be planted.`,
+        a: `Inside the arc of radius ${a} m centred on A, on the AB side of the bisector of angle A`,
+        sol: [S(`Draw an arc of radius ${a} m centred on A — the tree must be inside it`, "M1"),
+              S(`Construct the bisector of angle DAB — the tree must be on the AB side`, "M1"),
+              S(`Shade the region satisfying both conditions`, "A1")] };
+    }
+  },
+
+  digitalStorage: {
+    name: "Units of digital storage", grades: [7, 8],
+    gen(r, d) {
+      if (d === 1) {
+        const mb = ri(r, 2, 40);
+        return { q: `A photo file is ${mb} MB.\nHow many kilobytes is that? (1 MB = 1000 KB)`,
+          a: `${mb * 1000} KB`,
+          sol: [S(`${mb} × 1000`, "M1"), S(`${mb * 1000} KB`, "A1")] };
+      }
+      if (d === 2) {
+        const gb = ri(r, 2, 16), mb = ri(r, 20, 400);
+        return { q: `A memory card holds ${gb} GB. Each photo is ${mb} MB.\nHow many whole photos will fit? (1 GB = 1000 MB)`,
+          a: String(Math.floor((gb * 1000) / mb)),
+          sol: [S(`${gb} GB = ${gb * 1000} MB`, "M1"),
+                S(`${gb * 1000} ÷ ${mb} = ${money((gb * 1000) / mb)}`, "M1"),
+                S(`${Math.floor((gb * 1000) / mb)} whole photos`, "A1")] };
+      }
+      const gb = ri(r, 2, 8), kb = ri(r, 200, 900);
+      const files = Math.floor((gb * 1000000) / kb);
+      return { q: `A drive holds ${gb} GB. Each document is ${kb} KB.\nWrite the capacity of the drive in kilobytes in standard form,\nand find how many whole documents it will hold.`,
+        a: `${gb} × 10${sup(6)} KB; ${files} documents`,
+        sol: [S(`${gb} GB = ${gb * 1000} MB = ${gb * 1000000} KB`, "M1"),
+              S(`= ${gb} × 10${sup(6)} KB`, "A1"),
+              S(`${gb * 1000000} ÷ ${kb} = ${files} whole documents`, "A1")] };
+    }
+  },
+
+  algebraicFractions: {
+    name: "Algebraic fractions", grades: [10, 11, 12],
+    gen(r, d) {
+      if (d === 1) {
+        const a = ri(r, 1, 6);
+        let b = ri(r, 1, 6);
+        if (b === a) b = a === 6 ? 1 : a + 1;
+        return { q: `Simplify ${frac(`x${sup(2)} + ${a + b}x + ${a * b}`, `x + ${a}`)}`,
+          a: `x + ${b}`,
+          sol: [S(`Factorise the numerator: (x + ${a})(x + ${b})`, "M1"),
+                S(`Cancel the factor (x + ${a})`, "M1"), S(`x + ${b}`, "A1")] };
+      }
+      if (d === 2) {
+        const a = ri(r, 1, 5), b = ri(r, 1, 5), c = ri(r, 2, 6);
+        return { q: `Write as a single fraction in its simplest form:\n${frac(a, `x + ${b}`)} + ${frac(c, "x")}`,
+          a: frac(`${a + c}x + ${b * c}`, `x(x + ${b})`),
+          sol: [S(`Common denominator x(x + ${b})`, "M1"),
+                S(`${frac(`${a}x + ${c}(x + ${b})`, `x(x + ${b})`)}`, "M1"),
+                S(frac(`${a + c}x + ${b * c}`, `x(x + ${b})`), "A1")] };
+      }
+      // Three different constants, so nothing cancels by accident.
+      const pool = [1, 2, 3, 4, 5, 6, 7];
+      const a = pool.splice(Math.floor(r() * pool.length), 1)[0];
+      const b = pool.splice(Math.floor(r() * pool.length), 1)[0];
+      const c = pool.splice(Math.floor(r() * pool.length), 1)[0];
+      return { q: `Simplify fully:\n${frac(`x${sup(2)} − ${a * a}`, `x${sup(2)} + ${a + b}x + ${a * b}`)} ÷ ${frac(`x − ${a}`, `x + ${c}`)}`,
+        a: frac(`(x + ${a})(x + ${c})`, `(x + ${b})(x − ${a})`),
+        sol: [S(`x${sup(2)} − ${a * a} = (x − ${a})(x + ${a})`, "M1"),
+              S(`x${sup(2)} + ${a + b}x + ${a * b} = (x + ${a})(x + ${b})`, "M1"),
+              S(`Dividing means multiplying by ${frac(`x + ${c}`, `x − ${a}`)}`, "M1"),
+              S(frac(`(x + ${a})(x + ${c})`, `(x + ${b})(x − ${a})`), "A1")] };
+    }
+  },
+
+  // ---------- AS and A Level pure ----------
+
+  circleEquation: {
+    name: "The equation of a circle", grades: [10, 11, 12],
+    gen(r, d) {
+      const a = ri(r, -6, 6), b = ri(r, -6, 6), rad0 = ri(r, 2, 9);
+      if (d === 1)
+        return { q: `Write down the centre and the radius of the circle\n(x ${a < 0 ? "+ " + -a : "− " + a})${sup(2)} + (y ${b < 0 ? "+ " + -b : "− " + b})${sup(2)} = ${rad0 * rad0}`,
+          a: `Centre (${nf(a)}, ${nf(b)}), radius ${rad0}`,
+          sol: [S(`(x − a)${sup(2)} + (y − b)${sup(2)} = r${sup(2)} has centre (a, b)`, "M1"),
+                S(`Centre (${nf(a)}, ${nf(b)}), r = ${rad(rad0 * rad0)} = ${rad0}`, "A1")] };
+      if (d === 2) {
+        const c = a * a + b * b - rad0 * rad0;
+        return { q: `A circle has equation x${sup(2)} + y${sup(2)} ${-2 * a < 0 ? "− " + 2 * a : "+ " + -2 * a}x ${-2 * b < 0 ? "− " + 2 * b : "+ " + -2 * b}y ${c < 0 ? "− " + -c : "+ " + c} = 0\nBy completing the square, find its centre and radius.`,
+          a: `Centre (${nf(a)}, ${nf(b)}), radius ${rad0}`,
+          sol: [S(`x${sup(2)} ${-2 * a < 0 ? "− " + 2 * a : "+ " + -2 * a}x = (x ${a < 0 ? "+ " + -a : "− " + a})${sup(2)} − ${a * a}`, "M1"),
+                S(`y${sup(2)} ${-2 * b < 0 ? "− " + 2 * b : "+ " + -2 * b}y = (y ${b < 0 ? "+ " + -b : "− " + b})${sup(2)} − ${b * b}`, "M1"),
+                S(`(x ${a < 0 ? "+ " + -a : "− " + a})${sup(2)} + (y ${b < 0 ? "+ " + -b : "− " + b})${sup(2)} = ${rad0 * rad0}`, "M1"),
+                S(`Centre (${nf(a)}, ${nf(b)}), radius ${rad0}`, "A1")] };
+      }
+      // A line through the centre meets the circle at two points a diameter apart.
+      const m = pick(r, [1, -1, 2, -2]);
+      return { q: `The circle C has centre (${nf(a)}, ${nf(b)}) and radius ${rad0}.\nThe line L has gradient ${nf(m)} and passes through the centre of C.\n(i) Show that L meets C at two points and find the distance between them.\n(ii) Find the equation of the tangent to C at the point (${nf(a)}, ${nf(b + rad0)}).`,
+        a: `(i) ${2 * rad0}  (ii) y = ${nf(b + rad0)}`,
+        sol: [S(`A line through the centre is a diameter, so it cuts the circle twice`, "M1"),
+              S(`Distance = 2r = ${2 * rad0}`, "A1"),
+              S(`(${nf(a)}, ${nf(b + rad0)}) is the top of the circle; the radius there is vertical`, "M1"),
+              S(`The tangent is perpendicular to it, so y = ${nf(b + rad0)}`, "A1")] };
+    }
+  },
+
+  polynomialDivision: {
+    name: "Division of polynomials", grades: [11, 12],
+    gen(r, d) {
+      const a = ri(r, 1, 5), b = ri(r, -5, 5), c = ri(r, -6, 6);
+      // (x − a)(x² + bx + c) = x³ + (b−a)x² + (c−ab)x − ac
+      const p2 = b - a, p1 = c - a * b, p0 = -a * c;
+      const cubic = poly([[1, 3], [p2, 2], [p1, 1], [p0, 0]]);
+      if (d === 1)
+        return { q: `Divide ${cubic} by (x ${a < 0 ? "+ " + -a : "− " + a})`,
+          a: poly([[1, 2], [b, 1], [c, 0]]),
+          sol: [S(`Long division: x${sup(3)} ÷ x = x${sup(2)}`, "M1"),
+                S(`Continue: the next terms are ${nf(b)}x and ${nf(c)}`, "M1"),
+                S(`Quotient ${poly([[1, 2], [b, 1], [c, 0]])}, remainder 0`, "A1")] };
+      if (d === 2) {
+        const rem = ri(r, 1, 9) * (r() < 0.5 ? -1 : 1);
+        const cubic2 = poly([[1, 3], [p2, 2], [p1, 1], [p0 + rem, 0]]);
+        return { q: `Find the quotient and the remainder when ${cubic2}\nis divided by (x ${a < 0 ? "+ " + -a : "− " + a})`,
+          a: `Quotient ${poly([[1, 2], [b, 1], [c, 0]])}, remainder ${nf(rem)}`,
+          sol: [S(`Divide as before to get the quotient ${poly([[1, 2], [b, 1], [c, 0]])}`, "M1"),
+                S(`What is left over is the remainder`, "M1"),
+                S(`Remainder ${nf(rem)} — and f(${a}) = ${nf(rem)} checks it`, "A1")] };
+      }
+      // Divide a quartic by a quadratic.
+      const q1 = ri(r, -4, 4), q0 = ri(r, 1, 6);
+      const e1 = ri(r, -3, 3), e0 = ri(r, -5, 5);
+      // (x² + q1 x + q0)(x² + e1 x + e0)
+      const c3 = q1 + e1, c2 = q0 + q1 * e1 + e0, c1 = q1 * e0 + q0 * e1, c0 = q0 * e0;
+      return { q: `Divide ${poly([[1, 4], [c3, 3], [c2, 2], [c1, 1], [c0, 0]])}\nby ${poly([[1, 2], [q1, 1], [q0, 0]])}, and hence write the quartic as a\nproduct of two quadratic factors.`,
+        a: `${poly([[1, 2], [e1, 1], [e0, 0]])}`,
+        sol: [S(`x${sup(4)} ÷ x${sup(2)} = x${sup(2)}; subtract and bring down`, "M1"),
+              S(`The next term of the quotient is ${nf(e1)}x, then ${nf(e0)}`, "M1"),
+              S(`Quotient ${poly([[1, 2], [e1, 1], [e0, 0]])}, remainder 0`, "A1"),
+              S(`So the quartic is (${poly([[1, 2], [q1, 1], [q0, 0]])})(${poly([[1, 2], [e1, 1], [e0, 0]])})`, "A1")] };
+    }
+  },
+
+  partialFractions: {
+    name: "Partial fractions", grades: [11, 12],
+    gen(r, d) {
+      if (d === 1) {
+        // A/(x+a) + B/(x+b)
+        const a = ri(r, 1, 5);
+        let b = ri(r, 1, 6);
+        if (b === a) b = a === 6 ? 1 : a + 1;
+        const A = ri(r, 1, 5), B = ri(r, 1, 5);
+        const n1 = A + B, n0 = A * b + B * a;
+        return { q: `Express in partial fractions:\n${frac(`${n1 === 1 ? "" : n1}x + ${n0}`, `(x + ${a})(x + ${b})`)}`,
+          a: `${frac(A, `x + ${a}`)} + ${frac(B, `x + ${b}`)}`,
+          sol: [S(`Let it equal ${frac("A", `x + ${a}`)} + ${frac("B", `x + ${b}`)}`, "M1"),
+                S(`${n1 === 1 ? "" : n1}x + ${n0} = A(x + ${b}) + B(x + ${a})`, "M1"),
+                S(`x = ${nf(-a)} gives A = ${A}; x = ${nf(-b)} gives B = ${B}`, "A1")] };
+      }
+      if (d === 2) {
+        // A/(x+a) + B/(x+a)²
+        const a = ri(r, 1, 5), A = ri(r, 1, 5), B = ri(r, 1, 6);
+        return { q: `Express in partial fractions:\n${frac(`${A === 1 ? "" : A}x + ${A * a + B}`, `(x + ${a})${sup(2)}`)}`,
+          a: `${frac(A, `x + ${a}`)} + ${frac(B, `(x + ${a})${sup(2)}`)}`,
+          sol: [S(`A repeated factor needs ${frac("A", `x + ${a}`)} + ${frac("B", `(x + ${a})${sup(2)}`)}`, "M1"),
+                S(`${A === 1 ? "" : A}x + ${A * a + B} = A(x + ${a}) + B`, "M1"),
+                S(`Comparing x terms A = ${A}; x = ${nf(-a)} gives B = ${B}`, "A1")] };
+      }
+      // Improper: divide first, then split.
+      const a = ri(r, 1, 4);
+      let b = ri(r, 1, 5);
+      if (b === a) b = a === 5 ? 1 : a + 1;
+      const k = ri(r, 1, 4), A = ri(r, 1, 4), B = ri(r, 1, 4);
+      // k + A/(x+a) + B/(x+b) over (x+a)(x+b)
+      const n2 = k, n1 = k * (a + b) + A + B, n0 = k * a * b + A * b + B * a;
+      return { q: `Express in partial fractions:\n${frac(`${n2 === 1 ? "" : n2}x${sup(2)} + ${n1}x + ${n0}`, `(x + ${a})(x + ${b})`)}\nExplain first why the fraction is improper.`,
+        a: `${k} + ${frac(A, `x + ${a}`)} + ${frac(B, `x + ${b}`)}`,
+        sol: [S(`The numerator has the same degree as the denominator, so the fraction is improper`, "B1"),
+              S(`Divide: the quotient is ${k}, leaving ${frac(`${A + B}x + ${A * b + B * a}`, `(x + ${a})(x + ${b})`)}`, "M1"),
+              S(`Split the proper part: x = ${nf(-a)} gives A = ${A}; x = ${nf(-b)} gives B = ${B}`, "M1"),
+              S(`${k} + ${frac(A, `x + ${a}`)} + ${frac(B, `x + ${b}`)}`, "A1")] };
+    }
+  },
+
+  increasingDecreasing: {
+    name: "Increasing and decreasing functions, stationary points", grades: [11, 12],
+    gen(r, d) {
+      if (d === 1) {
+        const a = ri(r, 1, 4), b = ri(r, -6, 6), x = ri(r, 1, 5);
+        const grad = 2 * a * x + b;
+        return { q: `f(x) = ${poly([[a, 2], [b, 1], [ri(r, -5, 5), 0]])}\nFind f′(x) and show that f is ${grad > 0 ? "increasing" : "decreasing"} at x = ${x}.`,
+          a: `f′(x) = ${poly([[2 * a, 1], [b, 0]])}, f′(${x}) = ${nf(grad)}`,
+          sol: [S(`f′(x) = ${poly([[2 * a, 1], [b, 0]])}`, "M1"),
+                S(`f′(${x}) = ${2 * a} × ${x} ${b < 0 ? "− " + -b : "+ " + b} = ${nf(grad)}`, "M1"),
+                S(`${nf(grad)} ${grad > 0 ? "> 0, so f is increasing" : "< 0, so f is decreasing"} at x = ${x}`, "A1")] };
+      }
+      // f′(x) = 3(x − p)(x − q), so f(x) = x³ − 3(p+q)/2·x² + 3pq·x.
+      // Choose p and q with p + q even, keeping every coefficient a whole number.
+      const p = ri(r, -4, 3);
+      const q = p + 2 * ri(r, 1, 3);
+      const b = (-3 * (p + q)) / 2, c = 3 * p * q, k = ri(r, -6, 6);
+      const f = poly([[1, 3], [b, 2], [c, 1], [k, 0]]);
+      if (d === 2)
+        return { q: `f(x) = ${f}\nFind f′(x) and the set of values of x for which f is decreasing.`,
+          a: `${nf(p)} < x < ${nf(q)}`,
+          sol: [S(`f′(x) = ${poly([[3, 2], [2 * b, 1], [c, 0]])} = 3(x ${p < 0 ? "+ " + -p : "− " + p})(x ${q < 0 ? "+ " + -q : "− " + q})`, "M1"),
+                S(`f is decreasing where f′(x) < 0`, "M1"),
+                S(`The parabola is below the axis between its roots: ${nf(p)} < x < ${nf(q)}`, "A1")] };
+      const fp = (x) => x * x * x + b * x * x + c * x + k;
+      return { q: `f(x) = ${f}\n(i) Find the coordinates of the two stationary points.\n(ii) Use the second derivative to determine the nature of each.`,
+        a: `(${nf(p)}, ${nf(fp(p))}) maximum; (${nf(q)}, ${nf(fp(q))}) minimum`,
+        sol: [S(`f′(x) = ${poly([[3, 2], [2 * b, 1], [c, 0]])} = 0 when x = ${nf(p)} or x = ${nf(q)}`, "M1"),
+              S(`f(${nf(p)}) = ${nf(fp(p))} and f(${nf(q)}) = ${nf(fp(q))}`, "A1"),
+              S(`f″(x) = ${poly([[6, 1], [2 * b, 0]])}; f″(${nf(p)}) = ${nf(6 * p + 2 * b)} < 0, a maximum`, "M1"),
+              S(`f″(${nf(q)}) = ${nf(6 * q + 2 * b)} > 0, a minimum`, "A1")] };
+    }
+  },
+
+  linearForm: {
+    name: "Transforming a relationship to linear form", grades: [11, 12],
+    gen(r, d) {
+      if (d === 1) {
+        const n = ri(r, 2, 5), A = ri(r, 2, 9);
+        return { q: `y = ${A}x${sup(n)}\nTake logarithms of both sides and write the result in the form\nlg y = m lg x + c, stating m and c.`,
+          a: `lg y = ${n} lg x + lg ${A}`,
+          sol: [S(`lg y = lg(${A}x${sup(n)}) = lg ${A} + lg x${sup(n)}`, "M1"),
+                S(`lg y = ${n} lg x + lg ${A}`, "A1"),
+                S(`m = ${n}, c = lg ${A} ≈ ${Math.log10(A).toFixed(3)}`, "A1")] };
+      }
+      if (d === 2) {
+        const n = ri(r, 2, 4), A = pick(r, [10, 100, 1000]);
+        const c = Math.log10(A);
+        return { q: `The graph of lg y against lg x is a straight line of gradient ${n}\nand intercept ${c} on the lg y axis.\nGiven that y = Ax${sup("n")}, find the values of A and n.`,
+          a: `A = ${A}, n = ${n}`,
+          sol: [S(`lg y = n lg x + lg A, so n is the gradient`, "M1"),
+                S(`n = ${n}`, "A1"),
+                S(`lg A = ${c}, so A = 10${sup(c)} = ${A}`, "A1")] };
+      }
+      const b = pick(r, [2, 3, 4, 5]), A = pick(r, [2, 5, 10]);
+      return { q: `y = A b${sup("x")}, where A and b are constants.\n(i) Show that the graph of lg y against x is a straight line.\n(ii) The line has gradient ${Math.log10(b).toFixed(4)} and passes through (0, ${Math.log10(A).toFixed(4)}).\nFind A and b.`,
+        a: `A = ${A}, b = ${b}`,
+        sol: [S(`lg y = lg A + x lg b, which is linear in x`, "M1"),
+              S(`Gradient = lg b = ${Math.log10(b).toFixed(4)}, so b = ${b}`, "A1"),
+              S(`Intercept = lg A = ${Math.log10(A).toFixed(4)}, so A = ${A}`, "A1")] };
+    }
+  },
+
+  reciprocalTrig: {
+    name: "The secant, cosecant and cotangent functions", grades: [11, 12],
+    gen(r, d) {
+      if (d === 1) {
+        const CASES = [["sec 60°", "2", "cos 60° = ⁅1/2⁆"],
+          ["cosec 30°", "2", "sin 30° = ⁅1/2⁆"],
+          ["cot 45°", "1", "tan 45° = 1"],
+          ["sec 0°", "1", "cos 0° = 1"],
+          ["cosec 90°", "1", "sin 90° = 1"]];
+        const c = pick(r, CASES);
+        return { q: `Find the exact value of ${c[0]}.`, a: c[1],
+          sol: [S(`${c[2]}`, "M1"),
+                S(`${c[0]} is the reciprocal, so it is ${c[1]}`, "A1")] };
+      }
+      if (d === 2) {
+        const k = pick(r, [2, 4]);
+        const ang = k === 2 ? 60 : 75.52;
+        return { q: `Solve sec θ = ${k} for 0° ≤ θ ≤ 180°, giving your answer\ncorrect to 1 decimal place where necessary.`,
+          a: `θ = ${k === 2 ? "60°" : "75.5°"}`,
+          sol: [S(`sec θ = ${frac(1, "cos θ")}, so cos θ = ${frac(1, k)}`, "M1"),
+                S(`θ = cos⁻¹(${frac(1, k)})`, "M1"),
+                S(`θ = ${k === 2 ? "60°" : "75.5°"}`, "A1")] };
+      }
+      const t = ri(r, 2, 6);
+      return { q: `Given that tan θ = ${t} and θ is acute,\nuse the identity 1 + tan${sup(2)}θ = sec${sup(2)}θ to find the exact\nvalues of sec θ and cos θ.`,
+        a: `sec θ = ${rad(1 + t * t)}, cos θ = ${frac(1, rad(1 + t * t))}`,
+        sol: [S(`sec${sup(2)}θ = 1 + ${t}${sup(2)} = ${1 + t * t}`, "M1"),
+              S(`θ is acute, so sec θ = ${rad(1 + t * t)} (positive root)`, "A1"),
+              S(`cos θ = ${frac(1, rad(1 + t * t))}`, "A1")] };
+    }
+  },
+
+  compoundAngle: {
+    name: "Compound angle formulae", grades: [11, 12],
+    gen(r, d) {
+      if (d === 1) {
+        const CASES = [
+          ["sin 75°", "sin(45° + 30°)", `${frac(`${rad(6)} + ${rad(2)}`, 4)}`],
+          ["cos 75°", "cos(45° + 30°)", `${frac(`${rad(6)} − ${rad(2)}`, 4)}`],
+          ["sin 15°", "sin(45° − 30°)", `${frac(`${rad(6)} − ${rad(2)}`, 4)}`],
+          ["cos 15°", "cos(45° − 30°)", `${frac(`${rad(6)} + ${rad(2)}`, 4)}`]
+        ];
+        const c = pick(r, CASES);
+        return { q: `Use a compound angle formula to find the exact value of ${c[0]}.`,
+          a: c[2],
+          sol: [S(`Write ${c[0]} as ${c[1]}`, "M1"),
+                S(`Expand using the addition formula with the exact values for 45° and 30°`, "M1"),
+                S(c[2], "A1")] };
+      }
+      if (d === 2) {
+        const T = [[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25]];
+        const A = pick(r, T);
+        let B = pick(r, T);
+        if (B[2] === A[2]) B = T[(T.indexOf(A) + 1) % T.length];
+        const num = A[0] * B[1] + A[1] * B[0], den = A[2] * B[2];
+        const g = gcd(num, den);
+        return { q: `A and B are acute angles with sin A = ${frac(A[0], A[2])} and cos B = ${frac(B[0], B[2])}.\nFind the exact value of sin(A + B).`,
+          a: frac(num / g, den / g),
+          sol: [S(`cos A = ${frac(A[1], A[2])} and sin B = ${frac(B[1], B[2])}`, "M1"),
+                S(`sin(A + B) = sin A cos B + cos A sin B`, "M1"),
+                S(`${frac(A[0], A[2])}×${frac(B[0], B[2])} + ${frac(A[1], A[2])}×${frac(B[1], B[2])} = ${frac(num / g, den / g)}`, "A1")] };
+      }
+      const k = pick(r, [30, 45, 60]);
+      return { q: `Solve sin(θ + ${k}°) = cos θ for 0° ≤ θ ≤ 360°.\nGive your answers correct to 1 decimal place where necessary.`,
+        a: `θ = ${(90 - k) / 2 + 0} ° and θ = ${(90 - k) / 2 + 180}°`,
+        sol: [S(`sin(θ + ${k}°) = sin θ cos ${k}° + cos θ sin ${k}°`, "M1"),
+              S(`Divide through by cos θ: tan θ cos ${k}° + sin ${k}° = 1`, "M1"),
+              S(`tan θ = ${frac(`1 − sin ${k}°`, `cos ${k}°`)} = tan ${(90 - k) / 2}°`, "M1"),
+              S(`θ = ${(90 - k) / 2}° or ${(90 - k) / 2 + 180}°`, "A1")] };
+    }
+  },
+
+  doubleAngle: {
+    name: "Double angle formulae", grades: [11, 12],
+    gen(r, d) {
+      const T = [[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25], [20, 21, 29]];
+      if (d === 1) {
+        const t = pick(r, T);
+        const num = 2 * t[0] * t[1], den = t[2] * t[2];
+        const g = gcd(num, den);
+        return { q: `θ is acute and sin θ = ${frac(t[0], t[2])}.\nFind the exact value of sin 2θ.`,
+          a: frac(num / g, den / g),
+          sol: [S(`cos θ = ${frac(t[1], t[2])}`, "M1"),
+                S(`sin 2θ = 2 sin θ cos θ = 2 × ${frac(t[0], t[2])} × ${frac(t[1], t[2])}`, "M1"),
+                S(frac(num / g, den / g), "A1")] };
+      }
+      if (d === 2) {
+        const t = pick(r, T);
+        const num = t[1] * t[1] - t[0] * t[0], den = t[2] * t[2];
+        const g = gcd(Math.abs(num), den);
+        return { q: `θ is acute and tan θ = ${frac(t[0], t[1])}.\nWithout finding θ, find the exact values of cos 2θ and tan 2θ.`,
+          a: `cos 2θ = ${frac(num / g, den / g)}, tan 2θ = ${frac(2 * t[0] * t[1], t[1] * t[1] - t[0] * t[0])}`,
+          sol: [S(`sin θ = ${frac(t[0], t[2])}, cos θ = ${frac(t[1], t[2])}`, "M1"),
+                S(`cos 2θ = cos${sup(2)}θ − sin${sup(2)}θ = ${frac(num, den)} = ${frac(num / g, den / g)}`, "A1"),
+                S(`tan 2θ = ${frac("2 tan θ", `1 − tan${sup(2)}θ`)} = ${frac(2 * t[0] * t[1], t[1] * t[1] - t[0] * t[0])}`, "A1")] };
+      }
+      return { q: `Solve cos 2θ = cos θ for 0° ≤ θ ≤ 360°.`,
+        a: "θ = 0°, 120°, 240°, 360°",
+        sol: [S(`cos 2θ = 2cos${sup(2)}θ − 1, so 2cos${sup(2)}θ − cos θ − 1 = 0`, "M1"),
+              S(`(2cos θ + 1)(cos θ − 1) = 0`, "M1"),
+              S(`cos θ = −${frac(1, 2)} gives θ = 120°, 240°`, "A1"),
+              S(`cos θ = 1 gives θ = 0°, 360°`, "A1")] };
+    }
+  },
+
+  trigIdentityProof: {
+    name: "Trigonometric identities", grades: [11, 12],
+    gen(r, d) {
+      if (d === 1) {
+        const CASES = [
+          [`sin${sup(2)}θ + cos${sup(2)}θ + tan${sup(2)}θ`, `sec${sup(2)}θ`, `sin${sup(2)}θ + cos${sup(2)}θ = 1, and 1 + tan${sup(2)}θ = sec${sup(2)}θ`],
+          [`${frac(`sin θ`, `cos θ`)} × cos θ`, `sin θ`, `The cos θ terms cancel`],
+          [`1 − cos${sup(2)}θ`, `sin${sup(2)}θ`, `Rearrange sin${sup(2)}θ + cos${sup(2)}θ = 1`],
+          [`sec${sup(2)}θ − 1`, `tan${sup(2)}θ`, `Rearrange 1 + tan${sup(2)}θ = sec${sup(2)}θ`],
+          [`cosec${sup(2)}θ − cot${sup(2)}θ`, `1`, `1 + cot${sup(2)}θ = cosec${sup(2)}θ`]
+        ];
+        const c = pick(r, CASES);
+        return { q: `Simplify ${c[0]}`, a: c[1],
+          sol: [S(c[2], "M1"), S(c[1], "A1")] };
+      }
+      if (d === 2)
+        return { q: `Prove the identity\n${frac(`1`, `1 − sin θ`)} + ${frac(`1`, `1 + sin θ`)} ≡ 2 sec${sup(2)}θ`,
+          a: "Proved",
+          sol: [S(`Common denominator: ${frac(`(1 + sin θ) + (1 − sin θ)`, `(1 − sin θ)(1 + sin θ)`)}`, "M1"),
+                S(`= ${frac(2, `1 − sin${sup(2)}θ`)}`, "M1"),
+                S(`1 − sin${sup(2)}θ = cos${sup(2)}θ`, "M1"),
+                S(`= ${frac(2, `cos${sup(2)}θ`)} = 2 sec${sup(2)}θ`, "A1")] };
+      const k = pick(r, [1, 2, 3]);
+      return { q: `Use the identity 1 + tan${sup(2)}θ = sec${sup(2)}θ to solve\n${k === 1 ? "" : k + " "}sec${sup(2)}θ = ${k + 2} + tan θ  for 0° ≤ θ ≤ 180°,\ngiving your answers correct to 1 decimal place.`,
+        a: `θ = 45° and θ = 180° − tan⁻¹(${frac(2, k)}) where applicable`,
+        sol: [S(`Replace sec${sup(2)}θ with 1 + tan${sup(2)}θ`, "M1"),
+              S(`${k === 1 ? "" : k}(1 + tan${sup(2)}θ) = ${k + 2} + tan θ`, "M1"),
+              S(`${k}tan${sup(2)}θ − tan θ + ${k} − ${k + 2} = 0, a quadratic in tan θ`, "M1"),
+              S(`Solve for tan θ, then find θ in the given range`, "A1")] };
+    }
+  },
+
+  rFormTrig: {
+    name: "Expressing a sin θ + b cos θ in the form R sin(θ ± α)", grades: [11, 12],
+    gen(r, d) {
+      const T = [[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25]];
+      const t = pick(r, T);
+      const a = t[0], b = t[1], R = t[2];
+      const alpha = (Math.atan2(b, a) * 180 / Math.PI);
+      if (d === 1)
+        return { q: `Express ${a} sin θ + ${b} cos θ in the form R sin(θ + α),\nwhere R > 0 and 0° < α < 90°. Give α correct to 1 decimal place.`,
+          a: `${R} sin(θ + ${alpha.toFixed(1)}°)`,
+          sol: [S(`R = ${rad(`${a}${sup(2)} + ${b}${sup(2)}`)} = ${rad(a * a + b * b)} = ${R}`, "M1"),
+                S(`tan α = ${frac(b, a)}, so α = ${alpha.toFixed(1)}°`, "M1"),
+                S(`${R} sin(θ + ${alpha.toFixed(1)}°)`, "A1")] };
+      if (d === 2)
+        return { q: `Given that ${a} sin θ + ${b} cos θ = ${R} sin(θ + ${alpha.toFixed(1)}°),\nwrite down the maximum and minimum values of ${a} sin θ + ${b} cos θ\nand the smallest positive value of θ at which the maximum occurs.`,
+          a: `Max ${R}, min ${nf(-R)}, at θ = ${(90 - alpha).toFixed(1)}°`,
+          sol: [S(`sin(θ + α) has maximum 1 and minimum −1`, "M1"),
+                S(`Maximum ${R}, minimum ${nf(-R)}`, "A1"),
+                S(`θ + ${alpha.toFixed(1)}° = 90° gives θ = ${(90 - alpha).toFixed(1)}°`, "A1")] };
+      const k = ri(r, 1, R - 1);
+      const s = Math.asin(k / R) * 180 / Math.PI;
+      const [sol1, sol2] = [((s - alpha) + 360) % 360, ((180 - s - alpha) + 360) % 360]
+        .sort((x, y) => x - y);
+      return { q: `Solve ${a} sin θ + ${b} cos θ = ${k} for 0° ≤ θ ≤ 360°,\ngiving your answers correct to 1 decimal place.`,
+        a: `θ = ${sol1.toFixed(1)}° and θ = ${sol2.toFixed(1)}°`,
+        sol: [S(`Write the left-hand side as ${R} sin(θ + ${alpha.toFixed(1)}°)`, "M1"),
+              S(`sin(θ + ${alpha.toFixed(1)}°) = ${frac(k, R)} = ${(k / R).toFixed(4)}`, "M1"),
+              S(`θ + ${alpha.toFixed(1)}° = ${s.toFixed(1)}° or ${(180 - s).toFixed(1)}° (adding 360° as needed)`, "M1"),
+              S(`θ = ${sol1.toFixed(1)}° or ${sol2.toFixed(1)}°`, "A1")] };
+    }
+  },
+
+  trapeziumRule: {
+    name: "The trapezium rule", grades: [11, 12],
+    gen(r, d) {
+      const f = (x) => x * x;
+      if (d === 1) {
+        const a = ri(r, 0, 3), h = ri(r, 1, 3);
+        const b = a + 2 * h;
+        const est = (h / 2) * (f(a) + 2 * f(a + h) + f(b));
+        const exact = (b * b * b - a * a * a) / 3;
+        return { q: `Use the trapezium rule with 2 intervals to estimate\n∫ from ${a} to ${b} of x${sup(2)} dx`,
+          a: money(est),
+          sol: [S(`h = ${h}; ordinates at x = ${a}, ${a + h}, ${b}`, "M1"),
+                S(`y-values ${f(a)}, ${f(a + h)}, ${f(b)}`, "M1"),
+                S(`${frac(h, 2)}[${f(a)} + 2(${f(a + h)}) + ${f(b)}] = ${money(est)}  (exact ${money(exact)})`, "A1")] };
+      }
+      if (d === 2) {
+        const a = 0, h = pick(r, [0.5, 1]);
+        const n = 4, b = a + n * h;
+        const ys = [0, 1, 2, 3, 4].map((i) => Math.sqrt(a + i * h));
+        const est = (h / 2) * (ys[0] + 2 * (ys[1] + ys[2] + ys[3]) + ys[4]);
+        return { q: `Use the trapezium rule with 4 intervals to estimate\n∫ from ${a} to ${b} of ${rad("x")} dx, giving your answer to 3 decimal places.`,
+          a: est.toFixed(3),
+          sol: [S(`h = ${h}; ordinates at x = ${[0, 1, 2, 3, 4].map((i) => a + i * h).join(", ")}`, "M1"),
+                S(`y-values ${ys.map((y) => y.toFixed(4)).join(", ")}`, "M1"),
+                S(`${frac(h, 2)}[y₀ + 2(y₁ + y₂ + y₃) + y₄] = ${est.toFixed(3)}`, "A1")] };
+      }
+      const a = ri(r, 1, 3), h = 1, n = ri(r, 2, 4);
+      const b = a + n * h;
+      const ys = [];
+      for (let i = 0; i <= n; i++) ys.push(1 / (a + i * h));
+      let s = ys[0] + ys[n];
+      for (let i = 1; i < n; i++) s += 2 * ys[i];
+      const est = (h / 2) * s;
+      const exact = Math.log(b / a);
+      return { q: `Use the trapezium rule with ${n} intervals to estimate\n∫ from ${a} to ${b} of ${frac(1, "x")} dx, giving your answer to 4 decimal places.\nState, with a reason, whether your estimate is an over-estimate\nor an under-estimate.`,
+        a: `${est.toFixed(4)} — an over-estimate`,
+        sol: [S(`h = ${h}; y-values ${ys.map((y) => y.toFixed(4)).join(", ")}`, "M1"),
+              S(`${frac(h, 2)}[y₀ + 2(…) + y${sub(n)}] = ${est.toFixed(4)}`, "A1"),
+              S(`The curve y = ${frac(1, "x")} is convex here, so the trapezia lie above it — an over-estimate (exact value ${exact.toFixed(4)})`, "B1")] };
+    }
+  },
+
+  iterativeSolution: {
+    name: "Numerical solution of equations", grades: [11, 12],
+    gen(r, d) {
+      if (d === 1) {
+        const a = ri(r, 1, 3), c = ri(r, 1, 6);
+        // f(x) = x³ + a x − (a + 1 + c) has a root between 1 and 2 for suitable c
+        const k = a + 1 + c;
+        const f = (x) => x * x * x + a * x - k;
+        let lo = 1;
+        while (f(lo) > 0 && lo > -5) lo--;
+        while (f(lo + 1) < 0 && lo < 10) lo++;
+        return { q: `f(x) = x${sup(3)} + ${a}x − ${k}\nShow that the equation f(x) = 0 has a root between x = ${nf(lo)} and x = ${nf(lo + 1)}.`,
+          a: `f(${nf(lo)}) = ${nf(money(f(lo)))}, f(${nf(lo + 1)}) = ${nf(money(f(lo + 1)))} — a sign change`,
+          sol: [S(`f(${nf(lo)}) = ${nf(money(f(lo)))}`, "M1"),
+                S(`f(${nf(lo + 1)}) = ${nf(money(f(lo + 1)))}`, "M1"),
+                S(`f is continuous and changes sign, so there is a root between ${nf(lo)} and ${nf(lo + 1)}`, "A1")] };
+      }
+      if (d === 2) {
+        const a = ri(r, 2, 6);
+        const g = (x) => Math.cbrt(a * x + 1);
+        let x = 2;
+        const steps = [x];
+        for (let i = 0; i < 3; i++) { x = g(x); steps.push(x); }
+        return { q: `The iterative formula x${sub("n+1")} = ∛(${a}x${sub("n")} + 1) is used with x₁ = 2.\nFind x₂, x₃ and x₄, each correct to 4 decimal places.`,
+          a: steps.slice(1).map((v) => v.toFixed(4)).join(", "),
+          sol: [S(`x₂ = ∛(${a}×2 + 1) = ${steps[1].toFixed(4)}`, "M1"),
+                S(`x₃ = ${steps[2].toFixed(4)}`, "M1"),
+                S(`x₄ = ${steps[3].toFixed(4)}`, "A1")] };
+      }
+      const a = ri(r, 2, 5), b = ri(r, 1, 5);
+      const g = (x) => Math.cbrt(a * x + b);
+      let x = 2;
+      for (let i = 0; i < 40; i++) x = g(x);
+      return { q: `(i) Show that the equation x${sup(3)} − ${a}x − ${b} = 0 can be rearranged\nas x = ∛(${a}x + ${b}).\n(ii) Use the iterative formula x${sub("n+1")} = ∛(${a}x${sub("n")} + ${b}) with x₁ = 2 to\nfind the root correct to 3 decimal places, showing your iterations.\n(iii) Explain how you know your answer is correct to 3 decimal places.`,
+        a: x.toFixed(3),
+        sol: [S(`x${sup(3)} = ${a}x + ${b}, so x = ∛(${a}x + ${b})`, "M1"),
+              S(`Iterate from x₁ = 2 until successive values agree to 3 d.p.`, "M1"),
+              S(`Root = ${x.toFixed(3)}`, "A1"),
+              S(`Check a sign change in f(x) = x${sup(3)} − ${a}x − ${b} between ${(x - 0.0005).toFixed(4)} and ${(x + 0.0005).toFixed(4)}`, "B1")] };
+    }
+  },
+
+  scalarProduct: {
+    name: "The scalar product", grades: [11, 12],
+    gen(r, d) {
+      const v = () => [ri(r, -5, 5), ri(r, -5, 5), ri(r, -5, 5)];
+      // "1i" and "+ 0j" are not how a vector is written on a paper.
+      const show = (a) => {
+        const names = ["i", "j", "k"];
+        let out = "";
+        a.forEach((v, i) => {
+          if (v === 0) return;
+          const mag = Math.abs(v) === 1 ? "" : Math.abs(v);
+          out += out === "" ? (v < 0 ? "−" : "") + mag + names[i]
+                            : (v < 0 ? " − " : " + ") + mag + names[i];
+        });
+        return out || "0";
+      };
+      if (d === 1) {
+        const a = v(), b = v();
+        const dot = a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+        return { q: `a = ${show(a)}\nb = ${show(b)}\nFind a · b.`,
+          a: nf(dot),
+          sol: [S(`a · b = ${nf(a[0])}(${nf(b[0])}) + ${nf(a[1])}(${nf(b[1])}) + ${nf(a[2])}(${nf(b[2])})`, "M1"),
+                S(nf(dot), "A1")] };
+      }
+      if (d === 2) {
+        const a = v(), b = v();
+        const dot = a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+        const ma = Math.hypot(...a), mb = Math.hypot(...b);
+        if (!ma || !mb) return { q: "a = 3i + 4j, b = 4i − 3j\nFind the angle between a and b.", a: "90°",
+          sol: [S("a · b = 12 − 12 = 0", "M1"), S("cos θ = 0, so θ = 90°", "A1")] };
+        // Parallel vectors can push the cosine a hair past ±1 in floating point.
+        const cosT = Math.max(-1, Math.min(1, dot / (ma * mb)));
+        const ang = Math.acos(cosT) * 180 / Math.PI;
+        return { q: `a = ${show(a)}\nb = ${show(b)}\nFind the angle between a and b, correct to 1 decimal place.`,
+          a: `${ang.toFixed(1)}°`,
+          sol: [S(`a · b = ${nf(dot)}`, "M1"),
+                S(`|a| = ${rad(a[0] * a[0] + a[1] * a[1] + a[2] * a[2])} = ${ma.toFixed(4)}, |b| = ${mb.toFixed(4)}`, "M1"),
+                S(`cos θ = ${frac(nf(dot), (ma * mb).toFixed(4))}, θ = ${ang.toFixed(1)}°`, "A1")] };
+      }
+      const a = [ri(r, 1, 5), ri(r, 1, 5), ri(r, 1, 5)];
+      const b0 = ri(r, 1, 4), b1 = ri(r, 1, 4);
+      const bShow = `${b0 === 1 ? "" : b0}i + ${b1 === 1 ? "" : b1}j + λk`;
+      const lam = -(a[0] * b0 + a[1] * b1) / a[2];
+      const scaled = Number.isInteger(lam) ? lam : null;
+      const b2 = scaled !== null ? scaled : 1;
+      return { q: `a = ${show(a)}\nb = ${bShow}\nFind the value of λ for which a and b are perpendicular,\nand explain what the scalar product tells you about the angle\nbetween two vectors when it is negative.`,
+        a: `λ = ${scaled !== null ? nf(scaled) : frac(nf(-(a[0] * b0 + a[1] * b1)), a[2])}`,
+        sol: [S(`Perpendicular means a · b = 0`, "M1"),
+              S(`${a[0]}(${b0}) + ${a[1]}(${b1}) + ${a[2] === 1 ? "" : a[2]}λ = 0`, "M1"),
+              S(`λ = ${scaled !== null ? nf(scaled) : frac(nf(-(a[0] * b0 + a[1] * b1)), a[2])}`, "A1"),
+              S(`A negative scalar product means cos θ < 0, so the angle is obtuse`, "B1")] };
+    }
+  },
+
+  lineIntersection: {
+    name: "Intersection of two lines", grades: [11, 12],
+    gen(r, d) {
+      if (d === 1) {
+        const m1 = ri(r, 1, 4), c1 = ri(r, -6, 6);
+        const m2 = m1 + ri(r, 1, 4), x = ri(r, -4, 4);
+        const c2 = m1 * x + c1 - m2 * x;
+        return { q: `Find the point where the lines y = ${nf(m1)}x ${c1 < 0 ? "− " + -c1 : "+ " + c1}\nand y = ${nf(m2)}x ${c2 < 0 ? "− " + -c2 : "+ " + c2} meet.`,
+          a: `(${nf(x)}, ${nf(m1 * x + c1)})`,
+          sol: [S(`${nf(m1)}x ${c1 < 0 ? "− " + -c1 : "+ " + c1} = ${nf(m2)}x ${c2 < 0 ? "− " + -c2 : "+ " + c2}`, "M1"),
+                S(`x = ${nf(x)}`, "M1"),
+                S(`y = ${nf(m1 * x + c1)}, so the point is (${nf(x)}, ${nf(m1 * x + c1)})`, "A1")] };
+      }
+      // 3D lines built so they really do meet at a chosen point.
+      const P = [ri(r, -4, 4), ri(r, -4, 4), ri(r, -4, 4)];
+      const d1v = [ri(r, 1, 3), ri(r, -3, 3), ri(r, 1, 3)];
+      // The second direction must not be parallel to the first, or the lines
+      // coincide and there is no angle between them to find.
+      let d2v = [ri(r, -3, 3), ri(r, 1, 3), ri(r, 1, 3)];
+      for (let i = 0; i < 20 && d1v[0] * d2v[1] - d1v[1] * d2v[0] === 0
+           && d1v[1] * d2v[2] - d1v[2] * d2v[1] === 0; i++)
+        d2v = [ri(r, -3, 3), ri(r, 1, 3), ri(r, 1, 3)];
+      if (d1v[0] * d2v[1] - d1v[1] * d2v[0] === 0
+          && d1v[1] * d2v[2] - d1v[2] * d2v[1] === 0) d2v = [d1v[2], d1v[0], -d1v[1] - 1];
+      const s = ri(r, 1, 3), t = ri(r, 1, 3);
+      const A = P.map((p, i) => p - s * d1v[i]);
+      const B = P.map((p, i) => p - t * d2v[i]);
+      const vec = (a) => `(${a.map(nf).join(", ")})`;
+      if (d === 2)
+        return { q: `Line l₁ passes through A${vec(A)} with direction ${vec(d1v)}.\nLine l₂ passes through B${vec(B)} with direction ${vec(d2v)}.\nShow that the lines intersect and find the point of intersection.`,
+          a: vec(P),
+          sol: [S(`Write both lines in parametric form and equate the x and y components`, "M1"),
+                S(`Solving gives s = ${s}, t = ${t}`, "M1"),
+                S(`The z components agree, so the lines meet at ${vec(P)}`, "A1")] };
+      const dot = d1v[0] * d2v[0] + d1v[1] * d2v[1] + d1v[2] * d2v[2];
+      const ang = Math.acos(Math.abs(dot) / (Math.hypot(...d1v) * Math.hypot(...d2v))) * 180 / Math.PI;
+      return { q: `Line l₁ passes through A${vec(A)} with direction ${vec(d1v)}.\nLine l₂ passes through B${vec(B)} with direction ${vec(d2v)}.\n(i) Show that l₁ and l₂ intersect, and find the point of intersection.\n(ii) Find the acute angle between the lines, correct to 1 decimal place.\n(iii) Explain what it would have meant if no solution had been found.`,
+        a: `${vec(P)}; ${ang.toFixed(1)}°`,
+        sol: [S(`Equating components gives s = ${s}, t = ${t}, consistent in all three`, "M1"),
+              S(`Point of intersection ${vec(P)}`, "A1"),
+              S(`cos θ = ${frac(`|${nf(dot)}|`, (Math.hypot(...d1v) * Math.hypot(...d2v)).toFixed(4))}, θ = ${ang.toFixed(1)}°`, "A1"),
+              S(`Inconsistent equations would mean the lines are skew — not parallel, but never meeting`, "B1")] };
+    }
+  },
+
+  separableDE: {
+    name: "Differential equations and separating the variables", grades: [11, 12],
+    gen(r, d) {
+      if (d === 1) {
+        const k = ri(r, 2, 6);
+        return { q: `Find the general solution of ${frac("dy", "dx")} = ${k}y`,
+          a: `y = Ae${sup(k + "x")}`,
+          sol: [S(`Separate: ${frac("1", "y")} dy = ${k} dx`, "M1"),
+                S(`Integrate: ln y = ${k}x + c`, "M1"),
+                S(`y = Ae${sup(k + "x")}, where A = e${sup("c")}`, "A1")] };
+      }
+      if (d === 2) {
+        const k = ri(r, 2, 5), y0 = ri(r, 2, 8);
+        return { q: `${frac("dy", "dx")} = ${k}xy, and y = ${y0} when x = 0.\nFind y in terms of x.`,
+          a: `y = ${y0}e^(${frac(k, 2)} x${sup(2)})`,
+          sol: [S(`Separate: ${frac("1", "y")} dy = ${k}x dx`, "M1"),
+                S(`ln y = ${frac(k, 2)}x${sup(2)} + c`, "M1"),
+                S(`x = 0, y = ${y0} gives c = ln ${y0}`, "M1"),
+                S(`y = ${y0}e^(${frac(k, 2)}x${sup(2)})`, "A1")] };
+      }
+      const k = ri(r, 2, 8), N0 = pick(r, [100, 200, 500, 1000]);
+      return { q: `A population N grows so that its rate of increase is proportional\nto the population, with constant of proportionality ${frac(1, k)}.\n(i) Write down a differential equation for ${frac("dN", "dt")}.\n(ii) Given N = ${N0} when t = 0, solve it to find N in terms of t.\n(iii) Find the time taken for the population to double,\ncorrect to 2 decimal places.`,
+        a: `N = ${N0}e^(${frac("t", k)}); t = ${(k * Math.log(2)).toFixed(2)}`,
+        sol: [S(`${frac("dN", "dt")} = ${frac(1, k)}N`, "M1"),
+              S(`Separate and integrate: ln N = ${frac("t", k)} + c`, "M1"),
+              S(`t = 0, N = ${N0} gives N = ${N0}e^(${frac("t", k)})`, "A1"),
+              S(`Doubling: e^(${frac("t", k)}) = 2, t = ${k} ln 2 = ${(k * Math.log(2)).toFixed(2)}`, "A1")] };
+    }
+  },
+
+  definiteIntegral: {
+    name: "Definite integrals and area under a curve", grades: [11, 12],
+    gen(r, d) {
+      if (d === 1) {
+        const a = ri(r, 1, 4), b = ri(r, 0, 5);
+        const lo = ri(r, 0, 2), hi = lo + ri(r, 1, 3);
+        const F = (x) => (a * x * x * x) / 3 + (b * x * x) / 2;
+        const val = F(hi) - F(lo);
+        return { q: `Evaluate ∫ from ${lo} to ${hi} of ${poly([[a, 2], [b, 1]])} dx`,
+          a: money(val),
+          sol: [S(`∫ = ${frac(a, 3)}x${sup(3)} + ${frac(b, 2)}x${sup(2)}`, "M1"),
+                S(`Substitute the limits ${hi} and ${lo}`, "M1"),
+                S(money(val), "A1")] };
+      }
+      if (d === 2) {
+        const a = ri(r, 1, 4), root = ri(r, 2, 5);
+        // y = a x (root − x), area between 0 and root
+        const area = (a * root * root * root) / 6;
+        return { q: `The curve y = ${a === 1 ? "" : a}x(${root} − x) meets the x-axis at x = 0 and x = ${root}.\nFind the exact area enclosed between the curve and the x-axis.`,
+          a: money(area),
+          sol: [S(`Area = ∫ from 0 to ${root} of ${poly([[a * root, 1], [-a, 2]])} dx`, "M1"),
+                S(`= [${frac(a * root, 2)}x${sup(2)} − ${frac(a, 3)}x${sup(3)}] from 0 to ${root}`, "M1"),
+                S(money(area), "A1")] };
+      }
+      const m = ri(r, 1, 4), k = ri(r, 1, 5);
+      // Curve y = x², line y = m x + k; area between them.
+      const disc = m * m + 4 * k;
+      const rt = Math.sqrt(disc);
+      const x1 = (m - rt) / 2, x2 = (m + rt) / 2;
+      const area = (Math.pow(x2 - x1, 3)) / 6;
+      return { q: `The curve y = x${sup(2)} and the line y = ${m === 1 ? "" : m}x + ${k} intersect at two points.\n(i) Find the x-coordinates of the points of intersection,\ncorrect to 3 decimal places.\n(ii) Find the area of the region enclosed between the line and the curve,\ncorrect to 3 decimal places.`,
+        a: `x = ${nf(x1.toFixed(3))} and ${nf(x2.toFixed(3))}; area ${area.toFixed(3)}`,
+        sol: [S(`x${sup(2)} = ${m === 1 ? "" : m}x + ${k}, so x${sup(2)} − ${m === 1 ? "" : m}x − ${k} = 0`, "M1"),
+              S(`x = ${nf(x1.toFixed(3))} or ${nf(x2.toFixed(3))}`, "A1"),
+              S(`Area = ∫ (line − curve) dx between the roots`, "M1"),
+              S(`= ${frac(`(x₂ − x₁)${sup(3)}`, 6)} = ${area.toFixed(3)}`, "A1")] };
+    }
+  },
+
+  naturalExpLog: {
+    name: "The number e, and differentiating eˣ and ln x", grades: [11, 12],
+    gen(r, d) {
+      if (d === 1) {
+        const k = ri(r, 2, 6);
+        return { q: `Differentiate  y = e${sup(k + "x")} + ${k} ln x`,
+          a: `${frac("dy", "dx")} = ${k}e${sup(k + "x")} + ${frac(k, "x")}`,
+          sol: [S(`${frac("d", "dx")}(e${sup("kx")}) = k e${sup("kx")}`, "M1"),
+                S(`${frac("d", "dx")}(ln x) = ${frac(1, "x")}`, "M1"),
+                S(`${k}e${sup(k + "x")} + ${frac(k, "x")}`, "A1")] };
+      }
+      if (d === 2) {
+        const a = ri(r, 2, 5), b = ri(r, 1, 6);
+        return { q: `Differentiate  y = e^(${a}x${sup(2)} + ${b})  with respect to x.`,
+          a: `${frac("dy", "dx")} = ${2 * a}x e${sup(`${a}x²+${b}`)}`,
+          sol: [S(`Chain rule: let u = ${a}x${sup(2)} + ${b}`, "M1"),
+                S(`${frac("du", "dx")} = ${2 * a}x and ${frac("dy", "du")} = e${sup("u")}`, "M1"),
+                S(`${frac("dy", "dx")} = ${2 * a}x e${sup(`${a}x²+${b}`)}`, "A1")] };
+      }
+      const a = ri(r, 1, 4);
+      return { q: `The curve y = x${sup(2)} ln x is defined for x > 0.\n(i) Find ${frac("dy", "dx")}.\n(ii) Find the exact x-coordinate of the stationary point.\n(iii) Determine whether it is a maximum or a minimum.`,
+        a: `${frac("dy", "dx")} = 2x ln x + x; x = e^(−${frac(1, 2)})`,
+        sol: [S(`Product rule: ${frac("dy", "dx")} = 2x ln x + x${sup(2)} × ${frac(1, "x")} = 2x ln x + x`, "M1"),
+              S(`x(2 ln x + 1) = 0, and x > 0, so ln x = −${frac(1, 2)}`, "M1"),
+              S(`x = e^(−${frac(1, 2)}) ≈ ${Math.exp(-0.5).toFixed(4)}`, "A1"),
+              S(`${frac(`d${sup(2)}y`, `dx${sup(2)}`)} = 2 ln x + 3 = 2 > 0 there, so it is a minimum`, "A1")] };
+    }
+  },
+
+  diffTrigFns: {
+    name: "Differentiating trigonometric functions", grades: [11, 12],
+    gen(r, d) {
+      const k = ri(r, 2, 6);
+      if (d === 1)
+        return { q: `Differentiate  y = sin ${k}x − cos ${k}x`,
+          a: `${frac("dy", "dx")} = ${k} cos ${k}x + ${k} sin ${k}x`,
+          sol: [S(`${frac("d", "dx")}(sin kx) = k cos kx`, "M1"),
+                S(`${frac("d", "dx")}(cos kx) = −k sin kx`, "M1"),
+                S(`${k} cos ${k}x + ${k} sin ${k}x`, "A1")] };
+      if (d === 2)
+        return { q: `Differentiate  y = tan ${k}x  and  y = x sin x,\nnaming the rule you use each time.`,
+          a: `${k} sec${sup(2)} ${k}x; sin x + x cos x`,
+          sol: [S(`Chain rule: ${frac("d", "dx")}(tan ${k}x) = ${k} sec${sup(2)} ${k}x`, "A1"),
+                S(`Product rule on x sin x: (1)(sin x) + (x)(cos x)`, "M1"),
+                S(`sin x + x cos x`, "A1")] };
+      return { q: `y = tan⁻¹(${k}x)\n(i) Find ${frac("dy", "dx")}.\n(ii) Find the gradient of the curve at x = 0.\n(iii) Explain why the gradient is always positive.`,
+        a: `${frac("dy", "dx")} = ${frac(k, `1 + ${k * k}x${sup(2)}`)}; gradient ${k} at x = 0`,
+        sol: [S(`${frac("d", "dx")}(tan⁻¹u) = ${frac(1, `1 + u${sup(2)}`)} × ${frac("du", "dx")}`, "M1"),
+              S(`u = ${k}x, so ${frac("dy", "dx")} = ${frac(k, `1 + ${k * k}x${sup(2)}`)}`, "A1"),
+              S(`At x = 0 the gradient is ${k}`, "A1"),
+              S(`1 + ${k * k}x${sup(2)} > 0 for all x and ${k} > 0, so the gradient is always positive`, "B1")] };
+    }
+  },
+
+  implicitDiff: {
+    name: "Differentiating implicit equations", grades: [11, 12],
+    gen(r, d) {
+      if (d === 1) {
+        const rr = ri(r, 2, 8);
+        return { q: `A circle has equation x${sup(2)} + y${sup(2)} = ${rr * rr}.\nUse implicit differentiation to find ${frac("dy", "dx")}.`,
+          a: frac("−x", "y"),
+          sol: [S(`Differentiate term by term: 2x + 2y${frac("dy", "dx")} = 0`, "M1"),
+                S(`2y${frac("dy", "dx")} = −2x`, "M1"),
+                S(frac("−x", "y"), "A1")] };
+      }
+      if (d === 2) {
+        const a = ri(r, 1, 4), c = ri(r, 2, 9);
+        return { q: `x${sup(2)} + ${a === 1 ? "" : a}xy + y${sup(2)} = ${c}\nFind ${frac("dy", "dx")} in terms of x and y.`,
+          a: frac(`−(2x + ${a === 1 ? "" : a}y)`, `${a === 1 ? "" : a}x + 2y`),
+          sol: [S(`Differentiate: 2x + ${a === 1 ? "" : a}(y + x${frac("dy", "dx")}) + 2y${frac("dy", "dx")} = 0`, "M1"),
+                S(`Collect the ${frac("dy", "dx")} terms: (${a === 1 ? "" : a}x + 2y)${frac("dy", "dx")} = −(2x + ${a === 1 ? "" : a}y)`, "M1"),
+                S(frac(`−(2x + ${a === 1 ? "" : a}y)`, `${a === 1 ? "" : a}x + 2y`), "A1")] };
+      }
+      const t = pick(r, [[3, 4, 5], [6, 8, 10], [5, 12, 13]]);
+      const rr = t[2];
+      return { q: `The curve x${sup(2)} + y${sup(2)} = ${rr * rr} passes through P(${t[0]}, ${t[1]}).\n(i) Find the gradient of the curve at P.\n(ii) Find the equation of the tangent at P.\n(iii) Show that the tangent is perpendicular to OP.`,
+        a: `Gradient ${frac(nf(-t[0]), t[1])}; ${t[0]}x + ${t[1]}y = ${rr * rr}`,
+        sol: [S(`${frac("dy", "dx")} = ${frac("−x", "y")}, so at P the gradient is ${frac(nf(-t[0]), t[1])}`, "M1"),
+              S(`y − ${t[1]} = ${frac(nf(-t[0]), t[1])}(x − ${t[0]})`, "M1"),
+              S(`${t[0]}x + ${t[1]}y = ${rr * rr}`, "A1"),
+              S(`OP has gradient ${frac(t[1], t[0])}; ${frac(t[1], t[0])} × ${frac(nf(-t[0]), t[1])} = −1, so they are perpendicular`, "A1")] };
+    }
+  },
+
+  recogniseIntegrals: {
+    name: "Recognising integrals", grades: [11, 12],
+    gen(r, d) {
+      if (d === 1) {
+        const a = ri(r, 2, 6), b = ri(r, 1, 8);
+        return { q: `Find  ∫ ${frac(`${2 * a}x`, `${a}x${sup(2)} + ${b}`)} dx`,
+          a: `ln|${a}x${sup(2)} + ${b}| + c`,
+          sol: [S(`The numerator is the derivative of the denominator`, "M1"),
+                S(`∫${frac("f′(x)", "f(x)")} dx = ln|f(x)| + c`, "M1"),
+                S(`ln|${a}x${sup(2)} + ${b}| + c`, "A1")] };
+      }
+      if (d === 2) {
+        const a = ri(r, 2, 5), b = ri(r, 1, 6);
+        return { q: `Find  ∫ e${sup(`${a}x+${b}`)} dx  and  ∫ ${frac(1, `${a}x + ${b}`)} dx`,
+          a: `${frac(1, a)}e${sup(`${a}x+${b}`)} + c;  ${frac(1, a)}ln|${a}x + ${b}| + c`,
+          sol: [S(`Reverse the chain rule: divide by the derivative of the bracket, ${a}`, "M1"),
+                S(`${frac(1, a)}e${sup(`${a}x+${b}`)} + c`, "A1"),
+                S(`${frac(1, a)}ln|${a}x + ${b}| + c`, "A1")] };
+      }
+      const a = ri(r, 2, 5);
+      return { q: `(i) Find ∫ ${frac(`sin ${a}x`, `cos ${a}x`)} dx, explaining how you recognise it.\n(ii) Hence evaluate ∫ from 0 to ${frac("π", 4 * a)} of ${frac(`sin ${a}x`, `cos ${a}x`)} dx,\ngiving your answer in an exact form.`,
+        a: `−${frac(1, a)} ln|cos ${a}x| + c;  ${frac(1, 2 * a)} ln 2`,
+        sol: [S(`The numerator is −${frac(1, a)} × the derivative of cos ${a}x`, "M1"),
+              S(`∫ = −${frac(1, a)} ln|cos ${a}x| + c`, "A1"),
+              S(`At the limits: −${frac(1, a)}[ln cos ${frac("π", 4)} − ln 1] = −${frac(1, a)} ln ${frac(1, rad(2))}`, "M1"),
+              S(`= ${frac(1, 2 * a)} ln 2`, "A1")] };
+    }
+  },
+
+  // ---------- Complex numbers ----------
+
+  complexArithmetic: {
+    name: "Complex numbers and their arithmetic", grades: [12],
+    gen(r, d) {
+      const cx = cplx;
+      const a = ri(r, -6, 6), b = ri(r, 1, 6) * (r() < 0.5 ? -1 : 1);
+      const c = ri(r, -6, 6), e = ri(r, 1, 6) * (r() < 0.5 ? -1 : 1);
+      if (d === 1)
+        return { q: `z₁ = ${cx(a, b)} and z₂ = ${cx(c, e)}\nFind z₁ + z₂ and z₁ − z₂.`,
+          a: `${cx(a + c, b + e)} and ${cx(a - c, b - e)}`,
+          sol: [S(`Add the real parts and the imaginary parts separately`, "M1"),
+                S(`z₁ + z₂ = ${cx(a + c, b + e)}`, "A1"),
+                S(`z₁ − z₂ = ${cx(a - c, b - e)}`, "A1")] };
+      if (d === 2)
+        return { q: `z₁ = ${cx(a, b)} and z₂ = ${cx(c, e)}\nFind z₁z₂, using i${sup(2)} = −1.`,
+          a: cx(a * c - b * e, a * e + b * c),
+          sol: [S(`Expand: (${nf(a)})(${nf(c)}) + (${nf(a)})(${nf(e)})i + (${nf(b)})(${nf(c)})i + (${nf(b)})(${nf(e)})i${sup(2)}`, "M1"),
+                S(`i${sup(2)} = −1, so the last term is ${nf(-b * e)}`, "M1"),
+                S(cx(a * c - b * e, a * e + b * c), "A1")] };
+      const den = c * c + e * e;
+      const rn = a * c + b * e, im = b * c - a * e;
+      // Each part is cancelled against the denominator on its own: ⁅0/5⁆ is 0,
+      // and ⁅5/5⁆ is 1, neither of which belongs on a printed answer.
+      const part = (num) => {
+        if (num === 0) return "0";
+        const g = gcd(Math.abs(num), den);
+        return g === den ? nf(num / den) : frac(nf(num / g), den / g);
+      };
+      const xPart = part(rn), yPart = part(im);
+      // A coefficient of exactly 1 disappears in front of i.
+      const withI = (t) => (t === "1" ? "i" : `${t}i`);
+      const ans = im === 0 ? xPart
+        : rn === 0 ? (im < 0 ? "−" + withI(part(-im)) : withI(yPart))
+        : `${xPart} ${im < 0 ? "− " + withI(part(-im)) : "+ " + withI(yPart)}`;
+      return { q: `z₁ = ${cx(a, b)} and z₂ = ${cx(c, e)}\nExpress ${frac("z₁", "z₂")} in the form x + iy, giving x and y as exact fractions.\nState the conjugate you multiplied by and explain why it works.`,
+        a: ans,
+        sol: [S(`Multiply top and bottom by the conjugate ${cx(c, -e)}`, "M1"),
+              S(`Denominator: (${nf(c)})${sup(2)} + (${nf(e)})${sup(2)} = ${den}, a real number`, "M1"),
+              S(`Numerator: ${cplx(rn, im)}`, "M1"),
+              S(ans, "A1")] };
+    }
+  },
+
+  argandDiagram: {
+    name: "The complex plane, modulus and argument", grades: [12],
+    gen(r, d) {
+      const cx = cplx;
+      if (d === 1) {
+        const t = pick(r, [[3, 4, 5], [6, 8, 10], [5, 12, 13], [8, 15, 17]]);
+        const a = t[0] * (r() < 0.5 ? -1 : 1), b = t[1] * (r() < 0.5 ? -1 : 1);
+        return { q: `z = ${cx(a, b)}\nShow z on an Argand diagram and find |z|.`,
+          a: String(t[2]),
+          sol: [S(`Plot the point (${nf(a)}, ${nf(b)})`, "M1"),
+                S(`|z| = ${rad(`${Math.abs(a)}${sup(2)} + ${Math.abs(b)}${sup(2)}`)} = ${rad(t[2] * t[2])}`, "M1"),
+                S(String(t[2]), "A1")] };
+      }
+      if (d === 2) {
+        const CASES = [[1, 1, `${rad(2)}`, `${frac("π", 4)}`], [-1, 1, `${rad(2)}`, `${frac("3π", 4)}`],
+          [-1, -1, `${rad(2)}`, `−${frac("3π", 4)}`], [1, -1, `${rad(2)}`, `−${frac("π", 4)}`],
+          [0, 2, "2", `${frac("π", 2)}`], [-3, 0, "3", "π"], [2, 0, "2", "0"]];
+        const c = pick(r, CASES);
+        return { q: `z = ${cx(c[0], c[1])}\nFind |z| and arg z, giving arg z in radians in the interval −π < arg z ≤ π.`,
+          a: `|z| = ${c[2]}, arg z = ${c[3]}`,
+          sol: [S(`|z| = ${rad(`${Math.abs(c[0])}${sup(2)} + ${Math.abs(c[1])}${sup(2)}`)} = ${c[2]}`, "M1"),
+                S(`The point lies in the ${c[0] >= 0 && c[1] >= 0 ? "first" : c[0] < 0 && c[1] >= 0 ? "second" : c[0] < 0 ? "third" : "fourth"} quadrant`, "M1"),
+                S(`arg z = ${c[3]}`, "A1")] };
+      }
+      const modA = ri(r, 2, 5), modB = ri(r, 2, 5);
+      const gm = gcd(modA, modB);
+      const quotMod = modB / gm === 1 ? String(modA / gm) : frac(modA / gm, modB / gm);
+      return { q: `z₁ has modulus ${modA} and argument ${frac("π", 3)}.\nz₂ has modulus ${modB} and argument ${frac("π", 6)}.\n(i) Write z₁ in the polar form r(cos θ + i sin θ).\n(ii) Find the modulus and argument of z₁z₂ and of ${frac("z₁", "z₂")}.\n(iii) State the rule you used for each.`,
+        a: `|z₁z₂| = ${modA * modB}, arg = ${frac("π", 2)}; |z₁/z₂| = ${quotMod}, arg = ${frac("π", 6)}`,
+        sol: [S(`z₁ = ${modA}(cos ${frac("π", 3)} + i sin ${frac("π", 3)})`, "A1"),
+              S(`Multiplying multiplies the moduli and adds the arguments`, "M1"),
+              S(`|z₁z₂| = ${modA * modB}, arg(z₁z₂) = ${frac("π", 3)} + ${frac("π", 6)} = ${frac("π", 2)}`, "A1"),
+              S(`Dividing divides the moduli and subtracts the arguments: ${quotMod} and ${frac("π", 6)}`, "A1")] };
+    }
+  },
+
+  complexRoots: {
+    name: "Solving equations with complex roots", grades: [12],
+    gen(r, d) {
+      const cx = cplx;
+      if (d === 1) {
+        const k = ri(r, 1, 9);
+        return { q: `Solve  z${sup(2)} + ${k * k} = 0`,
+          a: `z = ${k}i or z = ${nf(-k)}i`,
+          sol: [S(`z${sup(2)} = ${nf(-k * k)}`, "M1"),
+                S(`z = ±${rad(`−${k * k}`)} = ±${k}i`, "A1")] };
+      }
+      if (d === 2) {
+        // Roots p ± qi ⇒ z² − 2p z + (p² + q²) = 0
+        const p = ri(r, -5, 5), q = ri(r, 1, 5);
+        return { q: `Solve  ${poly([[1, 2], [-2 * p, 1], [p * p + q * q, 0]]).replace(/x/g, "z")} = 0,\ngiving your answers in the form x + iy.`,
+          a: `z = ${cx(p, q)} or z = ${cx(p, -q)}`,
+          sol: [S(`Discriminant = ${nf(4 * p * p)} − 4(${p * p + q * q}) = ${nf(-4 * q * q)} < 0, so the roots are complex`, "M1"),
+                S(`z = ${frac(`${nf(2 * p)} ± ${rad(nf(-4 * q * q))}`, 2)}`, "M1"),
+                S(`z = ${cx(p, q)} or ${cx(p, -q)}`, "A1")] };
+      }
+      const p = ri(r, -4, 4), q = ri(r, 1, 4), s = ri(r, 1, 6) * (r() < 0.5 ? -1 : 1);
+      // (z − s)(z² − 2p z + p² + q²)
+      const c2 = -2 * p - s, c1 = p * p + q * q + 2 * p * s, c0 = -s * (p * p + q * q);
+      return { q: `The cubic equation ${poly([[1, 3], [c2, 2], [c1, 1], [c0, 0]]).replace(/x/g, "z")} = 0\nhas one real root z = ${nf(s)}.\n(i) Find the other two roots in the form x + iy.\n(ii) Explain why they must be a conjugate pair.`,
+        a: `${cx(p, q)} and ${cx(p, -q)}`,
+        sol: [S(`Divide by (z ${s < 0 ? "+ " + -s : "− " + s}) to get ${poly([[1, 2], [-2 * p, 1], [p * p + q * q, 0]]).replace(/x/g, "z")}`, "M1"),
+              S(`Solve the quadratic: z = ${cx(p, q)} or ${cx(p, -q)}`, "A1"),
+              S(`The coefficients are real, so non-real roots occur in conjugate pairs`, "B1")] };
+    }
+  },
+
+  complexLoci: {
+    name: "Loci in the complex plane", grades: [12],
+    gen(r, d) {
+      const cx = cplx;
+      const a = ri(r, -5, 5), b = ri(r, -5, 5), k = ri(r, 1, 6);
+      if (d === 1)
+        return { q: `Describe the locus of points z in the Argand diagram for which\n|z − (${cx(a, b)})| = ${k}`,
+          a: `A circle of radius ${k}, centre (${nf(a)}, ${nf(b)})`,
+          sol: [S(`|z − w| is the distance from z to the point w`, "M1"),
+                S(`Every such z is ${k} from (${nf(a)}, ${nf(b)}) — a circle of radius ${k}`, "A1")] };
+      if (d === 2) {
+        const c = ri(r, -5, 5), e = ri(r, -5, 5);
+        return { q: `Describe the locus of points z for which\n|z − (${cx(a, b)})| = |z − (${cx(c, e)})|`,
+          a: `The perpendicular bisector of the line joining (${nf(a)}, ${nf(b)}) and (${nf(c)}, ${nf(e)})`,
+          sol: [S(`z is the same distance from both points`, "M1"),
+                S(`The set of such points is the perpendicular bisector of the segment joining them`, "M1"),
+                S(`It passes through the midpoint (${nf((a + c) / 2)}, ${nf((b + e) / 2)})`, "A1")] };
+      }
+      return { q: `On one Argand diagram, sketch the loci\n(i) |z − (${cx(a, b)})| = ${k}\n(ii) arg(z − (${cx(a, b)})) = ${frac("π", 4)}\nDescribe each locus, and find the point where they meet.`,
+        a: `A circle radius ${k} centre (${nf(a)}, ${nf(b)}), and a half-line at ${frac("π", 4)} from that centre`,
+        sol: [S(`(i) A circle of radius ${k}, centre (${nf(a)}, ${nf(b)})`, "B1"),
+              S(`(ii) A half-line from (${nf(a)}, ${nf(b)}) — the point itself excluded — at ${frac("π", 4)} to the positive real direction`, "B1"),
+              S(`They meet where the half-line leaves the circle, at a distance ${k} along it`, "M1"),
+              S(`(${nf(a)} + ${frac(`${k}${rad(2)}`, 2)}, ${nf(b)} + ${frac(`${k}${rad(2)}`, 2)})`, "A1")] };
+    }
+  },
+
+  // ---------- Probability & Statistics 2 ----------
+
+  binomialDistribution: {
+    name: "The binomial distribution", grades: [11, 12],
+    gen(r, d) {
+      const nCr = (n, k) => {
+        let v = 1;
+        for (let i = 0; i < k; i++) v = (v * (n - i)) / (i + 1);
+        return Math.round(v);
+      };
+      const n = ri(r, 5, 12);
+      const den = pick(r, [2, 4, 5, 10]);
+      const num = ri(r, 1, den - 1);
+      const p = num / den;
+      if (d === 1) {
+        const k = ri(r, 1, n - 1);
+        const prob = nCr(n, k) * Math.pow(p, k) * Math.pow(1 - p, n - k);
+        return { q: `X ~ B(${n}, ${frac(num, den)})\nFind P(X = ${k}), correct to 4 decimal places.`,
+          a: prob.toFixed(4),
+          sol: [S(`P(X = ${k}) = ${n}C${k} × (${frac(num, den)})${sup(k)} × (${frac(den - num, den)})${sup(n - k)}`, "M1"),
+                S(`${n}C${k} = ${nCr(n, k)}`, "M1"),
+                S(prob.toFixed(4), "A1")] };
+      }
+      if (d === 2) {
+        const p0 = Math.pow(1 - p, n);
+        const p1 = n * p * Math.pow(1 - p, n - 1);
+        return { q: `X ~ B(${n}, ${frac(num, den)})\nFind P(X ≥ 2), correct to 4 decimal places.`,
+          a: (1 - p0 - p1).toFixed(4),
+          sol: [S(`P(X ≥ 2) = 1 − P(X = 0) − P(X = 1)`, "M1"),
+                S(`P(X = 0) = ${p0.toFixed(4)}, P(X = 1) = ${p1.toFixed(4)}`, "M1"),
+                S((1 - p0 - p1).toFixed(4), "A1")] };
+      }
+      const mean = n * p, varr = n * p * (1 - p);
+      return { q: `A fair spinner lands on red with probability ${frac(num, den)}.\nIt is spun ${n} times and X is the number of reds.\n(i) State the two conditions that make X binomial.\n(ii) Find E(X) and Var(X).\n(iii) Find the most likely number of reds, justifying your answer.`,
+        a: `E(X) = ${money(mean)}, Var(X) = ${money(varr)}`,
+        sol: [S(`Fixed number of independent trials, each with the same probability of success`, "B1"),
+              S(`E(X) = np = ${n} × ${frac(num, den)} = ${money(mean)}`, "A1"),
+              S(`Var(X) = np(1 − p) = ${money(varr)}`, "A1"),
+              S(`The mode is the value of k where P(X = k) is greatest — near ${Math.floor(mean + p)}`, "M1")] };
+    }
+  },
+
+  geometricDistribution: {
+    name: "The geometric distribution", grades: [11, 12],
+    gen(r, d) {
+      const den = pick(r, [2, 3, 4, 5, 6, 10]);
+      const num = ri(r, 1, den - 1);
+      const p = num / den, q = 1 - p;
+      if (d === 1) {
+        const k = ri(r, 2, 5);
+        const prob = Math.pow(q, k - 1) * p;
+        return { q: `X ~ Geo(${frac(num, den)})\nFind P(X = ${k}), giving your answer correct to 4 decimal places.`,
+          a: prob.toFixed(4),
+          sol: [S(`P(X = ${k}) = q${sup(k - 1)}p`, "M1"),
+                S(`= (${frac(den - num, den)})${sup(k - 1)} × ${frac(num, den)}`, "M1"),
+                S(prob.toFixed(4), "A1")] };
+      }
+      if (d === 2) {
+        const k = ri(r, 2, 6);
+        return { q: `X ~ Geo(${frac(num, den)})\nFind P(X > ${k}), and explain in words what this probability means.`,
+          a: Math.pow(q, k).toFixed(4),
+          sol: [S(`P(X > ${k}) = q${sup(k)} — the first ${k} trials all fail`, "M1"),
+                S(`= (${frac(den - num, den)})${sup(k)} = ${Math.pow(q, k).toFixed(4)}`, "A1"),
+                S(`It is the probability that the first success comes after the ${ordinalWord(k)} trial`, "B1")] };
+      }
+      let k = 1;
+      while (1 - Math.pow(q, k) < 0.9 && k < 200) k++;
+      return { q: `The probability that a machine produces a faulty item is ${frac(num, den)}.\nItems are tested one at a time until the first faulty one is found.\n(i) Write down the distribution of X, the number tested.\n(ii) Find E(X).\n(iii) Find the smallest n for which P(X ≤ n) > 0.9.`,
+        a: `X ~ Geo(${frac(num, den)}); E(X) = ${money(1 / p)}; n = ${k}`,
+        sol: [S(`X ~ Geo(${frac(num, den)})`, "B1"),
+              S(`E(X) = ${frac(1, "p")} = ${money(1 / p)}`, "A1"),
+              S(`P(X ≤ n) = 1 − q${sup("n")} > 0.9, so q${sup("n")} < 0.1`, "M1"),
+              S(`n > ${frac("ln 0.1", `ln ${money(q)}`)}, giving n = ${k}`, "A1")] };
+    }
+  },
+
+  poissonDistribution: {
+    name: "The Poisson distribution", grades: [12],
+    gen(r, d) {
+      const fact = (n) => { let v = 1; for (let i = 2; i <= n; i++) v *= i; return v; };
+      const lam = pick(r, [1.5, 2, 2.5, 3, 3.5, 4, 5]);
+      if (d === 1) {
+        const k = ri(r, 0, 4);
+        const prob = (Math.exp(-lam) * Math.pow(lam, k)) / fact(k);
+        return { q: `X ~ Po(${lam})\nFind P(X = ${k}), correct to 4 decimal places.`,
+          a: prob.toFixed(4),
+          sol: [S(`P(X = ${k}) = ${frac(`e${sup("−λ")}λ${sup(k)}`, `${k}!`)}`, "M1"),
+                S(`= ${frac(`e${sup("−" + lam)} × ${lam}${sup(k)}`, fact(k))}`, "M1"),
+                S(prob.toFixed(4), "A1")] };
+      }
+      if (d === 2) {
+        const mult = ri(r, 2, 4);
+        const lam2 = lam * mult;
+        const p0 = Math.exp(-lam2);
+        return { q: `Calls arrive at a switchboard at an average rate of ${lam} per minute,\nand follow a Poisson distribution.\nFind the probability that no calls arrive in a ${mult}-minute period.`,
+          a: p0.toFixed(4),
+          sol: [S(`Over ${mult} minutes the mean is ${lam} × ${mult} = ${lam2}`, "M1"),
+                S(`X ~ Po(${lam2}), so P(X = 0) = e${sup("−" + lam2)}`, "M1"),
+                S(p0.toFixed(4), "A1")] };
+      }
+      const n = pick(r, [100, 150, 200, 250]);
+      const p = pick(r, [0.01, 0.02, 0.03]);
+      const l2 = n * p;
+      const pl = Math.exp(-l2) * (1 + l2);
+      return { q: `X ~ B(${n}, ${p}).\n(i) State the conditions under which a Poisson distribution is a\nsuitable approximation to a binomial one.\n(ii) Use a Poisson approximation to estimate P(X ≤ 1),\ncorrect to 4 decimal places.\n(iii) Y ~ Po(${l2}) and Z ~ Po(${money(l2 / 2)}) are independent.\nWrite down the distribution of Y + Z.`,
+        a: `P(X ≤ 1) ≈ ${pl.toFixed(4)}; Y + Z ~ Po(${money(l2 * 1.5)})`,
+        sol: [S(`n is large and p is small, so that np is moderate`, "B1"),
+              S(`λ = np = ${n} × ${p} = ${l2}`, "M1"),
+              S(`P(X ≤ 1) = e${sup("−" + l2)}(1 + ${l2}) = ${pl.toFixed(4)}`, "A1"),
+              S(`Independent Poissons add: Y + Z ~ Po(${money(l2 * 1.5)})`, "A1")] };
+    }
+  },
+
+  hypothesisTest: {
+    name: "Hypothesis testing", grades: [12],
+    gen(r, d) {
+      if (d === 1) {
+        const p0 = pick(r, [0.2, 0.25, 0.3, 0.4, 0.5]);
+        const dir = pick(r, ["greater than", "less than", "different from"]);
+        const sym = dir === "greater than" ? ">" : dir === "less than" ? "<" : "≠";
+        return { q: `A researcher claims the proportion of learners who cycle to school\nis ${dir} ${p0}. A hypothesis test is to be carried out.\nWrite down the null and alternative hypotheses, and say whether\nthe test is one-tailed or two-tailed.`,
+          a: `H₀: p = ${p0}, H₁: p ${sym} ${p0}; ${sym === "≠" ? "two" : "one"}-tailed`,
+          sol: [S(`The null hypothesis always states no change: H₀: p = ${p0}`, "B1"),
+                S(`H₁: p ${sym} ${p0}`, "B1"),
+                S(`${sym === "≠" ? "Two-tailed — the alternative allows change in either direction" : "One-tailed — the alternative points one way"}`, "A1")] };
+      }
+      if (d === 2) {
+        const p0 = pick(r, [0.2, 0.25, 0.3]);
+        const sig = pick(r, [5, 10]);
+        const pval = pick(r, [0.021, 0.037, 0.064, 0.083, 0.112]);
+        const reject = pval < sig / 100;
+        return { q: `A one-tailed test of H₀: p = ${p0} against H₁: p > ${p0} is carried\nout at the ${sig}% significance level. The p-value is ${pval}.\nState the conclusion of the test in context.`,
+          a: reject ? "Reject H₀" : "Do not reject H₀",
+          sol: [S(`Compare the p-value with the significance level: ${pval} ${reject ? "<" : ">"} ${sig / 100}`, "M1"),
+                S(reject ? `Reject H₀` : `Do not reject H₀`, "A1"),
+                S(reject ? `There is evidence at the ${sig}% level that the proportion has increased above ${p0}` : `There is insufficient evidence at the ${sig}% level that the proportion has increased above ${p0}`, "A1")] };
+      }
+      const lam = pick(r, [3, 4, 5, 6]);
+      const obs = lam + ri(r, 4, 7);
+      const fact = (n) => { let v = 1; for (let i = 2; i <= n; i++) v *= i; return v; };
+      let tail = 0;
+      for (let k = obs; k < obs + 40; k++) tail += (Math.exp(-lam) * Math.pow(lam, k)) / fact(k);
+      const reject = tail < 0.05;
+      return { q: `The number of faults in a length of cable follows a Poisson\ndistribution with mean ${lam}. After a change in the process, ${obs} faults\nare recorded in one length.\nTest at the 5% significance level whether the mean number of faults\nhas increased. State your hypotheses, the p-value and your conclusion.`,
+        a: `p = ${tail.toFixed(4)}; ${reject ? "reject" : "do not reject"} H₀`,
+        sol: [S(`H₀: λ = ${lam}, H₁: λ > ${lam}; X ~ Po(${lam}) under H₀`, "B1"),
+              S(`p-value = P(X ≥ ${obs}) = ${tail.toFixed(4)}`, "M1"),
+              S(`${tail.toFixed(4)} ${reject ? "<" : ">"} 0.05`, "M1"),
+              S(reject ? `Reject H₀ — there is evidence the mean number of faults has increased` : `Do not reject H₀ — there is insufficient evidence of an increase`, "A1")] };
+    }
+  },
+
+  typeErrors: {
+    name: "Type I and Type II errors", grades: [12],
+    gen(r, d) {
+      const nCr = (n, k) => { let v = 1; for (let i = 0; i < k; i++) v = (v * (n - i)) / (i + 1); return Math.round(v); };
+      if (d === 1) {
+        const which = pick(r, ["I", "II"]);
+        return { q: `In a hypothesis test, explain what is meant by a Type ${which} error,\nand state which probability measures it.`,
+          a: which === "I" ? "Rejecting H₀ when H₀ is true" : "Not rejecting H₀ when H₀ is false",
+          sol: [S(which === "I" ? `A Type I error is rejecting a true null hypothesis` : `A Type II error is failing to reject a false null hypothesis`, "B1"),
+                S(which === "I" ? `Its probability is the significance level of the test` : `Its probability depends on the true value of the parameter, and is often written β`, "A1")] };
+      }
+      const n = pick(r, [10, 12, 15, 20]);
+      const p0 = 0.5;
+      // Critical region X ≥ c
+      let c = Math.ceil(n * 0.7), alpha = 0;
+      const tailFrom = (k, p) => {
+        let s = 0;
+        for (let i = k; i <= n; i++) s += nCr(n, i) * Math.pow(p, i) * Math.pow(1 - p, n - i);
+        return s;
+      };
+      alpha = tailFrom(c, p0);
+      if (d === 2)
+        return { q: `X ~ B(${n}, ${p0}) under H₀. The critical region for a test of\nH₀: p = ${p0} against H₁: p > ${p0} is X ≥ ${c}.\nFind the probability of a Type I error.`,
+          a: alpha.toFixed(4),
+          sol: [S(`A Type I error is rejecting H₀ when it is true`, "M1"),
+                S(`P(X ≥ ${c} | p = ${p0}) = ${alpha.toFixed(4)}`, "M1"),
+                S(alpha.toFixed(4), "A1")] };
+      const pTrue = pick(r, [0.6, 0.7, 0.75, 0.8]);
+      const beta = 1 - tailFrom(c, pTrue);
+      return { q: `A test of H₀: p = ${p0} against H₁: p > ${p0} uses X ~ B(${n}, p)\nand the critical region X ≥ ${c}.\n(i) Find the significance level of the test.\n(ii) Given that the true value is p = ${pTrue}, find the probability\nof a Type II error.\n(iii) Say how the two error probabilities change if the critical\nregion is widened to X ≥ ${c - 1}.`,
+        a: `α = ${alpha.toFixed(4)}, β = ${beta.toFixed(4)}`,
+        sol: [S(`Significance level = P(X ≥ ${c} | p = ${p0}) = ${alpha.toFixed(4)}`, "A1"),
+              S(`A Type II error is not rejecting H₀ when p = ${pTrue}`, "M1"),
+              S(`β = P(X ≤ ${c - 1} | p = ${pTrue}) = ${beta.toFixed(4)}`, "A1"),
+              S(`Widening the critical region raises the Type I probability and lowers the Type II probability`, "B1")] };
+    }
+  },
+
+  continuousRV: {
+    name: "Continuous random variables", grades: [11, 12],
+    gen(r, d) {
+      const b = ri(r, 2, 6);
+      if (d === 1)
+        return { q: `The continuous random variable X has probability density function\nf(x) = kx  for 0 ≤ x ≤ ${b}, and f(x) = 0 otherwise.\nFind the value of k.`,
+          a: frac(2, b * b),
+          sol: [S(`The total area under a pdf is 1: ∫ from 0 to ${b} of kx dx = 1`, "M1"),
+                S(`[${frac("kx", 2)}${sup(2)}] from 0 to ${b} = ${frac(`k × ${b * b}`, 2)} = 1`, "M1"),
+                S(`k = ${frac(2, b * b)}`, "A1")] };
+      if (d === 2)
+        return { q: `X has probability density function f(x) = ${frac(2, b * b)}x for 0 ≤ x ≤ ${b},\nand f(x) = 0 otherwise.\nFind E(X).`,
+          a: money((2 * b) / 3),
+          sol: [S(`E(X) = ∫ x f(x) dx = ∫ from 0 to ${b} of ${frac(2, b * b)}x${sup(2)} dx`, "M1"),
+                S(`= ${frac(2, b * b)} × ${frac(`${b}${sup(3)}`, 3)} = ${frac(2 * b, 3)}`, "M1"),
+                S(money((2 * b) / 3), "A1")] };
+      const med = b / Math.SQRT2;
+      const ex = (2 * b) / 3;
+      const varr = (b * b) / 2 - ex * ex;
+      return { q: `X has probability density function f(x) = ${frac(2, b * b)}x for 0 ≤ x ≤ ${b},\nand f(x) = 0 otherwise.\n(i) Find the median of X in exact form.\n(ii) Find Var(X).\n(iii) Explain why the median is less than the mean here.`,
+        a: `median ${frac(b, rad(2))} ≈ ${med.toFixed(3)}; Var(X) = ${money(varr)}`,
+        sol: [S(`∫ from 0 to m of ${frac(2, b * b)}x dx = ${frac(1, 2)} gives ${frac(`m${sup(2)}`, b * b)} = ${frac(1, 2)}`, "M1"),
+              S(`m = ${frac(b, rad(2))} ≈ ${med.toFixed(3)}`, "A1"),
+              S(`E(X${sup(2)}) = ∫ from 0 to ${b} of ${frac(2, b * b)}x${sup(3)} dx = ${frac(b * b, 2)}`, "M1"),
+              S(`Var(X) = ${frac(b * b, 2)} − (${frac(2 * b, 3)})${sup(2)} = ${money(varr)}`, "A1"),
+              S(`The density rises towards x = ${b}, so the distribution is left-skewed and the median sits below the mean`, "B1")] };
+    }
+  },
+
+  sumIndependentRV: {
+    name: "Sums and linear combinations of random variables", grades: [12],
+    gen(r, d) {
+      const mx = ri(r, 2, 12), vx = ri(r, 1, 9);
+      const my = ri(r, 2, 12), vy = ri(r, 1, 9);
+      if (d === 1)
+        return { q: `X and Y are independent, with E(X) = ${mx}, Var(X) = ${vx},\nE(Y) = ${my} and Var(Y) = ${vy}.\nFind E(X + Y) and Var(X + Y).`,
+          a: `E = ${mx + my}, Var = ${vx + vy}`,
+          sol: [S(`E(X + Y) = E(X) + E(Y) = ${mx} + ${my} = ${mx + my}`, "A1"),
+                S(`For independent variables the variances add`, "M1"),
+                S(`Var(X + Y) = ${vx} + ${vy} = ${vx + vy}`, "A1")] };
+      if (d === 2) {
+        const a = ri(r, 2, 5), c = ri(r, 1, 9);
+        return { q: `E(X) = ${mx} and Var(X) = ${vx}.\nFind E(${a}X + ${c}) and Var(${a}X + ${c}),\nand explain why the constant does not affect the variance.`,
+          a: `E = ${a * mx + c}, Var = ${a * a * vx}`,
+          sol: [S(`E(aX + b) = aE(X) + b = ${a} × ${mx} + ${c} = ${a * mx + c}`, "A1"),
+                S(`Var(aX + b) = a${sup(2)}Var(X) = ${a * a} × ${vx} = ${a * a * vx}`, "A1"),
+                S(`Adding a constant shifts every value equally, so the spread is unchanged`, "B1")] };
+      }
+      const a = ri(r, 2, 4), b = ri(r, 1, 3);
+      return { q: `X ~ N(${mx}, ${vx}) and Y ~ N(${my}, ${vy}) are independent.\n(i) Write down the distribution of ${a}X − ${b}Y.\n(ii) Find P(${a}X − ${b}Y > ${nf(a * mx - b * my)}).\n(iii) Explain why the coefficients are squared in the variance\nbut not in the mean.`,
+        a: `N(${nf(a * mx - b * my)}, ${a * a * vx + b * b * vy}); P = 0.5`,
+        sol: [S(`E = ${a}(${mx}) − ${b}(${my}) = ${nf(a * mx - b * my)}`, "M1"),
+              S(`Var = ${a}${sup(2)}(${vx}) + ${b}${sup(2)}(${vy}) = ${a * a * vx + b * b * vy}`, "A1"),
+              S(`${a}X − ${b}Y ~ N(${nf(a * mx - b * my)}, ${a * a * vx + b * b * vy})`, "A1"),
+              S(`The value asked for is the mean, so the probability is 0.5 by symmetry`, "A1"),
+              S(`Variance measures squared deviation, so scaling by a scales it by a${sup(2)}`, "B1")] };
+    }
+  },
+
+  sampleMeans: {
+    name: "Sampling and the distribution of sample means", grades: [12],
+    gen(r, d) {
+      const mu = ri(r, 20, 80), sd = ri(r, 2, 10), n = pick(r, [4, 9, 16, 25, 36, 100]);
+      if (d === 1)
+        return { q: `A population has mean ${mu} and variance ${sd * sd}.\nA random sample of size ${n} is taken.\nWrite down E(X̄) and Var(X̄) for the sample mean X̄.`,
+          a: `E(X̄) = ${mu}, Var(X̄) = ${money((sd * sd) / n)}`,
+          sol: [S(`E(X̄) = μ = ${mu}`, "A1"),
+                S(`Var(X̄) = ${frac("σ²", "n")} = ${frac(sd * sd, n)}`, "M1"),
+                S(money((sd * sd) / n), "A1")] };
+      if (d === 2) {
+        const se = sd / Math.sqrt(n);
+        const k = mu + Math.round(se * 2 * 10) / 10;
+        const z = (k - mu) / se;
+        return { q: `X ~ N(${mu}, ${sd * sd}) and a random sample of size ${n} is taken.\nFind P(X̄ > ${money(k)}), correct to 4 decimal places.`,
+          a: (0.5 * (1 - erfApprox(z / Math.SQRT2))).toFixed(4),
+          sol: [S(`X̄ ~ N(${mu}, ${frac(sd * sd, n)}), so the standard error is ${se.toFixed(4)}`, "M1"),
+                S(`z = ${frac(`${money(k)} − ${mu}`, se.toFixed(4))} = ${z.toFixed(3)}`, "M1"),
+                S((0.5 * (1 - erfApprox(z / Math.SQRT2))).toFixed(4), "A1")] };
+      }
+      return { q: `The times taken by learners to finish a task have mean ${mu} minutes\nand standard deviation ${sd} minutes. The distribution is not normal.\nA random sample of ${n >= 30 ? n : 50} learners is taken.\n(i) State the Central Limit Theorem and say why it applies here.\n(ii) Write down the approximate distribution of X̄.\n(iii) Explain what happens to the spread of X̄ as the sample size grows.`,
+        a: `X̄ ≈ N(${mu}, ${money((sd * sd) / (n >= 30 ? n : 50))})`,
+        sol: [S(`For a large sample the distribution of X̄ is approximately normal whatever the population distribution`, "B1"),
+              S(`The sample size ${n >= 30 ? n : 50} is large enough for the theorem to apply`, "B1"),
+              S(`X̄ ≈ N(${mu}, ${frac(sd * sd, n >= 30 ? n : 50)}) = N(${mu}, ${money((sd * sd) / (n >= 30 ? n : 50))})`, "A1"),
+              S(`Var(X̄) = ${frac("σ²", "n")}, so the spread falls as n rises`, "B1")] };
+    }
+  },
+
+  unbiasedEstimates: {
+    name: "Unbiased estimates of population mean and variance", grades: [12],
+    gen(r, d) {
+      const n = pick(r, [10, 12, 15, 20, 25, 50]);
+      const mean = ri(r, 4, 20);
+      const sx = n * mean;
+      if (d === 1)
+        return { q: `A random sample of ${n} values gives Σx = ${sx}.\nFind an unbiased estimate of the population mean.`,
+          a: String(mean),
+          sol: [S(`The sample mean is an unbiased estimate of μ`, "M1"),
+                S(`x̄ = ${frac(sx, n)} = ${mean}`, "A1")] };
+      const extra = ri(r, 2, 12) * (n - 1);
+      const sxx = sx * mean + extra;
+      const s2 = extra / (n - 1);
+      if (d === 2)
+        return { q: `A random sample of ${n} values gives Σx = ${sx} and Σx${sup(2)} = ${sxx}.\nFind unbiased estimates of the population mean and variance.`,
+          a: `x̄ = ${mean}, s${sup(2)} = ${money(s2)}`,
+          sol: [S(`x̄ = ${frac(sx, n)} = ${mean}`, "A1"),
+                S(`s${sup(2)} = ${frac(1, n - 1)}(Σx${sup(2)} − ${frac("(Σx)²", "n")}) = ${frac(1, n - 1)}(${sxx} − ${sx * mean})`, "M1"),
+                S(`= ${frac(extra, n - 1)} = ${money(s2)}`, "A1")] };
+      const c = ri(r, 10, 60);
+      return { q: `For a sample of ${n} values, the coded values y = x − ${c} give\nΣy = ${nf(sx - n * c)} and Σy${sup(2)} = ${sxx - 2 * c * sx + n * c * c}.\n(i) Find unbiased estimates of the population mean and variance of x.\n(ii) Explain why the coding does not change the variance.\n(iii) Explain why the divisor is n − 1 and not n.`,
+        a: `x̄ = ${mean}, s${sup(2)} = ${money(s2)}`,
+        sol: [S(`ȳ = ${frac(nf(sx - n * c), n)} = ${nf(mean - c)}, so x̄ = ${nf(mean - c)} + ${c} = ${mean}`, "M1"),
+              S(`s${sup(2)}(y) = ${frac(1, n - 1)}(Σy${sup(2)} − ${frac("(Σy)²", "n")}) = ${money(s2)}`, "M1"),
+              S(`Subtracting a constant shifts the data without changing its spread, so s${sup(2)}(x) = s${sup(2)}(y) = ${money(s2)}`, "A1"),
+              S(`Dividing by n − 1 corrects the bias caused by using x̄ rather than the unknown μ`, "B1")] };
+    }
+  },
+
+  confidenceInterval: {
+    name: "Confidence intervals", grades: [12],
+    gen(r, d) {
+      const Z = { 90: 1.645, 95: 1.96, 98: 2.326, 99: 2.576 };
+      const level = pick(r, [90, 95, 98, 99]);
+      const z = Z[level];
+      const mean = ri(r, 20, 90), sd = ri(r, 2, 10), n = pick(r, [16, 25, 36, 49, 64, 100]);
+      const half = (z * sd) / Math.sqrt(n);
+      if (d === 1)
+        return { q: `A random sample of ${n} items from a normal population with\nstandard deviation ${sd} has mean ${mean}.\nFind a ${level}% confidence interval for the population mean.`,
+          a: `(${(mean - half).toFixed(3)}, ${(mean + half).toFixed(3)})`,
+          sol: [S(`The ${level}% z-value is ${z}`, "B1"),
+                S(`Half-width = ${z} × ${frac(sd, rad(n))} = ${half.toFixed(3)}`, "M1"),
+                S(`(${(mean - half).toFixed(3)}, ${(mean + half).toFixed(3)})`, "A1")] };
+      if (d === 2) {
+        const want = Math.round(half * 10) / 20;   // aim for half the width
+        const need = Math.ceil(Math.pow((z * sd) / want, 2));
+        return { q: `A ${level}% confidence interval for the mean of a normal population\nwith standard deviation ${sd} is to have total width at most ${money(2 * want)}.\nFind the smallest sample size that will do.`,
+          a: String(need),
+          sol: [S(`Half-width ${z} × ${frac(sd, rad("n"))} ≤ ${money(want)}`, "M1"),
+                S(`${rad("n")} ≥ ${frac(`${z} × ${sd}`, money(want))}, so n ≥ ${((z * sd) / want) ** 2 === Infinity ? "" : (((z * sd) / want) ** 2).toFixed(2)}`, "M1"),
+                S(`n = ${need} (round up — a smaller n would be too wide)`, "A1")] };
+      }
+      const N = pick(r, [100, 200, 400, 500]);
+      const succ = Math.round(N * pick(r, [0.2, 0.3, 0.4, 0.5]));
+      const p = succ / N;
+      const hw = z * Math.sqrt((p * (1 - p)) / N);
+      return { q: `In a random sample of ${N} voters, ${succ} said they would vote yes.\n(i) Find a ${level}% confidence interval for the population proportion.\n(ii) State what "${level}% confident" means.\n(iii) Say what would happen to the interval if the sample size doubled.`,
+        a: `(${(p - hw).toFixed(4)}, ${(p + hw).toFixed(4)})`,
+        sol: [S(`p̂ = ${frac(succ, N)} = ${p}`, "M1"),
+              S(`Half-width = ${z} × √(p̂(1 − p̂)/${N}) = ${hw.toFixed(4)}`, "M1"),
+              S(`(${(p - hw).toFixed(4)}, ${(p + hw).toFixed(4)})`, "A1"),
+              S(`In the long run ${level}% of intervals built this way contain the true proportion`, "B1"),
+              S(`Doubling n divides the width by ${rad(2)}, so the interval narrows`, "B1")] };
+    }
+  },
+
+  stemAndLeaf: {
+    name: "Stem-and-leaf diagrams", grades: [8, 9, 10, 11, 12],
+    gen(r, d) {
+      const data = [];
+      for (let i = 0; i < 15; i++) data.push(ri(r, 10, 59));
+      data.sort((a, b) => a - b);
+      const stems = {};
+      data.forEach((v) => {
+        const s = Math.floor(v / 10);
+        (stems[s] = stems[s] || []).push(v % 10);
+      });
+      const plot = Object.keys(stems).map(Number).sort((a, b) => a - b)
+        .map((s) => `${s} | ${stems[s].join(" ")}`).join("\n");
+      if (d === 1)
+        return { q: `The stem-and-leaf diagram shows 15 values.  Key: 1 | 2 means 12\n${plot}\nWrite down the smallest and the largest value, and the range.`,
+          a: `${data[0]}, ${data[14]}, range ${data[14] - data[0]}`,
+          sol: [S(`Smallest ${data[0]}, largest ${data[14]}`, "M1"),
+                S(`Range = ${data[14]} − ${data[0]} = ${data[14] - data[0]}`, "A1")] };
+      if (d === 2)
+        return { q: `The stem-and-leaf diagram shows 15 values.  Key: 1 | 2 means 12\n${plot}\nFind the median and the mode.`,
+          a: `Median ${data[7]}`,
+          sol: [S(`With 15 values the median is the 8th`, "M1"),
+                S(`Median = ${data[7]}`, "A1"),
+                S(`The mode is the value that appears most often in the leaves`, "B1")] };
+      return { q: `The stem-and-leaf diagram shows 15 values.  Key: 1 | 2 means 12\n${plot}\n(i) Find the median, the lower quartile and the upper quartile.\n(ii) Find the interquartile range.\n(iii) Give one advantage of a stem-and-leaf diagram over a\nfrequency table for this data.`,
+        a: `Q₁ = ${data[3]}, median ${data[7]}, Q₃ = ${data[11]}, IQR ${data[11] - data[3]}`,
+        sol: [S(`The values are already in order: Q₁ is the 4th, the median the 8th and Q₃ the 12th`, "M1"),
+              S(`Q₁ = ${data[3]}, median = ${data[7]}, Q₃ = ${data[11]}`, "A1"),
+              S(`IQR = ${data[11]} − ${data[3]} = ${data[11] - data[3]}`, "A1"),
+              S(`The original values are all still visible, so no information is lost`, "B1")] };
+    }
   }
+,
+
+  numberHierarchy: {
+    name: "Hierarchy of numbers", grades: [7, 8, 9],
+    gen(r, d) {
+      if (d === 1) {
+        const CASES = [["7", "a natural number, an integer and a rational number"],
+          ["−4", "an integer and a rational number, but not a natural number"],
+          [frac(3, 4), "a rational number, but not an integer"],
+          ["0", "an integer and a rational number"],
+          [rad(2), "an irrational number"], ["π", "an irrational number"]];
+        const c = pick(r, CASES);
+        return { q: `Say which sets of numbers ${c[0]} belongs to:\nnatural numbers, integers, rational numbers, irrational numbers.`,
+          a: `It is ${c[1]}`,
+          sol: [S(`Natural ⊂ integers ⊂ rationals; the irrationals are separate`, "M1"),
+                S(`${c[0]} is ${c[1]}`, "A1")] };
+      }
+      if (d === 2) {
+        const n = ri(r, 2, 30);
+        const isSq = Number.isInteger(Math.sqrt(n));
+        return { q: `Is ${rad(n)} rational or irrational? Justify your answer.`,
+          a: isSq ? "Rational" : "Irrational",
+          sol: [S(`A square root is rational only when the number is a perfect square`, "M1"),
+                S(isSq ? `${n} = ${Math.sqrt(n)}${sup(2)}, so ${rad(n)} = ${Math.sqrt(n)} — rational` : `${n} is not a perfect square, so ${rad(n)} cannot be written as a fraction — irrational`, "A1")] };
+      }
+      const a = ri(r, 2, 9), b = ri(r, 2, 9);
+      return { q: `(i) Explain why every integer is a rational number.\n(ii) ${rad(a * a)} + ${frac(1, b)} is written down. State, with a reason,\nwhether it is rational or irrational.\n(iii) Give an example of two irrational numbers whose sum is rational.`,
+        a: `Rational`,
+        sol: [S(`Any integer n can be written ${frac("n", 1)}, a fraction of two integers`, "B1"),
+              S(`${rad(a * a)} = ${a}, so the expression is ${a} + ${frac(1, b)} = ${frac(a * b + 1, b)}`, "M1"),
+              S(`That is a fraction of two integers, so it is rational`, "A1"),
+              S(`For example ${rad(2)} and −${rad(2)} are both irrational and sum to 0`, "B1")] };
+    }
+  },
+
+  parallelogramTrapezium: {
+    name: "Area of parallelograms and trapezia", grades: [6, 7, 8],
+    gen(r, d) {
+      if (d === 1) {
+        const b = ri(r, 3, 14), h = ri(r, 2, 10);
+        return { q: `A parallelogram has base ${b} cm and perpendicular height ${h} cm.\nWork out its area.`,
+          a: `${b * h} cm${sup(2)}`,
+          sol: [S(`Area of a parallelogram = base × perpendicular height`, "M1"),
+                S(`${b} × ${h} = ${b * h} cm${sup(2)}`, "A1")] };
+      }
+      if (d === 2) {
+        const a = ri(r, 2, 9), b = a + ri(r, 1, 8), h = ri(r, 2, 5) * 2;
+        return { q: `A trapezium has parallel sides ${a} cm and ${b} cm,\nand a perpendicular height of ${h} cm.\nWork out its area.`,
+          a: `${((a + b) * h) / 2} cm${sup(2)}`,
+          sol: [S(`Area = ${frac(1, 2)}(a + b)h`, "M1"),
+                S(`${frac(1, 2)} × (${a} + ${b}) × ${h}`, "M1"),
+                S(`${((a + b) * h) / 2} cm${sup(2)}`, "A1")] };
+      }
+      const a = ri(r, 2, 8), h = ri(r, 2, 6) * 2;
+      const area = ri(r, 6, 20) * h;
+      const b = (2 * area) / h - a;
+      return { q: `A trapezium has area ${area} cm${sup(2)} and perpendicular height ${h} cm.\nOne of its parallel sides is ${a} cm.\nWork out the length of the other parallel side.`,
+        a: `${b} cm`,
+        sol: [S(`${frac(1, 2)}(${a} + b) × ${h} = ${area}`, "M1"),
+              S(`${a} + b = ${(2 * area) / h}`, "M1"),
+              S(`b = ${(2 * area) / h} − ${a} = ${b} cm`, "A1")] };
+    }
+  },
+
+  trigGraphTransform: {
+    name: "Transforming trigonometric graphs", grades: [10, 11, 12],
+    gen(r, d) {
+      const a = ri(r, 2, 5), b = pick(r, [2, 3, 4]), c = ri(r, 1, 6);
+      if (d === 1)
+        return { q: `Write down the amplitude and the period of  y = ${a} sin x°`,
+          a: `Amplitude ${a}, period 360°`,
+          sol: [S(`The amplitude is the coefficient of sin`, "M1"),
+                S(`Amplitude ${a}; the graph still repeats every 360°`, "A1")] };
+      if (d === 2)
+        return { q: `y = ${a} cos ${b}x°\nWrite down the amplitude, the period, and the maximum\nand minimum values of y.`,
+          a: `Amplitude ${a}, period ${360 / b}°, max ${a}, min ${nf(-a)}`,
+          sol: [S(`Amplitude = ${a}`, "B1"),
+                S(`Period = ${frac(360, b)}° = ${360 / b}°`, "A1"),
+                S(`Maximum ${a} and minimum ${nf(-a)}`, "A1")] };
+      return { q: `The graph of y = sin x° is transformed to y = ${a} sin ${b}x° + ${c}.\n(i) Describe fully the three transformations, in order.\n(ii) Write down the maximum and minimum values of y and the period.\n(iii) State how many solutions y = ${c} has for 0° ≤ x ≤ 360°.`,
+        a: `Max ${a + c}, min ${nf(c - a)}, period ${360 / b}°; ${2 * b + 1} solutions`,
+        sol: [S(`Stretch parallel to the y-axis, factor ${a}`, "B1"),
+              S(`Stretch parallel to the x-axis, factor ${frac(1, b)}, giving period ${360 / b}°`, "B1"),
+              S(`Translation ${c} units up`, "B1"),
+              S(`Maximum ${a} + ${c} = ${a + c}, minimum ${nf(-a)} + ${c} = ${nf(c - a)}`, "A1"),
+              S(`y = ${c} is the centre line, crossed ${2 * b} times inside the range plus the endpoint: ${2 * b + 1} solutions`, "A1")] };
+    }
+  }
+
 };
 
 // Which generators are appropriate for each grade

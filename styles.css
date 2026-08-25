@@ -183,32 +183,6 @@ body {
 .track-btn:hover { border-color: var(--primary); }
 .track-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
 
-/* ---------- Month filter ---------- */
-.month-bar { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
-
-.month-btn {
-  padding: 4px 11px;
-  border: 1px solid var(--line);
-  background: var(--card);
-  color: var(--ink-soft);
-  border-radius: 999px;
-  font-family: inherit;
-  font-size: 0.78rem;
-  cursor: pointer;
-}
-.month-btn:hover { border-color: var(--accent); color: var(--ink); }
-.month-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-
-.month-tag {
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: var(--accent);
-  border: 1px solid var(--accent);
-  border-radius: 999px;
-  padding: 1px 7px;
-  white-space: nowrap;
-}
-
 /* ---------- Strands & topics ---------- */
 .strand {
   background: var(--card);

@@ -173,8 +173,8 @@
 
       const name = el("span", "tname", t.name);
       name.title = t.gen
-        ? `${t.month ? t.month + " · " : ""}Questions from: ${GENERATORS[t.gen].name}`
-        : `${t.month ? t.month + " · " : ""}No question generator for this sub-topic yet`;
+        ? `Questions from: ${GENERATORS[t.gen].name}`
+        : "No question generator for this sub-topic yet";
 
       const diff = el("select", "tdiff");
       diff.dataset.topic = t.key;

@@ -1741,8 +1741,6 @@ const UI_STRINGS = {
   appSubtitle: "Mathematics Department — Curriculum Browser (Annual Syllabus 2026-27)",
   grades: "Grades",
   gradePrefix: "Grade",
-  studentView: "Student",
-  teacherView: "Teacher",
   cambridge: "Cambridge",
   oman: "Oman Bilingual",
   ged: "GED",
@@ -1752,6 +1750,5 @@ const UI_STRINGS = {
   noResults: "No topics match your search in this grade.",
   worksheetLink: "Worksheets & Exams",
   plannerLink: "Lesson Planner & Slides",
-  allMonths: "Whole year",
-  draftNote: "Built from the department's Annual Syllabus 2026-27. Month labels show when each topic is timetabled."
+  draftNote: "Built from the department's Annual Syllabus 2026-27."
 };

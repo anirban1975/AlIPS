@@ -171,7 +171,7 @@
         sel.appendChild(group);
         lastStrand = t.strand;
       }
-      const o = el("option", "", t.name + (t.month ? `  — ${t.month}` : "") + (t.gen ? "" : "  ·"));
+      const o = el("option", "", t.name + (t.gen ? "" : "  ·"));
       o.value = t.key;
       group.appendChild(o);
     });

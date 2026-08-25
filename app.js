@@ -1,23 +1,19 @@
 // AlIPS Math Curriculum Browser — app logic.
-// State: view (student/teacher), grade, stream (track index), month, search query.
+// State: grade, stream (track index), search query.
+//
+// The browser is a teaching reference: it always shows the department's own
+// teaching notes, and it lists every sub-topic of the chosen syllabus in
+// syllabus order. There is no student cut of the content and no month filter —
+// the department asked for one view of the whole syllabus (v1.6).
 
 (function () {
   const params = new URLSearchParams(location.search);
 
   const state = {
-    view: params.get("view") || safeGet("alips-view") || "student",
     grade: parseInt(params.get("grade"), 10) || 1,
     track: 0,
-    month: params.get("month") || "",
     query: ""
   };
-
-  function safeGet(key) {
-    try { return localStorage.getItem(key); } catch { return null; }
-  }
-  function safeSet(key, value) {
-    try { localStorage.setItem(key, value); } catch { /* private mode */ }
-  }
 
   const gradeData = () => CURRICULUM.find((g) => g.id === state.grade) || CURRICULUM[0];
   const trackData = () => {
@@ -71,30 +67,6 @@
     });
   }
 
-  // Month filter — the annual plan says when each topic is timetabled.
-  function renderMonthNav() {
-    const bar = document.getElementById("month-bar");
-    const here = new Set();
-    trackData().strands.forEach((s) => s.topics.forEach((t) => { if (t.m) here.add(t.m); }));
-    const months = MONTHS.filter((m) => here.has(m));
-    bar.innerHTML = "";
-    bar.classList.toggle("hidden", months.length === 0);
-    if (!months.length) return;
-
-    const mk = (value, text) => {
-      const btn = document.createElement("button");
-      btn.className = "month-btn" + (state.month === value ? " active" : "");
-      btn.textContent = text;
-      btn.addEventListener("click", () => {
-        state.month = state.month === value ? "" : value;
-        render();
-      });
-      return btn;
-    };
-    bar.appendChild(mk("", UI_STRINGS.allMonths));
-    months.forEach((m) => bar.appendChild(mk(m, m)));
-  }
-
   function badgeFor(tag) {
     const span = document.createElement("span");
     span.className = "badge badge-" + tag;
@@ -106,7 +78,6 @@
   }
 
   function topicMatches(topic) {
-    if (state.month && topic.m !== state.month) return false;
     if (!state.query) return true;
     const q = state.query.toLowerCase();
     return topic.n.toLowerCase().includes(q) ||
@@ -151,13 +122,6 @@
         const h4 = document.createElement("h4");
         h4.textContent = topic.n;
         head.appendChild(h4);
-        if (topic.m) {
-          const when = document.createElement("span");
-          when.className = "month-tag";
-          when.textContent = topic.m;
-          when.title = "Timetabled in " + topic.m;
-          head.appendChild(when);
-        }
         head.appendChild(badgeFor(topic.c));
         card.appendChild(head);
 
@@ -166,7 +130,7 @@
           p.textContent = topic.s;
           card.appendChild(p);
         }
-        if (state.view === "teacher" && topic.t) {
+        if (topic.t) {
           const note = document.createElement("p");
           note.className = "teacher-note";
           note.textContent = UI_STRINGS.teacherNoteLabel + ": " + topic.t;
@@ -188,33 +152,14 @@
     }
   }
 
-  function renderViewToggle() {
-    document.getElementById("view-student").classList.toggle("active", state.view === "student");
-    document.getElementById("view-teacher").classList.toggle("active", state.view === "teacher");
-  }
-
   function render() {
     applyStrings();
     renderGradeNav();
     renderTrackNav();
-    renderMonthNav();
-    renderViewToggle();
     renderContent();
   }
 
   // ---------- Events ----------
-
-  document.getElementById("view-student").addEventListener("click", () => {
-    state.view = "student";
-    safeSet("alips-view", state.view);
-    render();
-  });
-
-  document.getElementById("view-teacher").addEventListener("click", () => {
-    state.view = "teacher";
-    safeSet("alips-view", state.view);
-    render();
-  });
 
   document.getElementById("search").addEventListener("input", (e) => {
     state.query = e.target.value.trim();
