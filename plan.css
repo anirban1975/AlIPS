@@ -314,3 +314,20 @@
   .weekly-view .wk-plan tr { break-inside: avoid; page-break-inside: avoid; }
   .weekly-view .wk-grid { break-inside: avoid; page-break-inside: avoid; }
 }
+
+/* Cells the teacher can type into. The affordance is on screen only — the
+   printed form and the Word file must look like the Ministry template. */
+.sheet.weekly-view .wk-editable { outline: 1px dashed #b9c6d8; outline-offset: -2px; }
+.sheet.weekly-view .wk-editable:hover { background: #fbfdff; }
+.sheet.weekly-view .wk-editable:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+  background: #fff;
+}
+.sheet.weekly-view .wk-inline { display: inline-block; min-width: 12ch; }
+.gen-panel .wk-type-hint { margin-top: 8px; }
+#wk-edit-msg { flex: 1; text-align: end; }
+
+@media print {
+  .sheet.weekly-view .wk-editable { outline: none; background: none; }
+}

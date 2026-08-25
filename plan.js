@@ -37,7 +37,8 @@
     .replace(FRAC_RE, "$1/$2").replace(RAD_RE, "√$1");
 
   const state = { view: "deck", grade: 5, track: 0, topic: null, topics: [],
-                  model: null, spec: null, slide: 0, revealed: false };
+                  model: null, spec: null, slide: 0, revealed: false,
+                  wkEdits: {} };   // what the teacher has typed on the weekly form
 
   // Topic list and generator matching live in topics.js, shared with the
   // worksheet generator so both tools offer exactly the same topics.
@@ -110,6 +111,12 @@
     // Setting .value in code fires no input event, so the weekly grid's
     // "Objectives achieved" column has to be told the count changed.
     syncAchieved();
+    // Each sub-topic keeps its own copy of whatever the teacher has typed on
+    // the weekly form.
+    state.wkEdits = wkEditsFor(topic);
+    const msg = $("wk-edit-msg");
+    if (msg) msg.textContent = Object.keys(state.wkEdits).length
+      ? "your wording is saved on this device" : "";
   }
 
   // Only store an override when the teacher has actually changed the wording.
@@ -355,6 +362,48 @@
 
   const tick = (on) => (on ? "☑" : "☐");
 
+  // ---------- The teacher's own writing on the form ----------
+  // Every cell of the planning grid is typeable, and what a teacher types is
+  // kept per sub-topic so a week's work survives a reload, a regenerate and a
+  // switch to the presentation and back. Cell ids are stable: "r0.act".
+  const WK_EDIT_KEY = "alips-weekly-edits";
+
+  const wkEditsFor = (topic) => (readStore(WK_EDIT_KEY)[topic] || {});
+  function saveWkEdit(topic, id, html) {
+    const all = readStore(WK_EDIT_KEY);
+    const mine = all[topic] || (all[topic] = {});
+    if (html.trim()) mine[id] = html; else delete mine[id];
+    if (!Object.keys(mine).length) delete all[topic];
+    writeStore(WK_EDIT_KEY, all);
+  }
+  function clearWkEdits(topic) {
+    const all = readStore(WK_EDIT_KEY);
+    delete all[topic];
+    writeStore(WK_EDIT_KEY, all);
+  }
+
+  // What a teacher types is their own, but it still has to survive a trip
+  // through the Word exporter, so paste is reduced to a plain subset.
+  const WK_OK_TAGS = new Set(["B", "STRONG", "I", "EM", "U", "BR", "P", "DIV",
+    "OL", "UL", "LI", "SPAN", "SUP", "SUB"]);
+  function cleanHTML(html) {
+    const box = document.createElement("div");
+    box.innerHTML = String(html);
+    // Anything that carries code goes entirely; anything else unknown is
+    // unwrapped, keeping the words the teacher meant to paste.
+    box.querySelectorAll("script, style, iframe, object, embed, link").forEach((n) => n.remove());
+    box.querySelectorAll("*").forEach((n) => {
+      if (!WK_OK_TAGS.has(n.tagName)) {
+        n.replaceWith(...n.childNodes);
+        return;
+      }
+      Array.from(n.attributes).forEach((a) => {
+        if (a.name !== "class" || !/^(wk-|ans$)/.test(a.value)) n.removeAttribute(a.name);
+      });
+    });
+    return box.innerHTML;
+  }
+
   // The three teaching dates of the week, from the date the teacher picked.
   function weekDates(startISO, dayNames) {
     const out = [];
@@ -378,12 +427,19 @@
     const rows = objectives.map((text, i) => ({
       n: i + 1, objective: text, activities: [], assessment: [], minutes: spec.wkTime
     }));
+    // Rows beyond one per objective, for anything else taught that week.
+    for (let i = 0; i < spec.wkExtra; i++)
+      rows.push({ n: rows.length + 1, objective: "", activities: [], assessment: [], minutes: spec.wkTime });
+
     // Deal the worked examples and the practice questions round the objectives,
     // so every row carries something and none is left empty while another has
-    // three. A sub-topic with no generator simply leaves the cells blank for
-    // the teacher to write in, which is what the paper template expects.
-    model.examples.forEach((ex, k) => rows[k % rows.length].activities.push(ex));
-    model.core.forEach((it, k) => rows[k % rows.length].assessment.push(it));
+    // three. On "blank" nothing is drafted at all: the teacher writes the
+    // strategy and the assessment themselves, which is what the paper template
+    // expects anyway.
+    if (!spec.wkBlank) {
+      model.examples.forEach((ex, k) => rows[k % rows.length].activities.push(ex));
+      model.core.forEach((it, k) => rows[k % rows.length].assessment.push(it));
+    }
     return { objectives, rows };
   }
 
@@ -436,7 +492,11 @@
     // ---- title and introduction, as the template lays them out
     const t = el("p", "wk-line");
     t.appendChild(el("b", "", "Title: "));
-    t.appendChild(document.createTextNode(spec.title || "……………….."));
+    const tv = el("span", "wk-editable wk-inline", spec.title || "……………….."); 
+    tv.contentEditable = "true";
+    tv.dataset.edit = "title";
+    if (state.wkEdits.title !== undefined) tv.innerHTML = state.wkEdits.title;
+    t.appendChild(tv);
     sheet.appendChild(t);
 
     const intro = el("p", "wk-line");
@@ -473,13 +533,24 @@
       return d;
     };
 
+    // A cell the teacher can type into. Anything they have already written
+    // replaces the drafted content; an empty edit falls back to the draft.
+    const edits = state.wkEdits;
+    const typeable = (td, id) => {
+      td.contentEditable = "true";
+      td.dataset.edit = id;
+      td.classList.add("wk-editable");
+      if (edits[id] !== undefined) td.innerHTML = edits[id];
+      return td;
+    };
+
     wk.rows.forEach((row, ri) => {
       const tr = el("tr");
 
       const objTd = el("td", "wk-obj");
       if (ri === 0) objTd.appendChild(el("div", "wk-stem", "The student should be able to:"));
       objTd.appendChild(el("div", "wk-objline", `${row.n}. ${row.objective}`));
-      tr.appendChild(objTd);
+      tr.appendChild(typeable(objTd, `r${ri}.obj`));
 
       const actTd = el("td", "wk-act");
       if (row.activities.length) {
@@ -503,9 +574,10 @@
       } else {
         actTd.appendChild(el("div", "wk-blank", ""));
       }
-      tr.appendChild(actTd);
+      tr.appendChild(typeable(actTd, `r${ri}.act`));
 
-      tr.appendChild(el("td", "wk-time", row.minutes ? row.minutes + " min" : ""));
+      tr.appendChild(typeable(el("td", "wk-time", row.minutes ? row.minutes + " min" : ""),
+        `r${ri}.time`));
       // The aids and the assessment tools are chosen once for the lesson, so
       // they are written in the first row and span the rest, as a teacher
       // filling the paper form by hand would do.
@@ -513,7 +585,7 @@
         const td = el("td", "wk-aids");
         td.rowSpan = wk.rows.length;
         td.appendChild(aidsCell());
-        tr.appendChild(td);
+        tr.appendChild(typeable(td, "aids"));
       }
 
       const asTd = el("td", "wk-assess");
@@ -528,15 +600,15 @@
       } else {
         asTd.appendChild(el("div", "wk-blank", ""));
       }
-      tr.appendChild(asTd);
+      tr.appendChild(typeable(asTd, `r${ri}.assess`));
 
       if (ri === 0) {
         const td = el("td", "wk-tools");
         td.rowSpan = wk.rows.length;
         td.appendChild(toolsCell());
-        tr.appendChild(td);
+        tr.appendChild(typeable(td, "tools"));
       }
-      tr.appendChild(el("td", "wk-remarks", ""));
+      tr.appendChild(typeable(el("td", "wk-remarks", ""), `r${ri}.remarks`));
       plan.appendChild(tr);
     });
     sheet.appendChild(plan);
@@ -555,6 +627,9 @@
     const wk = buildWeekly(spec, model);
     const dates = weekDates(spec.wkStart, spec.wkDays);
     const cols = 1 + spec.wkClasses.length * 3;
+    // A cell the teacher has typed into wins over the drafted content.
+    const E = state.wkEdits;
+    const cell = (id, drafted) => (E[id] !== undefined ? cleanHTML(E[id]) : drafted);
 
     let b = `<p class="wtitle">Lesson Plan for Mathematics</p>`;
 
@@ -573,7 +648,7 @@
     b += `<tr><td class="wnotes" colspan="${cols}">` +
       WK_NOTES.map((t) => `&#9670; ${esc(t)}`).join("<br>") + `</td></tr></table>`;
 
-    b += `<p><b>Title:</b> ${esc(spec.title || "………………..")}</p>`;
+    b += `<p><b>Title:</b> ${cell("title", esc(spec.title || "………………..") )}</p>`;
     b += `<p><b>Introduction:</b></p>`;
     b += `<p>` + WK_INTRO.map((k) =>
       `${tick(spec.wkIntro.includes(k))} ${esc(k)}`).join("&nbsp;&nbsp;&nbsp;&nbsp;") + `</p>`;
@@ -591,6 +666,7 @@
       `<br><b>Homework:</b> ${esc(spec.wkHome || "____________")}`;
 
     wk.rows.forEach((row) => {
+      const ri = row.n - 1;
       let act = "";
       if (row.activities.length) {
         row.activities.forEach((ex, i) => {
@@ -608,15 +684,17 @@
         : "&nbsp;";
 
       const span = wk.rows.length;
+      const objDraft = (row.n === 1
+        ? `<p><b>The student should be able to:</b></p><p>${row.n}. ${esc(row.objective)}</p>`
+        : `<p>${row.n}. ${esc(row.objective)}</p>`);
       b += `<tr>` +
-        (row.n === 1 ? `<td><p><b>The student should be able to:</b></p><p>${row.n}. ${esc(row.objective)}</p></td>`
-                     : `<td><p>${row.n}. ${esc(row.objective)}</p></td>`) +
-        `<td>${act}</td>` +
-        `<td class="wc">${row.minutes ? row.minutes + " min" : "&nbsp;"}</td>` +
-        (row.n === 1 ? `<td rowspan="${span}">${aidsHTML()}</td>` : "") +
-        `<td>${ass}</td>` +
-        (row.n === 1 ? `<td rowspan="${span}">${toolsHTML()}</td>` : "") +
-        `<td>&nbsp;</td></tr>`;
+        `<td>${cell(`r${ri}.obj`, objDraft)}</td>` +
+        `<td>${cell(`r${ri}.act`, act)}</td>` +
+        `<td class="wc">${cell(`r${ri}.time`, row.minutes ? row.minutes + " min" : "&nbsp;")}</td>` +
+        (row.n === 1 ? `<td rowspan="${span}">${cell("aids", aidsHTML())}</td>` : "") +
+        `<td>${cell(`r${ri}.assess`, ass)}</td>` +
+        (row.n === 1 ? `<td rowspan="${span}">${cell("tools", toolsHTML())}</td>` : "") +
+        `<td>${cell(`r${ri}.remarks`, "&nbsp;")}</td></tr>`;
     });
     b += `</table>`;
 
@@ -985,6 +1063,8 @@
       wkAidsOther: $("wk-aids-other").value.trim(),
       wkTools: checkedIn("wk-tools"),
       wkHome: $("wk-home").value.trim(),
+      wkBlank: $("wk-content").value === "blank",
+      wkExtra: Math.max(0, +$("wk-extra").value || 0),
       objectives: linesOf("objectives"),
       criteria: linesOf("criteria"),
       nExamples: Math.max(0, +$("n-examples").value || 0),
@@ -1023,7 +1103,9 @@
       wkIntro: checkedIn("wk-intro"),
       wkAids: checkedIn("wk-aids"),
       wkAidsOther: $("wk-aids-other").value.trim(),
-      wkTools: checkedIn("wk-tools")
+      wkTools: checkedIn("wk-tools"),
+      wkContent: $("wk-content").value,
+      wkExtra: $("wk-extra").value
     });
     state.spec = readSpec();
     state.model = buildModel(state.spec);
@@ -1065,6 +1147,16 @@
 
   $("view-deck").addEventListener("click", () => setView("deck"));
   $("view-weekly").addEventListener("click", () => setView("weekly"));
+
+  // Typing anywhere on the weekly form is kept against this sub-topic.
+  $("sheet").addEventListener("input", (e) => {
+    const cellEl = e.target.closest("[data-edit]");
+    if (!cellEl) return;
+    const html = cellEl.innerHTML;
+    state.wkEdits[cellEl.dataset.edit] = html;
+    saveWkEdit(state.topic || $("topic-select").value, cellEl.dataset.edit, html);
+    $("wk-edit-msg").textContent = "your wording is saved on this device";
+  });
   $("grade-select").addEventListener("change", (e) => {
     state.grade = +e.target.value;
     state.track = 0;
@@ -1127,6 +1219,24 @@
     saveBlob(new Blob([txt], { type: "text/plain" }),
       `AlIPS_lesson_wording_${who.replace(/[^\w]+/g, "_")}.txt`);
   });
+  $("wk-clear").addEventListener("click", (e) => {
+    const topic = state.topic || $("topic-select").value;
+    if (!Object.keys(state.wkEdits).length) {
+      e.target.textContent = "Nothing typed yet";
+      setTimeout(() => { e.target.textContent = "Clear my typing"; }, 2000);
+      return;
+    }
+    clearWkEdits(topic);
+    state.wkEdits = {};
+    $("wk-edit-msg").textContent = "back to the draft";
+    if (state.spec) render();
+  });
+  const reflowWeekly = () => { if (state.spec && state.view === "weekly") generate(); };
+  ["wk-content", "wk-extra"].forEach((id) => {
+    $(id).addEventListener("change", reflowWeekly);
+    $(id).addEventListener("input", reflowWeekly);
+  });
+
   $("new-seed").addEventListener("click", () => {
     $("seed").value = Math.floor(Math.random() * 899999) + 100000;
     generate();
@@ -1183,6 +1293,8 @@
   buildChecks("wk-aids", WK_AIDS, prefs.wkAids || ["Books", "Board"]);
   buildChecks("wk-tools", WK_TOOLS, prefs.wkTools || ["Oral work", "Written work"]);
   if (prefs.wkAidsOther) $("wk-aids-other").value = prefs.wkAidsOther;
+  if (prefs.wkContent) $("wk-content").value = prefs.wkContent;
+  if (prefs.wkExtra) $("wk-extra").value = prefs.wkExtra;
   buildClassRows();
   $("objectives").addEventListener("input", syncAchieved);
   $("wk-classes").addEventListener("input", (e) => {

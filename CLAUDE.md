@@ -5,7 +5,7 @@ Interactive math app for grades 1–12 at Al Injaz International Private School
 curriculum. **The app is English-only** — Arabic was removed at the
 department's request (v0.4). Do not re-introduce bilingual strings.
 
-## Current state (v1.7)
+## Current state (v1.8)
 
 - `index.html` / `app.js` — curriculum browser: grades 1–12 → stream → strands →
   topics, built from the department's Annual Syllabus 2026-27. Stream selector
@@ -371,6 +371,28 @@ A sub-topic with no generator still produces the whole form, with the
 Strategies and Assessment cells left blank for the teacher to write in — which
 is exactly what the paper template expects.
 
+**The form is typeable (v1.8).** A drafted plan is a starting point, not the
+plan: every cell of the planning grid, plus the Title line, is
+`contenteditable`, so a teacher clicks in and writes their own strategy over
+the draft. Cell ids are stable (`r0.act`, `r2.assess`, `aids`, `tools`,
+`title`), and what is typed is kept per **sub-topic** in `localStorage` under
+`alips-weekly-edits`, so a week's work survives a reload, a re-generate, a new
+seed and a trip to the presentation and back. `Clear my typing` drops the
+override and the draft comes back.
+
+- An edited cell **wins over the drafted content** everywhere — screen, print
+  and Word — through `cell(id, drafted)` in `weeklyWord()`.
+- `Strategies & Assessment: Leave blank` drafts nothing at all, for teachers who
+  would rather write the whole plan themselves. **Extra blank rows** adds rows
+  beyond one per objective, for anything else taught that week.
+- Pasted markup is reduced to a plain subset by `cleanHTML()` before it reaches
+  the Word exporter: `script`/`style`/`iframe`/`object`/`embed`/`link` are
+  removed outright, every other unknown tag is unwrapped so the words survive,
+  and all attributes are dropped except the classes this file sets. A teacher
+  pasting out of Word must not be able to break the export.
+- The dashed edit outline is screen-only. **The printed form and the Word file
+  must look exactly like the Ministry template**, so `@media print` clears it.
+
 ## Difficulty must change the question, not just the numbers
 
 Easy / Medium / Challenging are three *kinds* of question, not one question
@@ -455,6 +477,8 @@ user and git-ignored.
    monthwise segregation removed~~ — done
 8. ~~v1.7 Lesson planner split into Presentation and the department's own
    weekly plan template~~ — done
-9. Editable starter/plenary text and per-topic keyword lists
-10. Diagram-bearing generators (constructions, histograms, transformations
+9. ~~v1.8 The weekly plan is typeable — teachers write their own strategy over
+   the draft and it is kept per sub-topic~~ — done
+10. Editable starter/plenary text and per-topic keyword lists
+11. Diagram-bearing generators (constructions, histograms, transformations
     drawn on a printed grid)

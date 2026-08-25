@@ -125,6 +125,26 @@
         <label class="sub" for="wk-home">Homework</label>
         <input id="wk-home" type="text" value="Exercise ___ , page ___"
                title="The template asks for homework at most 3 times a week">
+
+        <label for="wk-content">Strategies &amp; Assessment</label>
+        <select id="wk-content">
+          <option value="draft">Draft them from the sub-topic</option>
+          <option value="blank">Leave blank — I'll write my own</option>
+        </select>
+
+        <label class="sub" for="wk-extra">Extra blank rows</label>
+        <input id="wk-extra" type="number" min="0" max="8" value="0"
+               title="Rows beyond one per objective, for anything else taught this week">
+
+        <p class="hint wk-type-hint">Every cell of the plan is typeable — click
+          into it and write your own strategy. What you write is kept against
+          this sub-topic on this device, and goes into the print and the Word
+          file.</p>
+        <div class="row-btns">
+          <button id="wk-clear" class="mini-btn"
+            title="Throw away what you have typed on this plan and go back to the draft">Clear my typing</button>
+          <span class="hint" id="wk-edit-msg"></span>
+        </div>
       </div>
 
       <div class="panel-group">
