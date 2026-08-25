@@ -285,6 +285,31 @@ model object, so a given paper number produces identical questions in both.
 - Same seed ⇒ identical paper ("Paper no." printed on every sheet), so teachers
   can reprint or share a paper by its number.
 
+## Difficulty must change the question, not just the numbers
+
+Easy / Medium / Challenging are three *kinds* of question, not one question
+with bigger numbers. A generator whose three branches differ only in the digits
+is a bug — the department reported exactly that ("in completing the square
+there was no question where x² has a coefficient").
+
+The rule each senior generator follows:
+
+- **d1** the technique in its plainest form
+- **d2** the same technique with an extra step or a harder form (a leading
+  coefficient, a rearrangement, an inverse)
+- **d3** the technique applied — a turning point classified, a stationary point
+  found, an angle of elevation, an exact area, grouped data
+
+Check any generator you touch with:
+
+```
+node -e 'const fs=require("fs"),vm=require("vm");const c={console};vm.createContext(c);
+for(const f of ["data.js","gen.js"])vm.runInContext(fs.readFileSync(f,"utf8"),c);
+const{GENERATORS,mulberry32}=vm.runInContext("({GENERATORS,mulberry32})",c);
+for(const[id,g]of Object.entries(GENERATORS)){const q=[1,2,3].map(d=>g.gen(mulberry32(77),d).q);
+if(q[0]===q[1]||q[1]===q[2])console.log("NOT VARYING:",g.name);}'
+```
+
 ## Verifying changes
 
 No test suite. Verify visually with headless Chromium:

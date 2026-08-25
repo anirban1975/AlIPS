@@ -338,10 +338,8 @@ table.rubric-edit button.x {
 .sheet .space-3 { height: 130px; }
 
 /* ---------- Handwriting practice (tracing numerals) ----------
-   A solid model, then hollow numerals to trace over, then empty squares.
-   The hollow effect uses text-stroke with a transparent fill, which prints as
-   a clean outline; browsers without it fall back to light grey, still
-   traceable. */
+   Each numeral is a single-stroke skeleton path: solid for the model, one
+   dotted line for the guides the child traces over. */
 .sheet .trace-block { margin: 6px 0 10px; break-inside: avoid; page-break-inside: avoid; }
 
 .sheet .trace-row {
@@ -359,27 +357,20 @@ table.rubric-edit button.x {
   display: flex;
   align-items: center;
   justify-content: center;
-  /* faint quarter guides, as on handwriting paper */
-  background:
-    linear-gradient(to right, transparent 49.5%, #e4e4e4 49.5%, #e4e4e4 50.5%, transparent 50.5%),
-    linear-gradient(to bottom, transparent 49.5%, #e4e4e4 49.5%, #e4e4e4 50.5%, transparent 50.5%);
+  padding: 4px;
 }
 
-.sheet .trace-glyph {
-  font-size: 54px;
-  line-height: 1;
-  font-weight: 700;
+.sheet .trace-svg { width: 100%; height: 100%; }
+.sheet .trace-svg path {
+  fill: none;
+  stroke: #000;
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
-
-.sheet .trace-cell.model .trace-glyph { color: #000; }
-
-.sheet .trace-cell.guide .trace-glyph {
-  color: #cfcfcf;
-  -webkit-text-stroke: 1.2px #9a9a9a;
-  text-stroke: 1.2px #9a9a9a;
-}
-@supports (-webkit-text-stroke: 1px black) {
-  .sheet .trace-cell.guide .trace-glyph { color: transparent; }
+.sheet .trace-svg.dotted path {
+  stroke: #8c8c8c;
+  stroke-dasharray: 5 9;
 }
 
 .sheet .trace-word {

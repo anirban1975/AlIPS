@@ -816,18 +816,48 @@
   const diagramFor = (item) =>
     item.venn ? vennSVG(item.venn) : item.carroll ? carrollTable(item.carroll) : null;
 
-  // A handwriting row: one solid model numeral, then hollow numerals to trace
-  // over, then empty squares to write in unaided.
+  // Single-stroke digit skeletons, drawn the way a child forms the numeral, so
+  // the guide is one dotted line to follow rather than the double contour an
+  // outlined font glyph would give.
+  const DIGIT_PATHS = {
+    "0": "M50,22 A28,48 0 0,1 50,118 A28,48 0 0,1 50,22",
+    "1": "M32,40 L50,22 L50,118",
+    "2": "M24,46 C24,20 76,20 74,50 C73,70 40,88 24,118 L78,118",
+    "3": "M26,40 C26,18 74,20 72,48 C71,68 52,70 46,70 C52,70 76,72 76,94 C76,122 30,124 24,102",
+    "4": "M64,22 L20,86 L82,86 M64,22 L64,118",
+    "5": "M74,24 L34,24 L30,62 C56,52 78,66 78,90 C78,116 44,126 24,108",
+    "6": "M70,26 C44,32 24,56 24,84 C24,104 38,118 52,118 C68,118 78,104 78,88 C78,72 66,62 50,62 C36,62 26,72 24,84",
+    "7": "M22,26 L78,26 L42,118",
+    "8": "M50,22 A22,20 0 1,1 50,62 A27,28 0 1,1 50,118 A27,28 0 1,1 50,62 A22,20 0 1,1 50,22",
+    "9": "M76,60 C76,38 62,24 50,24 C34,24 24,38 24,54 C24,70 36,80 50,80 C64,80 74,72 76,60 C76,88 62,110 34,120"
+  };
+
+  // One numeral as SVG: solid for the model, dotted for the ones to trace.
+  function digitSVG(ch, dotted) {
+    const ns = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("viewBox", "0 0 100 140");
+    svg.setAttribute("class", "trace-svg" + (dotted ? " dotted" : ""));
+    const d = DIGIT_PATHS[ch];
+    if (d) {
+      const path = document.createElementNS(ns, "path");
+      path.setAttribute("d", d);
+      svg.appendChild(path);
+    }
+    return svg;
+  }
+
+  // A handwriting row: one solid model numeral, then dotted numerals to trace.
   function traceGrid(t) {
-    const cell = (cls, text) => {
+    const cell = (cls, ch, dotted) => {
       const c = el("div", "trace-cell " + cls);
-      if (text !== undefined) c.appendChild(el("span", "trace-glyph", text));
+      if (ch !== undefined) c.appendChild(digitSVG(ch, dotted));
       return c;
     };
     const row = el("div", "trace-row");
-    row.appendChild(cell("model", t.char));
-    for (let i = 0; i < (t.guides || 4); i++) row.appendChild(cell("guide", t.char));
-    for (let i = 0; i < (t.blanks || 3); i++) row.appendChild(cell("blank"));
+    row.appendChild(cell("model", t.char, false));
+    for (let i = 0; i < (t.guides || 5); i++) row.appendChild(cell("guide", t.char, true));
+    for (let i = 0; i < (t.blanks || 0); i++) row.appendChild(cell("blank"));
     const wrap = el("div", "trace-block");
     wrap.appendChild(row);
     if (t.word) wrap.appendChild(el("div", "trace-word", `${t.char}  —  ${t.word}`));
@@ -1323,16 +1353,40 @@ td.right { text-align: right; }
     return "";
   }
 
-  // Word has no text-stroke, so the guide numerals print in light grey — the
-  // child still traces over them, and it prints identically on any printer.
+  // Word cannot draw SVG, so each numeral is rendered to a PNG from the same
+  // single-stroke path — the guides stay one dotted line, as on screen.
+  function digitPNG(ch, dotted) {
+    const d = DIGIT_PATHS[ch];
+    if (!d || typeof Path2D === "undefined") return "";
+    const w = 100, h = 140, scale = 3;
+    const c = document.createElement("canvas");
+    c.width = w * scale;
+    c.height = h * scale;
+    const x = c.getContext("2d");
+    if (!x) return "";
+    x.scale(scale, scale);
+    x.fillStyle = "#fff";
+    x.fillRect(0, 0, w, h);
+    x.strokeStyle = dotted ? "#8c8c8c" : "#000";
+    x.lineWidth = 6;
+    x.lineCap = "round";
+    x.lineJoin = "round";
+    if (dotted) x.setLineDash([5, 9]);
+    x.stroke(new Path2D(d));
+    try { return c.toDataURL("image/png"); } catch { return ""; }
+  }
+
   function wordTrace(t) {
-    const cell = (inner, colour) =>
-      `<td style="width:52pt;height:52pt;border:1pt solid #999;text-align:center;` +
-      `font-size:34pt;color:${colour};padding:0">${inner}</td>`;
+    const img = (dotted) => {
+      const src = digitPNG(t.char, dotted);
+      return src ? `<img src="${src}" width="46" height="64" alt="">` : "&nbsp;";
+    };
+    const cell = (inner) =>
+      `<td style="width:52pt;height:66pt;border:1pt solid #999;text-align:center;padding:2pt">${inner}</td>`;
     let h = `<table class="lay" style="margin:6pt 0 6pt 14pt;border-collapse:collapse"><tr>`;
-    h += cell(esc(t.char), "#000");
-    for (let i = 0; i < (t.guides || 4); i++) h += cell(esc(t.char), "#c8c8c8");
-    for (let i = 0; i < (t.blanks || 3); i++) h += cell("&nbsp;", "#000");
+    h += cell(img(false));
+    for (let i = 0; i < (t.guides || 5); i++) h += cell(img(true));
+    for (let i = 0; i < (t.blanks || 0); i++) h += cell("&nbsp;");
     h += `</tr></table>`;
     if (t.word) h += `<p style="margin:0 0 8pt 14pt">${esc(t.char)} &mdash; ${esc(t.word)}</p>`;
     return h;

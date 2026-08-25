@@ -280,8 +280,10 @@ const GENERATORS = {
         sol: [first, S(`${b} × ${c} = ${b * c}`, "M1"), S(`${a} + ${b * c} = ${a + b * c}`, "A1")] };
       if (d === 2) return { q: `Work out (${a} + ${b}) × ${c} − ${b}`, a: String((a + b) * c - b),
         sol: [S("Brackets first", "M1"), S(`${a + b} × ${c} = ${(a + b) * c}`, "M1"), S(`${(a + b) * c} − ${b} = ${(a + b) * c - b}`, "A1")] };
-      return { q: `Work out ${a} × ${b} − ${c}² + ${a}`, a: String(a * b - c * c + a),
-        sol: [first, S(`${a} × ${b} = ${a * b},  ${c}² = ${c * c}`, "M1"), S(`${a * b} − ${c * c} + ${a} = ${a * b - c * c + a}`, "A1")] };
+      const ans = a * b - c * c + a;
+      return { q: `Work out ${a} × ${b} − ${c}${sup(2)} + ${a}`, a: nf(ans),
+        sol: [first, S(`${a} × ${b} = ${a * b},  ${c}${sup(2)} = ${c * c}`, "M1"),
+              S(`${a * b} − ${c * c} + ${a} = ${nf(ans)}`, "A1")] };
     }
   },
   areaPerimeterRect: {
@@ -455,12 +457,34 @@ const GENERATORS = {
   straightLine: {
     name: "Straight-line graphs", grades: [8, 9, 10],
     gen(r, d) {
-      const m = ri(r, 1, 2 + d) * (d === 3 && r() < 0.5 ? -1 : 1), c = ri(r, -6, 8);
-      const line = `y = ${m === 1 ? "" : m === -1 ? "−" : nf(m)}x ${c >= 0 ? "+ " + c : "− " + -c}`;
-      const cmp = S("Compare with y = mx + c: m is the gradient, c the y-intercept", "M1");
-      if (r() < 0.5)
-        return { q: `Write down the gradient of the line ${line}`, a: nf(m), sol: [cmp, S(`m = ${nf(m)}`, "A1")] };
-      return { q: `Write down the y-intercept of the line ${line}`, a: `(0, ${nf(c)})`, sol: [cmp, S(`(0, ${nf(c)})`, "A1")] };
+      if (d === 1) {
+        const m = ri(r, 1, 5) * (r() < 0.4 ? -1 : 1), c = ri(r, -6, 8);
+        const line = `y = ${m === 1 ? "" : m === -1 ? "−" : nf(m)}x ${c >= 0 ? "+ " + c : "− " + -c}`;
+        const cmp = S("Compare with y = mx + c: m is the gradient, c the y-intercept", "M1");
+        if (r() < 0.5)
+          return { q: `Write down the gradient of the line ${line}`, a: nf(m),
+            sol: [cmp, S(`m = ${nf(m)}`, "A1")] };
+        return { q: `Write down the y-intercept of the line ${line}`, a: `(0, ${nf(c)})`,
+          sol: [cmp, S(`(0, ${nf(c)})`, "A1")] };
+      }
+      if (d === 2) {
+        // Not in y = mx + c form yet — it has to be rearranged first.
+        const k = ri(r, 2, 4), m = ri(r, 1, 5) * (r() < 0.5 ? -1 : 1), c = ri(r, -6, 8);
+        const eq = `${k}y = ${poly([[k * m, 1], [k * c, 0]])}`;
+        return { q: `Find the gradient and the y-intercept of the line\n${eq}`,
+          a: `gradient ${nf(m)}, y-intercept (0, ${nf(c)})`,
+          sol: [S(`Divide through by ${k}:  y = ${poly([[m, 1], [c, 0]])}`, "M1"),
+                S(`gradient = ${nf(m)}, y-intercept = (0, ${nf(c)})`, "A1")] };
+      }
+      // Perpendicular through a point — two ideas combined.
+      const m = pick(r, [2, 3, 4, 5]), x1 = ri(r, 1, 6), y1 = ri(r, 1, 8);
+      const perp = frac(nf(-1), m);
+      const cNum = m * y1 + x1;
+      return { q: `A line is perpendicular to y = ${m}x + ${ri(r, 1, 9)} and passes through (${x1}, ${y1}).\nFind its equation in the form y = mx + c.`,
+        a: `y = ${perp}x + ${cNum % m === 0 ? cNum / m : frac(cNum, m)}`,
+        sol: [S(`Perpendicular gradient = −1 ÷ ${m} = ${perp}`, "M1"),
+              S(`${y1} = ${perp}(${x1}) + c`, "M1"),
+              S(`c = ${cNum % m === 0 ? cNum / m : frac(cNum, m)}, so y = ${perp}x + ${cNum % m === 0 ? cNum / m : frac(cNum, m)}`, "A1")] };
     }
   },
   pythagoras: {
@@ -468,13 +492,27 @@ const GENERATORS = {
     gen(r, d) {
       const t = pick(r, [[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25],
                          [6, 8, 10], [9, 12, 15], [20, 21, 29], [9, 40, 41], [12, 35, 37]]);
-      const k = d === 1 ? ri(r, 1, 2) : ri(r, 1, 3);
+      const k = d === 1 ? 1 : ri(r, 1, 3);
       const [a, b, c] = t.map((v) => v * k);
-      if (d < 3)
-        return { q: `A right-angled triangle has shorter sides ${a} cm and ${b} cm. Find the hypotenuse.`, a: `${c} cm`,
-          sol: [S(`c² = ${a}² + ${b}² = ${a * a} + ${b * b} = ${c * c}`, "M1"), S(`c = ${rad(c * c)} = ${c} cm`, "A1")] };
-      return { q: `A right-angled triangle has hypotenuse ${c} cm and one side ${a} cm. Find the other side.`, a: `${b} cm`,
-        sol: [S(`b² = ${c}² − ${a}² = ${c * c} − ${a * a} = ${b * b}`, "M1"), S(`b = ${rad(b * b)} = ${b} cm`, "A1")] };
+      if (d === 1)
+        return { q: `A right-angled triangle has shorter sides ${a} cm and ${b} cm.\nFind the hypotenuse.`,
+          a: `${c} cm`,
+          sol: [S(`c² = ${a}² + ${b}² = ${a * a} + ${b * b} = ${c * c}`, "M1"),
+                S(`c = ${rad(c * c)} = ${c} cm`, "A1")] };
+      if (d === 2)
+        return { q: `A right-angled triangle has hypotenuse ${c} cm and one shorter side ${a} cm.\nFind the other side.`,
+          a: `${b} cm`,
+          sol: [S(`b² = ${c}² − ${a}² = ${c * c} − ${a * a} = ${b * b}`, "M1"),
+                S(`b = ${rad(b * b)} = ${b} cm`, "A1")] };
+      // No exact triple: the answer is a decimal, and the shape has to be
+      // turned into a right-angled triangle first.
+      const w = ri(r, 4, 14), h = ri(r, 4, 14);
+      const diag = +Math.sqrt(w * w + h * h).toFixed(2);
+      return { q: `A rectangle measures ${w} cm by ${h} cm.\nFind the length of a diagonal, correct to 2 decimal places.`,
+        a: `${diag} cm`,
+        sol: [S(`The diagonal is the hypotenuse of a right-angled triangle with sides ${w} and ${h}`, "M1"),
+              S(`d² = ${w}² + ${h}² = ${w * w + h * h}`, "M1"),
+              S(`d = ${rad(w * w + h * h)} = ${diag} cm`, "A1")] };
     }
   },
   standardForm: {
@@ -503,42 +541,104 @@ const GENERATORS = {
   quadraticSolve: {
     name: "Solving quadratics", grades: [9, 10, 11],
     gen(r, d) {
-      const p = ri(r, 1, 5 + d), q0 = ri(r, 1, 5 + d) * (d >= 2 && r() < 0.5 ? -1 : 1);
-      if (p === q0) return this.gen(r, d);
-      const fmt = (v) => (v < 0 ? `(x − ${-v})` : `(x + ${v})`);
-      const ex = poly([[1, 2], [p + q0, 1], [p * q0, 0]]);
-      return {
-        q: `Solve:  ${ex} = 0`, a: `x = ${nf(-p)}  or  x = ${nf(-q0)}`,
-        sol: [S(`Factorise: two numbers with sum ${nf(p + q0)} and product ${nf(p * q0)} are ${nf(p)} and ${nf(q0)}`, "M1"),
-              S(`${fmt(p)}${fmt(q0)} = 0`, "M1"),
-              S(`x = ${nf(-p)}  or  x = ${nf(-q0)}`, "A1")]
-      };
+      if (d === 1) {
+        // Monic, both roots positive — factorises straight away.
+        const p = ri(r, 1, 6), q = ri(r, 1, 6);
+        const expr = poly([[1, 2], [-(p + q), 1], [p * q, 0]]);
+        return { q: `Solve:  ${expr} = 0`, a: p === q ? `x = ${p}` : `x = ${p} or x = ${q}`,
+          sol: [S(`Two numbers with sum ${p + q} and product ${p * q}: ${p} and ${q}`, "M1"),
+                S(`(x − ${p})(x − ${q}) = 0`, "M1"),
+                S(p === q ? `x = ${p}` : `x = ${p} or x = ${q}`, "A1")] };
+      }
+      if (d === 2) {
+        // Monic but with a negative root, so the signs have to be reasoned out.
+        const p = ri(r, 1, 7), q = -ri(r, 1, 7);
+        const expr = poly([[1, 2], [-(p + q), 1], [p * q, 0]]);
+        return { q: `Solve:  ${expr} = 0`, a: `x = ${p} or x = ${nf(q)}`,
+          sol: [S(`Two numbers with sum ${nf(p + q)} and product ${nf(p * q)}: ${p} and ${nf(q)}`, "M1"),
+                S(`(x − ${p})(x ${q < 0 ? "+ " + -q : "− " + q}) = 0`, "M1"),
+                S(`x = ${p} or x = ${nf(q)}`, "A1")] };
+      }
+      // A leading coefficient, so the factorisation is no longer by inspection.
+      const a = ri(r, 2, 4), p = ri(r, 1, 5), q = ri(r, 1, 5) * (r() < 0.5 ? -1 : 1);
+      // (ax − p)(x − q) = ax² − (aq + p)x + pq
+      const expr = poly([[a, 2], [-(a * q + p), 1], [p * q, 0]]);
+      const root1 = p % a === 0 ? String(p / a) : frac(p, a);
+      return { q: `Solve:  ${expr} = 0`, a: `x = ${root1} or x = ${nf(q)}`,
+        sol: [S(`Split the middle term: two numbers with product ${nf(a * p * q)} and sum ${nf(-(a * q + p))}`, "M1"),
+              S(`(${a}x − ${p})(x ${q < 0 ? "+ " + -q : "− " + q}) = 0`, "M1"),
+              S(`x = ${root1} or x = ${nf(q)}`, "A1")] };
     }
   },
   trigRightAngle: {
     name: "Right-angled trigonometry", grades: [9, 10],
     gen(r, d) {
-      const angle = pick(r, [25, 30, 35, 40, 50, 55, 60]);
-      const adj = ri(r, 4, 8 + d * 4);
-      const opp = adj * Math.tan((angle * Math.PI) / 180);
-      return {
-        q: `In a right-angled triangle, the angle is ${angle}° and the adjacent side is ${adj} cm. Find the opposite side, correct to 1 decimal place.`,
-        a: `${opp.toFixed(1)} cm`,
-        sol: [S("Opposite and adjacent → use tan θ", "M1"),
-              S(`opposite = ${adj} × tan ${angle}°`, "M1"),
-              S(`≈ ${opp.toFixed(1)} cm`, "A1")]
-      };
+      const round2 = (v) => +v.toFixed(2);
+      if (d === 1) {
+        // Given an angle and the adjacent side, find the opposite side.
+        const ang = pick(r, [20, 25, 30, 35, 40, 45, 50, 55, 60]);
+        const adj = ri(r, 4, 15);
+        const opp = round2(adj * Math.tan((ang * Math.PI) / 180));
+        return { q: `In a right-angled triangle the angle is ${ang}° and the adjacent side is ${adj} cm.\nFind the opposite side, correct to 2 decimal places.`,
+          a: `${opp} cm`,
+          sol: [S(`tan ${ang}° = ${frac("opposite", `${adj}`)}`, "M1"),
+                S(`opposite = ${adj} tan ${ang}° = ${opp} cm`, "A1")] };
+      }
+      if (d === 2) {
+        // Two sides given, the angle is wanted — inverse trigonometry.
+        const t = pick(r, [[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25]]);
+        const ang = round2((Math.atan(t[0] / t[1]) * 180) / Math.PI);
+        return { q: `A right-angled triangle has an opposite side of ${t[0]} cm and an adjacent side of ${t[1]} cm.\nFind the angle, correct to 2 decimal places.`,
+          a: `${ang}°`,
+          sol: [S(`tan θ = ${frac(t[0], t[1])}`, "M1"),
+                S(`θ = tan⁻¹(${frac(t[0], t[1])}) = ${ang}°`, "A1")] };
+      }
+      // Angle of elevation: a two-step problem set in context.
+      const ang = pick(r, [25, 30, 35, 40, 50, 55, 60]);
+      const dist = ri(r, 10, 40);
+      const eye = ri(r, 1, 2);
+      const height = round2(dist * Math.tan((ang * Math.PI) / 180) + eye);
+      return { q: `From a point ${dist} m from the foot of a tower, the angle of elevation of the top is ${ang}°.\nThe observer's eye is ${eye} m above the ground.\nFind the height of the tower, correct to 2 decimal places.`,
+        a: `${height} m`,
+        sol: [S(`tan ${ang}° = ${frac("h", `${dist}`)}, where h is the height above eye level`, "M1"),
+              S(`h = ${dist} tan ${ang}° = ${round2(dist * Math.tan((ang * Math.PI) / 180))} m`, "M1"),
+              S(`Height of tower = ${round2(dist * Math.tan((ang * Math.PI) / 180))} + ${eye} = ${height} m`, "A1")] };
     }
   },
   indices: {
     name: "Laws of indices", grades: [8, 9, 10],
     gen(r, d) {
-      const m = ri(r, 2, 5 + d), n = ri(r, 2, 4 + d);
-      if (d < 3)
-        return { q: `Simplify:  x${sup(m)} × x${sup(n)}`, a: `x${sup(m + n)}`,
-          sol: [S("When multiplying, add the indices", "M1"), S(`${m} + ${n} = ${m + n}, so x${sup(m + n)}`, "A1")] };
-      return { q: `Simplify:  (x${sup(m)})${sup(n)} ÷ x${sup(n)}`, a: `x${sup(m * n - n)}`,
-        sol: [S(`(x${sup(m)})${sup(n)} = x${sup(m * n)}`, "M1"), S(`When dividing, subtract: ${m * n} − ${n} = ${m * n - n}`, "A1")] };
+      if (d === 1) {
+        const a = ri(r, 2, 6), b = ri(r, 2, 6);
+        return { q: `Simplify:  x${sup(a)} × x${sup(b)}`, a: `x${sup(a + b)}`,
+          sol: [S("When multiplying, add the indices", "M1"), S(`${a} + ${b} = ${a + b}, so x${sup(a + b)}`, "A1")] };
+      }
+      if (d === 2) {
+        // Coefficients as well as indices, and a division.
+        const k = ri(r, 2, 6), m = ri(r, 2, 5), a = ri(r, 4, 9), b = ri(r, 1, 3);
+        return { q: `Simplify:  ${frac(`${k * m}x${sup(a)}`, `${m}x${sup(b)}`)}`,
+          a: `${k}x${sup(a - b)}`,
+          sol: [S(`Numbers: ${k * m} ÷ ${m} = ${k}`, "M1"),
+                S(`Indices: ${a} − ${b} = ${a - b}, so ${k}x${sup(a - b)}`, "A1")] };
+      }
+      // Negative and fractional indices, evaluated to a number.
+      const base = pick(r, [4, 8, 9, 16, 25, 27, 32, 64]);
+      const roots = { 4: 2, 9: 3, 25: 5, 16: 2, 8: 2, 27: 3, 32: 2, 64: 4 };
+      const isCube = base === 8 || base === 27 || base === 64;
+      const den = base === 32 ? 5 : isCube ? 3 : 2;
+      const root = Math.round(Math.pow(base, 1 / den));
+      // num must not equal den, or the index reduces to 1 and the question
+      // stops being about fractional indices at all.
+      let num = ri(r, 2, 3);
+      if (num === den) num = den + 1;
+      const neg = r() < 0.5;
+      const val = Math.pow(root, num);
+      const expo = `${neg ? "⁻" : ""}${sup(num)}⁄${sup(den)}`;
+      return { q: `Evaluate:  ${base}${expo}`,
+        a: neg ? frac(1, val) : String(val),
+        sol: [S(`The denominator ${den} means the ${den === 2 ? "square" : den === 3 ? "cube" : den + "th"} root: ${rad(base)} = ${root}`, "M1"),
+              S(`Raise to the power ${num}: ${root}${sup(num)} = ${val}`, "M1"),
+              S(neg ? `A negative index means the reciprocal: ${frac(1, val)}` : `= ${val}`, "A1")] };
     }
   },
   permutations: {
@@ -560,26 +660,52 @@ const GENERATORS = {
   standardDeviation: {
     name: "Mean and standard deviation", grades: [11],
     gen(r, d) {
-      const n = ri(r, 5, 8), mean = ri(r, 10, 30);
-      // Build the deviations in ± pairs so they sum to exactly zero (the mean is
-      // then a whole number) and every one stays small, keeping the marks positive.
+      const n = d === 1 ? 6 : 8, mean = ri(r, 8, 20) * 5;
+      // Deviations in ± pairs so the mean is a whole number and marks stay positive.
       const devs = [];
       for (let i = 0; i < Math.floor(n / 2); i++) { const v = ri(r, 1, 4); devs.push(v, -v); }
       if (n % 2) devs.push(0);
-      for (let i = devs.length - 1; i > 0; i--) {   // shuffle so the pairs are not obvious
+      for (let i = devs.length - 1; i > 0; i--) {
         const j = Math.floor(r() * (i + 1));
         [devs[i], devs[j]] = [devs[j], devs[i]];
       }
       const vals = devs.map((v) => mean + v);
       const sumsq = devs.reduce((t, v) => t + v * v, 0);
       const sd = Math.sqrt(sumsq / n);
-      return {
-        q: `The ${n} values below are the marks of a group of students.\n${vals.join(", ")}\nFind the mean and the standard deviation, giving the standard deviation correct to 2 decimal places.`,
-        a: `x̄ = ${mean},  σ = ${sd.toFixed(2)}`,
-        sol: [S(`Σx = ${vals.reduce((t, v) => t + v, 0)}, so x̄ = ${frac(vals.reduce((t, v) => t + v, 0), n)} = ${mean}`, "M1"),
-              S(`Σ(x − x̄)² = ${sumsq}`, "M1"),
-              S(`σ = ${rad(frac(sumsq, n))} = ${sd.toFixed(2)}`, "A1")]
-      };
+      const sumx = vals.reduce((t, v) => t + v, 0);
+
+      if (d === 1)
+        return { q: `The ${n} values below are the marks of a group of students.\n${vals.join(", ")}\nFind the mean and the standard deviation, giving the standard deviation correct to 2 decimal places.`,
+          a: `x̄ = ${mean},  σ = ${sd.toFixed(2)}`,
+          sol: [S(`Σx = ${sumx}, so x̄ = ${frac(sumx, n)} = ${mean}`, "M1"),
+                S(`Σ(x − x̄)² = ${sumsq}`, "M1"),
+                S(`σ = ${rad(frac(sumsq, n))} = ${sd.toFixed(2)}`, "A1")] };
+
+      if (d === 2) {
+        // Summary statistics only — the raw data is not given.
+        const sumx2 = vals.reduce((t, v) => t + v * v, 0);
+        return { q: `For ${n} values, Σx = ${sumx} and Σx${sup(2)} = ${sumx2}.\nFind the mean and the standard deviation, correct to 2 decimal places.`,
+          a: `x̄ = ${mean},  σ = ${sd.toFixed(2)}`,
+          sol: [S(`x̄ = ${frac("Σx", "n")} = ${frac(sumx, n)} = ${mean}`, "M1"),
+                S(`σ² = ${frac("Σx²", "n")} − x̄² = ${frac(sumx2, n)} − ${mean}${sup(2)}`, "M1"),
+                S(`σ = ${sd.toFixed(2)}`, "A1")] };
+      }
+      // Grouped data: midpoints have to be found first.
+      const w = 10, start = ri(r, 1, 4) * 10;
+      const fs = [ri(r, 2, 6), ri(r, 5, 12), ri(r, 5, 12), ri(r, 2, 6)];
+      const mids = [0, 1, 2, 3].map((i) => start + w * i + w / 2);
+      const N = fs.reduce((t, f) => t + f, 0);
+      const sfx = fs.reduce((t, f, i) => t + f * mids[i], 0);
+      const sfx2 = fs.reduce((t, f, i) => t + f * mids[i] * mids[i], 0);
+      const m = sfx / N;
+      const sg = Math.sqrt(sfx2 / N - m * m);
+      const rows = fs.map((f, i) => `${start + w * i}–${start + w * (i + 1) - 1}: ${f}`).join("\n");
+      return { q: `The table shows the marks of ${N} students.\n${rows}\nUsing the mid-interval values, find an estimate of the mean and the standard deviation, correct to 2 decimal places.`,
+        a: `x̄ ≈ ${m.toFixed(2)},  σ ≈ ${sg.toFixed(2)}`,
+        sol: [S(`Mid-interval values: ${mids.join(", ")}`, "M1"),
+              S(`Σfx = ${sfx},  Σfx² = ${sfx2},  n = ${N}`, "M1"),
+              S(`x̄ = ${frac(sfx, N)} = ${m.toFixed(2)}`, "M1"),
+              S(`σ = ${rad(`${frac(sfx2, N)} − x̄²`)} = ${sg.toFixed(2)}`, "A1")] };
     }
   },
   logarithms: {
@@ -636,27 +762,65 @@ const GENERATORS = {
   differentiation: {
     name: "Differentiation", grades: [11, 12],
     gen(r, d) {
-      const a = ri(r, 1, 3 + d), n = ri(r, 2, 2 + d), b = ri(r, 1, 9), c = ri(r, 1, 9);
-      const f = poly([[a, n], [b, 1], [c, 0]]);
-      const df = poly([[a * n, n - 1], [b, 0]]);
-      return { q: `Differentiate:  y = ${f}`, a: `${frac("d" + "y", "dx")} = ${df}`,
-        sol: [S("Multiply by the power, then reduce the power by 1; constants vanish", "M1"),
-              S(`${a}x${sup(n)} → ${a * n}x${n - 1 === 1 ? "" : sup(n - 1)},  ${b}x → ${b},  ${c} → 0`, "M1"),
-              S(`${frac("dy", "dx")} = ${df}`, "A1")] };
+      if (d === 1) {
+        const a = ri(r, 2, 6), b = ri(r, 2, 9), c = ri(r, 1, 9);
+        return { q: `Differentiate:  y = ${poly([[a, 2], [b, 1], [c, 0]])}`,
+          a: `${frac("dy", "dx")} = ${poly([[2 * a, 1], [b, 0]])}`,
+          sol: [S(`Multiply by the power and reduce the power by 1`, "M1"),
+                S(`${frac("dy", "dx")} = ${poly([[2 * a, 1], [b, 0]])}`, "A1")] };
+      }
+      if (d === 2) {
+        // A cubic, and the gradient is wanted at a particular point.
+        const a = ri(r, 1, 4), b = ri(r, 2, 6), c = ri(r, 2, 9), x = ri(r, 1, 4);
+        const dy = poly([[3 * a, 2], [2 * b, 1], [c, 0]]);
+        const val = 3 * a * x * x + 2 * b * x + c;
+        return { q: `y = ${poly([[a, 3], [b, 2], [c, 1], [ri(r, 1, 9), 0]])}\nFind the gradient of the curve when x = ${x}.`,
+          a: String(val),
+          sol: [S(`${frac("dy", "dx")} = ${dy}`, "M1"),
+                S(`At x = ${x}:  3(${a})(${x})${sup(2)} + 2(${b})(${x}) + ${c}`, "M1"),
+                S(`= ${val}`, "A1")] };
+      }
+      // Stationary points: differentiate, set to zero, solve — and classify.
+      const p = ri(r, 1, 4), q = p + ri(r, 1, 4);
+      // y = x³ − (3/2)(p+q)x² + 3pq x has dy/dx = 3(x − p)(x − q); scale by 2
+      const dy = `3(x − ${p})(x − ${q})`;
+      const expr = poly([[2, 3], [-3 * (p + q), 2], [6 * p * q, 1], [ri(r, 1, 9), 0]]);
+      return { q: `Find the x-coordinates of the stationary points of\ny = ${expr}\nand determine the nature of each.`,
+        a: `x = ${p} (maximum), x = ${q} (minimum)`,
+        sol: [S(`${frac("dy", "dx")} = ${poly([[6, 2], [-6 * (p + q), 1], [6 * p * q, 0]])} = 6(x − ${p})(x − ${q})`, "M1"),
+              S(`${frac("dy", "dx")} = 0 when x = ${p} or x = ${q}`, "M1"),
+              S(`${frac("d²y", "dx²")} = ${poly([[12, 1], [-6 * (p + q), 0]])};  at x = ${p} it is negative (maximum), at x = ${q} positive (minimum)`, "A1")] };
     }
   },
   integration: {
     name: "Integration", grades: [11, 12],
     gen(r, d) {
-      const n = ri(r, 1, 2 + d);
-      const a = (n + 1) * ri(r, 1, 3);
-      const b = ri(r, 1, 9);
-      const f = poly([[a, n], [b, 0]]);
-      const F = poly([[a / (n + 1), n + 1], [b, 1]]);
-      return { q: `Find:  ∫ (${f}) dx`, a: `${F} + c`,
-        sol: [S("Raise the power by 1, then divide by the new power", "M1"),
-              S(`${a}x${sup(n)} → ${frac(a + "x" + sup(n + 1), n + 1)} = ${a / (n + 1)}x${sup(n + 1)},  ${b} → ${b}x`, "M1"),
-              S(`Add the constant of integration: ${F} + c`, "A1")] };
+      if (d === 1) {
+        const n = ri(r, 1, 3), a = (n + 1) * ri(r, 1, 4), c = ri(r, 1, 9);
+        return { q: `Find:  ∫ (${poly([[a, n], [c, 0]])}) dx`,
+          a: `${poly([[a / (n + 1), n + 1], [c, 1]])} + c`,
+          sol: [S(`Raise the power by 1 and divide by the new power`, "M1"),
+                S(`${poly([[a / (n + 1), n + 1], [c, 1]])} + c`, "A1")] };
+      }
+      if (d === 2) {
+        // A definite integral — the constant drops out and limits are used.
+        const a = 3 * ri(r, 1, 3), lo = ri(r, 0, 2), hi = lo + ri(r, 1, 3);
+        const F = (x) => (a / 3) * x * x * x;
+        return { q: `Evaluate:  ∫ from ${lo} to ${hi} of ${a}x${sup(2)} dx`,
+          a: String(F(hi) - F(lo)),
+          sol: [S(`∫ ${a}x${sup(2)} dx = ${a / 3}x${sup(3)}`, "M1"),
+                S(`[${a / 3}x${sup(3)}] from ${lo} to ${hi} = ${F(hi)} − ${F(lo)}`, "M1"),
+                S(`= ${F(hi) - F(lo)}`, "A1")] };
+      }
+      // Area between a curve and a line — set up the integral as well as do it.
+      const k = ri(r, 2, 5);
+      // y = kx − x² meets y = 0 at x = 0 and x = k; area = k³/6
+      const num = k * k * k, area = num % 6 === 0 ? String(num / 6) : frac(num, 6);
+      return { q: `The curve y = ${k}x − x${sup(2)} meets the x-axis at x = 0 and x = ${k}.\nFind the exact area enclosed between the curve and the x-axis.`,
+        a: area,
+        sol: [S(`Area = ∫ from 0 to ${k} of (${k}x − x${sup(2)}) dx`, "M1"),
+              S(`= [${frac(k, 2)}x${sup(2)} − ${frac(1, 3)}x${sup(3)}] from 0 to ${k}`, "M1"),
+              S(`= ${frac(k * k * k, 2)} − ${frac(k * k * k, 3)} = ${area}`, "A1")] };
     }
   },
   binomial: {
@@ -743,10 +907,11 @@ const GENERATORS = {
       return {
         // The numeral is in the question text so the repeat-check can tell one
         // tracing row from another — otherwise every row reads the same.
-        q: `Trace the number ${n}, then write it yourself.`,
+        q: `Trace the number ${n}.`,
         a: `Correct formation of ${n}`,
-        trace: { char: String(n), guides: 4, blanks: 3, word: numberWords(n) },
-        sol: [S(`Start at the top and follow the arrows to form ${n}`, "B1")]
+        // Tracing only: a model to look at, then dotted numerals to trace over.
+        trace: { char: String(n), guides: 5, blanks: 0, word: numberWords(n) },
+        sol: [S(`Start where the dotted line starts and follow it to form ${n}`, "B1")]
       };
     }
   },
@@ -1679,18 +1844,33 @@ const GENERATORS = {
   completeSquare: {
     name: "Completing the square", grades: [10, 11],
     gen(r, d) {
-      const p = ri(r, 1, 8) * (r() < 0.5 ? -1 : 1), q = ri(r, -9, 9);
-      const b = -2 * p, c = p * p + q;
-      const expr = poly([[1, 2], [b, 1], [c, 0]]);
-      if (d === 1 || d === 2)
-        return { q: `Write ${expr} in the form (x + a)² + b`,
+      // d1 monic; d2 a real leading coefficient; d3 a negative one, and the
+      // turning point has to be identified as a maximum rather than a minimum.
+      if (d === 1) {
+        const p = ri(r, 1, 8) * (r() < 0.5 ? -1 : 1), q = ri(r, -9, 9);
+        const expr = poly([[1, 2], [-2 * p, 1], [p * p + q, 0]]);
+        return { q: `Write ${expr} in the form (x + a)${sup(2)} + b`,
           a: `(x ${p < 0 ? "+ " + -p : "− " + p})${sup(2)} ${q < 0 ? "− " + -q : "+ " + q}`,
-          sol: [S(`Half of ${nf(b)} is ${nf(-p)}`, "M1"),
+          sol: [S(`Half of ${nf(-2 * p)} is ${nf(-p)}`, "M1"),
                 S(`(x ${p < 0 ? "+ " + -p : "− " + p})${sup(2)} ${q < 0 ? "− " + -q : "+ " + q}`, "A1")] };
-      return { q: `Find the minimum value of ${expr} and the value of x at which it occurs.`,
-        a: `minimum ${nf(q)} at x = ${nf(p)}`,
-        sol: [S(`Complete the square: (x ${p < 0 ? "+ " + -p : "− " + p})${sup(2)} ${q < 0 ? "− " + -q : "+ " + q}`, "M1"),
-              S(`The square is least when x = ${nf(p)}, giving ${nf(q)}`, "A1")] };
+      }
+      const a = d === 2 ? ri(r, 2, 5) : pick(r, [-4, -3, -2, 2, 3, 5]);
+      const p = ri(r, 1, 6) * (r() < 0.5 ? -1 : 1), q = ri(r, -12, 12);
+      // a(x + p)² + q  expands to  ax² + 2apx + (ap² + q)
+      const expr = poly([[a, 2], [2 * a * p, 1], [a * p * p + q, 0]]);
+      const sq = `${a === 1 ? "" : a === -1 ? "−" : nf(a)}(x ${p < 0 ? "− " + -p : "+ " + p})${sup(2)} ` +
+                 `${q < 0 ? "− " + -q : "+ " + q}`;
+      if (d === 2)
+        return { q: `Write ${expr} in the form a(x + p)${sup(2)} + q`, a: sq,
+          sol: [S(`Take out the factor ${nf(a)}:  ${nf(a)}[x${sup(2)} ${2 * p < 0 ? "− " + -2 * p : "+ " + 2 * p}x] ${a * p * p + q < 0 ? "− " + -(a * p * p + q) : "+ " + (a * p * p + q)}`, "M1"),
+                S(`Half of ${nf(2 * p)} is ${nf(p)}, so the bracket is (x ${p < 0 ? "− " + -p : "+ " + p})${sup(2)} − ${p * p}`, "M1"),
+                S(sq, "A1")] };
+      const kind = a > 0 ? "minimum" : "maximum";
+      return { q: `By completing the square, find the turning point of y = ${expr}\nand state whether it is a maximum or a minimum.`,
+        a: `(${nf(-p)}, ${nf(q)}), a ${kind}`,
+        sol: [S(`${expr} = ${sq}`, "M1"),
+              S(`The square is zero when x = ${nf(-p)}, giving y = ${nf(q)}`, "M1"),
+              S(`Turning point (${nf(-p)}, ${nf(q)}); a is ${a > 0 ? "positive" : "negative"}, so it is a ${kind}`, "A1")] };
     }
   },
   polynomialTheorems: {
