@@ -1,0 +1,561 @@
+/* Worksheet & exam generator — screen controls + print layout matching the
+   AlIPS Word templates (Comic Sans MS, 14 pt for Grades 1-4, 12 pt otherwise). */
+
+.gen-layout {
+  display: grid;
+  grid-template-columns: 352px 1fr;
+  gap: 24px;
+  max-width: 1240px;
+  margin: 24px auto;
+  padding: 0 24px;
+}
+
+/* The blueprint table needs eight columns, so the panel widens for it. */
+.gen-layout.wide-panel { grid-template-columns: 500px 1fr; max-width: 1400px; }
+
+@media (max-width: 860px) {
+  .gen-layout,
+  .gen-layout.wide-panel { grid-template-columns: 1fr; }
+}
+
+.gen-panel {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.panel-group { display: flex; flex-direction: column; gap: 6px; }
+
+.panel-group > label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  margin-top: 4px;
+}
+
+.gen-panel select,
+.gen-panel input[type="number"],
+.gen-panel input[type="text"] {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-size: 0.92rem;
+  background: var(--paper);
+  font-family: inherit;
+}
+
+.topic-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 8px;
+  background: var(--paper);
+}
+
+.topic-checks label { font-size: 0.88rem; display: flex; gap: 8px; align-items: flex-start; }
+
+.seed-row { display: flex; gap: 8px; }
+.seed-row input { flex: 1; }
+
+.check-inline { font-size: 0.9rem; display: flex; gap: 8px; align-items: center; margin-top: 6px; }
+
+.mini-btn {
+  padding: 7px 12px;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary-btn {
+  padding: 11px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--primary);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primary-btn.secondary { background: var(--accent); }
+.primary-btn.word { background: #2b579a; }  /* Word blue */
+
+.panel-note { font-size: 0.75rem; color: var(--ink-soft); line-height: 1.4; }
+
+.hint { font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 0.72rem; color: var(--ink-soft); }
+
+.row-btns { display: flex; gap: 8px; align-items: center; }
+.row-btns .mini-btn { flex: 0 0 auto; }
+.row-btns select { flex: 1; min-width: 0; }
+
+/* Difficulty selector beside each topic */
+.topic-checks label { justify-content: space-between; }
+.topic-checks .tname { flex: 1; }
+.topic-checks .tdiff {
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  padding: 1px 4px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  font-family: inherit;
+}
+.topic-checks label.off .tdiff { opacity: 0.35; }
+
+/* Stream selector stacks like the other panel fields. */
+#track-group { display: flex; flex-direction: column; gap: 6px; }
+
+/* Strand headings inside the topic list, so the syllabus reads as it does in
+   the annual plan rather than as one flat list. */
+.topic-checks .strand-head {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--primary);
+  background: var(--primary-soft);
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin: 8px 0 2px;
+}
+.topic-checks .strand-head:first-child { margin-top: 0; }
+
+/* A sub-topic with no question generator: visible, but not selectable. */
+.topic-checks label.no-gen { opacity: 0.45; }
+.topic-checks label.no-gen .tname { text-decoration: line-through; }
+
+/* Rubric editors in the side panel */
+table.rubric-edit { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+table.rubric-edit th {
+  text-align: start;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  padding: 2px 4px;
+  font-weight: 700;
+}
+table.rubric-edit td { padding: 2px; }
+table.rubric-edit input, table.rubric-edit select {
+  width: 100%;
+  padding: 5px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-family: inherit;
+  background: var(--paper);
+}
+table.rubric-edit td.narrow { width: 62px; }
+
+/* Blueprint table — widths must be on the header row for table-layout: fixed */
+/* Q | Part | Topic | Level | Type | AO | Mk | × — wider than the panel, so it
+   scrolls sideways inside its own box rather than squeezing the selects. */
+.bp-scroll { overflow-x: auto; padding-bottom: 2px; }
+
+table.bp { table-layout: fixed; min-width: 470px; }
+table.bp th:nth-child(1), table.bp td:nth-child(1) { width: 38px; }
+table.bp th:nth-child(2), table.bp td:nth-child(2) { width: 34px; }
+table.bp th:nth-child(4), table.bp td:nth-child(4) { width: 72px; }
+table.bp th:nth-child(5), table.bp td:nth-child(5) { width: 60px; }
+table.bp th:nth-child(6), table.bp td:nth-child(6) { width: 58px; }
+table.bp th:nth-child(7), table.bp td:nth-child(7) { width: 44px; }
+table.bp th:nth-child(8), table.bp td:nth-child(8) { width: 22px; }
+
+table.bp td.prt { text-align: center; color: var(--ink-soft); font-size: 0.76rem; }
+
+.bp-add-row { align-items: center; gap: 6px; }
+.bp-add-row .sub-inline { font-size: 0.74rem; font-weight: 600; text-transform: none; }
+.bp-add-row input[type="number"] {
+  width: 46px;
+  padding: 5px 4px;
+  text-align: center;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-family: inherit;
+  font-size: 0.8rem;
+  -moz-appearance: textfield;
+}
+.bp-add-row input[type="number"]::-webkit-outer-spin-button,
+.bp-add-row input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+.bp-tally { white-space: pre-line; line-height: 1.55; }
+table.bp input, table.bp select { padding: 4px 3px; font-size: 0.78rem; }
+/* Hide number spinners so the digits themselves have room */
+table.bp input[type="number"] { -moz-appearance: textfield; text-align: center; }
+table.bp input[type="number"]::-webkit-outer-spin-button,
+table.bp input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+table.bp td.topic select { text-overflow: ellipsis; max-width: 100%; }
+
+.bp-paste { margin-top: 4px; }
+.bp-paste summary {
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+.bp-paste textarea {
+  width: 100%;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--paper);
+  margin-bottom: 6px;
+}
+.bp-paste code { font-size: 0.72rem; }
+table.rubric-edit td.kill { width: 26px; }
+table.rubric-edit button.x {
+  border: none;
+  background: transparent;
+  color: #b3261e;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 2px 4px;
+}
+
+/* ---------- The generated sheet (mirrors the Word templates) ---------- */
+
+.sheet {
+  background: #fff;
+  /* Single-line page border, as on the department's printed papers. */
+  border: 1px solid #000;
+  padding: 26px 30px;
+  min-height: 400px;
+  color: #000;
+  font-family: "Comic Sans MS", "Comic Neue", "Chalkboard SE", cursive;
+  font-size: var(--sheet-size, 12pt);
+  line-height: 1.45;
+}
+
+/* In print, a fixed frame repeats the single-line border on every page. */
+.page-frame { display: none; }
+
+.sheet .letterhead-img {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin-bottom: 6px;
+}
+
+.sheet .exam-title {
+  text-align: center;
+  font-size: 1.15em;
+  font-weight: 700;
+  margin: 10px 0;
+}
+
+/* Info + marks tables — plain black borders like Word */
+.sheet table.tpl {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: 1em;
+}
+
+.sheet table.tpl td, .sheet table.tpl th {
+  border: 1px solid #000;
+  padding: 4px 7px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.sheet table.tpl th { font-weight: 700; }
+.sheet table.tpl td.lbl { font-weight: 700; text-align: start; white-space: nowrap; }
+.sheet table.tpl td.val { text-align: start; }
+
+.sheet .sig-block {
+  border-top: 1px solid #000;
+  margin-top: 8px;
+  padding-top: 6px;
+  font-size: 0.92em;
+  line-height: 2.1;
+}
+
+.sheet .instructions { margin: 12px 0 4px; }
+.sheet .instructions h4 { font-size: 1em; margin-bottom: 2px; }
+.sheet .instructions ul { padding-inline-start: 26px; }
+.sheet .instructions li { margin-bottom: 1px; }
+
+/* Worksheet header lines */
+.sheet .ws-meta { margin-top: 10px; font-size: 1em; }
+.sheet .ws-meta .row {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 7px;
+}
+.sheet .ws-meta .fill { border-bottom: 1px solid #000; display: inline-block; min-width: 150px; }
+.sheet .ws-meta .grow { flex: 1; }
+.sheet .ws-meta .grow .fill { min-width: 60%; }
+
+/* Questions */
+.sheet .q {
+  margin-top: 14px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.sheet .q-head {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 700;
+  gap: 20px;
+}
+
+.sheet .q-body { white-space: pre-line; }
+
+.sheet .part {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: 6px;
+  padding-inline-start: 22px;
+}
+
+.sheet .part .ptext { white-space: pre-line; flex: 1; }
+.sheet .part .pmarks { white-space: nowrap; }
+
+.sheet .space-1 { height: 34px; }
+.sheet .space-2 { height: 74px; }
+.sheet .space-3 { height: 130px; }
+
+/* ---------- Handwriting practice (tracing numerals) ----------
+   Each numeral is a single-stroke skeleton path: solid for the model, one
+   dotted line for the guides the child traces over. */
+.sheet .trace-block { margin: 6px 0 10px; break-inside: avoid; page-break-inside: avoid; }
+
+.sheet .trace-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-inline-start: 22px;
+}
+
+.sheet .trace-cell {
+  width: 78px;
+  height: 78px;
+  border: 1px solid #999;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+
+.sheet .trace-svg { width: 100%; height: 100%; }
+.sheet .trace-svg path {
+  fill: none;
+  stroke: #000;
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.sheet .trace-svg.dotted path {
+  stroke: #8c8c8c;
+  stroke-dasharray: 5 9;
+}
+
+.sheet .trace-word {
+  padding-inline-start: 22px;
+  margin-top: 4px;
+  font-size: 0.9em;
+}
+
+/* ---------- Sorting diagrams (Venn and Carroll) ---------- */
+.sheet .diagram-block {
+  margin: 8px 0 10px;
+  padding-inline-start: 22px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.sheet .venn-svg {
+  width: 100%;
+  max-width: 470px;
+  height: auto;
+}
+.sheet .venn-svg .venn-label {
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.sheet table.carroll {
+  border-collapse: collapse;
+  max-width: 470px;
+}
+.sheet table.carroll th,
+.sheet table.carroll td {
+  border: 1px solid #000;
+  padding: 6px 8px;
+  font-size: 0.9em;
+}
+.sheet table.carroll th { font-weight: 700; text-align: center; background: #f2f2f2; }
+.sheet table.carroll th.rowhead { text-align: start; width: 30%; }
+.sheet table.carroll th.corner { border: none; background: none; }
+.sheet table.carroll td { height: 62px; }
+
+/* Multiple-choice options — two columns, so four options take two lines and a
+   long option can still run the full width. */
+.sheet .mcq-opts {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2px 24px;
+  margin: 4px 0 8px;
+  padding-inline-start: 40px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.sheet .mcq-opt { white-space: pre-line; }
+.sheet .mcq-let { font-weight: 700; margin-inline-end: 4px; }
+
+.sheet .tbl-head { font-weight: 700; margin: 10px 0 3px; }
+
+/* Worksheet question list */
+.sheet .ws-q {
+  margin-top: 12px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+  white-space: pre-line;
+}
+.sheet .ws-q .num { font-weight: 700; }
+
+/* Mark scheme */
+.mark-scheme {
+  page-break-before: always;
+  break-before: page;
+  margin-top: 26px;
+  border-top: 2px solid #000;
+  padding-top: 12px;
+}
+.mark-scheme h3 { font-size: 1.05em; margin-bottom: 8px; }
+.mark-scheme .ms-item { margin-bottom: 7px; break-inside: avoid; }
+.mark-scheme .ms-q { font-weight: 700; }
+.mark-scheme .ms-ans { margin-inline-start: 14px; }
+.mark-scheme .ms-steps { margin-inline-start: 14px; font-size: 0.92em; }
+.mark-scheme .code {
+  display: inline-block;
+  border: 1px solid #000;
+  border-radius: 3px;
+  padding: 0 4px;
+  margin-inline-start: 6px;
+  font-size: 0.85em;
+}
+
+/* Grading rubric printed on the paper */
+.sheet .rubric-print { margin-top: 10px; break-inside: avoid; page-break-inside: avoid; }
+.sheet .rubric-print .cap { font-weight: 700; margin-bottom: 2px; }
+
+/* Score, teacher signature and reward chart (worksheets) */
+.sheet .foot-block {
+  margin-top: 18px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.sheet table.foot-tbl {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+}
+
+.sheet table.foot-tbl td {
+  border: 1px solid #000;
+  padding: 6px 8px;
+  vertical-align: middle;
+}
+
+.sheet table.foot-tbl td.k { font-weight: 700; white-space: nowrap; width: 1%; }
+.sheet table.foot-tbl td.sign { height: 42px; }
+
+.sheet .reward-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sheet .reward {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.sheet .reward .tickbox {
+  display: inline-block;
+  width: 0.95em;
+  height: 0.95em;
+  border: 1px solid #000;
+}
+
+.sheet .reward .star { font-size: 1.15em; }
+
+.sheet-foot { margin-top: 18px; font-size: 0.8em; text-align: center; color: #444; }
+
+.placeholder-hint {
+  color: var(--ink-soft);
+  text-align: center;
+  padding: 60px 20px;
+  font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+}
+
+/* ---------- Print ---------- */
+
+@page { size: A4; margin: 12mm 14mm; }
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; }
+  .gen-layout { display: block; margin: 0; padding: 0; max-width: none; }
+  .sheet { border: none; border-radius: 0; padding: 4mm 5mm; min-height: 0; }
+  a[href]:after { content: none !important; }
+
+  /* Fixed elements repeat on every printed page, giving each page its border. */
+  .page-frame {
+    display: block;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    border: 1px solid #000;
+    pointer-events: none;
+    z-index: 0;
+  }
+}
+
+.topic-checks.diff-muted .tdiff { opacity: 0.3; pointer-events: none; }
+
+/* ---------- Mathematical notation ---------- */
+.sheet .frac, .mark-scheme .frac {
+  display: inline-flex;
+  flex-direction: column;
+  vertical-align: middle;
+  text-align: center;
+  margin: 0 0.18em;
+  line-height: 1.08;
+  font-size: 0.88em;
+}
+.sheet .frac .fnum, .mark-scheme .frac .fnum { border-bottom: 1px solid currentColor; padding: 0 0.25em; }
+.sheet .frac .fden, .mark-scheme .frac .fden { padding: 0 0.25em; }
+.sheet .radic .vinc, .mark-scheme .radic .vinc {
+  border-top: 1px solid currentColor;
+  padding: 0 0.15em 0 0.05em;
+  margin-inline-start: -0.05em;
+}

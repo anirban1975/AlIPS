@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AlIPS Math Curriculum</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="letterhead.png" alt="Al Injaz International Private School" class="letterhead">
+      <p class="brand-sub" data-i18n="appSubtitle"></p>
+    </div>
+    <div class="controls">
+      <a href="plan.html" class="nav-btn" data-i18n="plannerLink"></a>
+      <a href="worksheets.html" class="nav-btn" data-i18n="worksheetLink"></a>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="grade-nav" aria-label="Grades">
+      <h2 data-i18n="grades"></h2>
+      <ul id="grade-list"></ul>
+    </nav>
+
+    <main class="content">
+      <div class="content-header">
+        <div>
+          <h2 id="grade-title"></h2>
+          <p id="grade-stage" class="stage-label"></p>
+          <p id="grade-book" class="book-label"></p>
+        </div>
+        <input id="search" type="search" data-i18n-placeholder="searchPlaceholder">
+      </div>
+
+      <!-- Stream selector: only Grades 10-12 run more than one syllabus -->
+      <div id="track-bar" class="track-bar hidden" role="group" aria-label="Stream"></div>
+
+      <div class="legend">
+        <span class="badge badge-cambridge" data-i18n="cambridge"></span>
+        <span class="badge badge-ged" data-i18n="ged"></span>
+        <span class="badge badge-oman" data-i18n="oman"></span>
+        <span class="badge badge-both" data-i18n="bothCurricula"></span>
+      </div>
+
+      <div id="strands"></div>
+
+      <p class="draft-note" data-i18n="draftNote"></p>
+    </main>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
