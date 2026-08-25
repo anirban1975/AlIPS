@@ -203,3 +203,114 @@
   resize: vertical;
 }
 #fields-msg { flex: 1; text-align: end; }
+
+/* ---------- Weekly plan — the department's own template ----------
+   A4 landscape: the sheet widens, the type drops to a document size, and the
+   two grids sit at the proportions the Word template uses. */
+
+.gen-panel .wk-edit input {
+  width: 100%;
+  padding: 3px 5px;
+  font-size: 0.78rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--paper);
+  font-family: inherit;
+}
+.gen-panel .wk-edit th { font-size: 0.7rem; }
+.gen-panel .wk-checks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px 8px;
+  margin-bottom: 6px;
+}
+.gen-panel .wk-checks .check-inline { font-size: 0.78rem; margin: 0; }
+
+.sheet.weekly-view {
+  /* Landscape: wider than the portrait sheet, and set in a document face
+     rather than Comic Sans — the template is a Ministry form, not a worksheet.
+     The form carries no page border of its own, and it ends where its content
+     ends rather than stretching to the height of the panel beside it. */
+  max-width: 27cm;
+  min-height: 0;
+  align-self: start;
+  border: none;
+  padding: 0;
+  font-family: "Times New Roman", Georgia, serif;
+  font-size: 10pt;
+  line-height: 1.35;
+}
+.sheet.weekly-view .wk-title {
+  text-align: center;
+  font-weight: 700;
+  font-size: 18pt;
+  margin-bottom: 10px;
+}
+
+.sheet.weekly-view table { border-collapse: collapse; width: 100%; }
+.sheet.weekly-view td,
+.sheet.weekly-view th {
+  border: 1px solid #000;
+  padding: 3px 5px;
+  vertical-align: top;
+}
+
+.sheet.weekly-view .wk-grid { width: 62%; margin-bottom: 10px; }
+.sheet.weekly-view .wk-grid td { text-align: center; white-space: nowrap; }
+.sheet.weekly-view .wk-lbl {
+  text-align: start;
+  font-weight: 700;
+  background: #ededed;
+  white-space: nowrap;
+}
+.sheet.weekly-view .wk-class { background: #f6f6f6; font-weight: 700; }
+.sheet.weekly-view .wk-notes { text-align: start; font-size: 8.5pt; font-style: italic; }
+
+.sheet.weekly-view .wk-line { margin: 4px 0; }
+.sheet.weekly-view .wk-intro-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2px 18px;
+  margin: 2px 0 10px 0;
+  max-width: 60%;
+}
+
+.sheet.weekly-view .wk-plan th {
+  background: #ededed;
+  text-align: center;
+  font-weight: 700;
+}
+.sheet.weekly-view .wk-plan td { font-size: 9pt; }
+.sheet.weekly-view .wk-stem { font-weight: 700; margin-bottom: 3px; }
+.sheet.weekly-view .wk-objline { margin-bottom: 3px; }
+.sheet.weekly-view .wk-item { margin-bottom: 3px; }
+.sheet.weekly-view .wk-steps,
+.sheet.weekly-view .wk-qs { padding-inline-start: 18px; margin: 2px 0 5px 0; }
+.sheet.weekly-view .wk-steps li,
+.sheet.weekly-view .wk-qs li { margin-bottom: 2px; }
+.sheet.weekly-view .wk-ans { color: #1d7a3f; margin-bottom: 5px; }
+.sheet.weekly-view .wk-stack > div { white-space: nowrap; }
+.sheet.weekly-view .wk-other { font-style: italic; white-space: normal; }
+.sheet.weekly-view .wk-hw { margin-top: 4px; white-space: normal; }
+.sheet.weekly-view td.wk-time { text-align: center; }
+/* Blank cells still need to be tall enough to write in by hand. */
+.sheet.weekly-view .wk-blank { min-height: 48px; }
+.sheet.weekly-view .wk-remarks { min-width: 70px; }
+
+.sheet.weekly-view .wk-sign {
+  margin-top: 14px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-weight: 700;
+  font-size: 11pt;
+}
+
+@media print {
+  /* The template is a Ministry form, so it carries no page border of its own.
+     The landscape page size is switched in by plan.js, because an @page rule
+     here would also turn the presentation printout on its side. */
+  body.weekly-print .page-frame { display: none; }
+  .weekly-view .wk-plan tr { break-inside: avoid; page-break-inside: avoid; }
+  .weekly-view .wk-grid { break-inside: avoid; page-break-inside: avoid; }
+}

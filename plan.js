@@ -1,9 +1,12 @@
-// AlIPS Lesson Planner — builds a lesson plan and a matching slide deck from
-// one model, so the plan a teacher prints and the slides they present always
-// contain the same questions.
+// AlIPS Lesson Planner — two sections, both built from one model of the
+// chosen sub-topic, so the slides a teacher presents and the plan they hand in
+// always contain the same questions.
 //
-// Outputs: printable lesson plan, Word (.doc), full-screen present mode,
-// and a real PowerPoint (.pptx) built in the browser via zip.js.
+//   1. Presentation — a slide deck for one sub-topic: on screen, full screen
+//      for the projector, and a real PowerPoint (.pptx) built by zip.js.
+//   2. Weekly plan  — the department's own template (A4 landscape, the week
+//      grid of two classes x three periods, the seven-column planning grid and
+//      the four signature lines), on screen, in print and as Word.
 
 (function () {
   const $ = (id) => document.getElementById(id);
@@ -33,7 +36,7 @@
   const mathPlainText = (t) => String(t)
     .replace(FRAC_RE, "$1/$2").replace(RAD_RE, "√$1");
 
-  const state = { view: "plan", grade: 5, track: 0, topic: null, topics: [],
+  const state = { view: "deck", grade: 5, track: 0, topic: null, topics: [],
                   model: null, spec: null, slide: 0, revealed: false };
 
   // Topic list and generator matching live in topics.js, shared with the
@@ -104,6 +107,9 @@
     $("criteria").value = (useSaved ? saved.criteria : dept.criteria).join("\n");
     $("fields-msg").textContent = useSaved ? "your saved wording"
       : dept.isDept ? "department wording" : "draft wording";
+    // Setting .value in code fires no input event, so the weekly grid's
+    // "Objectives achieved" column has to be told the count changed.
+    syncAchieved();
   }
 
   // Only store an override when the teacher has actually changed the wording.
@@ -126,6 +132,80 @@
   }
 
   const fontFor = (grade) => (grade <= 4 ? 14 : 12);
+
+  // ---------- Weekly-plan panel controls ----------
+
+  // Tick lists (introduction method, educational aids, assessment tools) are
+  // built from the same arrays the template prints, so the two cannot drift.
+  function buildChecks(id, items, preset) {
+    const box = $(id);
+    box.innerHTML = "";
+    items.forEach((name) => {
+      const lab = el("label", "check-inline");
+      const cb = el("input");
+      cb.type = "checkbox";
+      cb.value = name;
+      cb.checked = preset.includes(name);
+      lab.appendChild(cb);
+      lab.appendChild(document.createTextNode(" " + name));
+      box.appendChild(lab);
+    });
+  }
+  const checkedIn = (id) =>
+    Array.from($(id).querySelectorAll("input:checked")).map((c) => c.value);
+
+  // Two classes, three periods each — the shape of the template's week grid.
+  function buildClassRows() {
+    const body = $("wk-classes").querySelector("tbody");
+    body.innerHTML = "";
+    [["A", "1st, 3rd, 6th"], ["B", "2nd, 1st, 5th"]].forEach(([suffix, periods], i) => {
+      const tr = el("tr");
+      const mk = (cls, value, title) => {
+        const td = el("td");
+        const inp = el("input");
+        inp.type = "text";
+        inp.className = cls;
+        inp.value = value;
+        if (title) inp.title = title;
+        td.appendChild(inp);
+        tr.appendChild(td);
+        return inp;
+      };
+      mk("wk-cname", `${state.grade}\\${i + 1}`, "Class name, as it appears on the plan");
+      mk("wk-cper", periods, "Three periods, comma separated");
+      mk("wk-cach", "", "Objective numbers reached in each period");
+      body.appendChild(tr);
+    });
+    syncAchieved();
+  }
+
+  // "Objectives achieved" follows the number of objectives unless the teacher
+  // has typed over it.
+  function syncAchieved() {
+    const n = Math.max(1, linesOf("objectives").length);
+    const want = defaultAchieved(n).join(" | ");
+    $("wk-classes").querySelectorAll(".wk-cach").forEach((inp) => {
+      if (!inp.value.trim() || inp.dataset.auto === "1") {
+        inp.value = want;
+        inp.dataset.auto = "1";
+      }
+    });
+  }
+
+  function readClasses() {
+    return Array.from($("wk-classes").querySelectorAll("tbody tr")).map((tr) => {
+      const cell = (cls) => tr.querySelector("." + cls).value;
+      // Periods separate on commas; objective numbers separate on a bar, since
+      // a single period can reach more than one objective ("2,3").
+      const three = (t, sep) => {
+        const parts = String(t).split(sep).map((x) => x.trim());
+        return [parts[0] || "", parts[1] || "", parts[2] || ""];
+      };
+      return { name: cell("wk-cname"),
+               periods: three(cell("wk-cper"), ","),
+               achieved: three(cell("wk-cach"), "|") };
+    });
+  }
 
   // ---------- Panel ----------
 
@@ -240,7 +320,7 @@
     };
   }
 
-  // ---------- Lesson plan (screen / print) ----------
+  // ---------- Shared question rendering ----------
 
   const qList = (items, showAns) => {
     const ol = el("ol", "q-list");
@@ -252,150 +332,327 @@
     return ol;
   };
 
-  function section(title, minutes) {
-    const h = el("div", "plan-sec");
-    const head = el("div", "plan-sec-head");
-    head.appendChild(el("span", "", title));
-    if (minutes) head.appendChild(el("span", "mins", minutes));
-    h.appendChild(head);
-    return h;
+  // ---------- Weekly plan (the department's own template) ----------
+  //
+  // Transcribed from the department's `example_of_lesson_plan.docx`: A4
+  // landscape, a week grid of two classes × three periods, then the seven-column
+  // planning grid, then the four signature lines. The week grid in the original
+  // is a right-to-left table, which displays with the row label on the left —
+  // that is what is reproduced here.
+
+  const WK_INTRO = ["Activity", "Experiment", "Story", "Game", "Question", "Drawing a diagram"];
+  const WK_AIDS = ["Books", "Board", "Posters & stickers", "2D, 3D Shapes", "Movies",
+    "Show Instruments", "PC", "Samples"];
+  const WK_TOOLS = ["Oral work", "Written work", "Project", "Practical activities", "Short tests"];
+  const WK_NOTES = [
+    "A lesson should be covered in maximum 3 periods (not days)",
+    "In grade (1-4): One objective can be achieved in 2-4 periods"
+  ];
+  const WK_COLS = ["Objectives", "Strategies & Activities", "Time", "Educational aids",
+    "Assessment", "Continuous assessment tools", "Remarks"];
+  // Column widths, in the same proportions as the template's own grid.
+  const WK_W = [20.0, 21.8, 7.5, 11.5, 14.6, 11.8, 12.7];
+
+  const tick = (on) => (on ? "☑" : "☐");
+
+  // The three teaching dates of the week, from the date the teacher picked.
+  function weekDates(startISO, dayNames) {
+    const out = [];
+    const base = startISO ? new Date(startISO + "T00:00:00") : null;
+    for (let i = 0; i < 3; i++) {
+      const name = (dayNames[i] || "").trim();
+      if (!base) { out.push(name ? `${name} ___ / ___ / 20___` : "___ / ___ / 20___"); continue; }
+      const dt = new Date(base.getTime());
+      dt.setDate(dt.getDate() + i);
+      const dd = String(dt.getDate()).padStart(2, "0");
+      const mm = String(dt.getMonth() + 1).padStart(2, "0");
+      out.push(`${name} ${dd}\\${mm}\\${dt.getFullYear()}`);
+    }
+    return out;
   }
 
-  function renderPlan(spec, model, sheet) {
-    const img = el("img", "letterhead-img");
-    img.src = "letterhead.png";
-    img.alt = "Al Injaz International Private School";
-    sheet.appendChild(img);
+  // One planning row per objective: the template's own guidance is to write
+  // each activity and each exercise against the objective it serves.
+  function buildWeekly(spec, model) {
+    const objectives = spec.objectives.length ? spec.objectives : draftObjectives(spec.title);
+    const rows = objectives.map((text, i) => ({
+      n: i + 1, objective: text, activities: [], assessment: [], minutes: spec.wkTime
+    }));
+    // Deal the worked examples and the practice questions round the objectives,
+    // so every row carries something and none is left empty while another has
+    // three. A sub-topic with no generator simply leaves the cells blank for
+    // the teacher to write in, which is what the paper template expects.
+    model.examples.forEach((ex, k) => rows[k % rows.length].activities.push(ex));
+    model.core.forEach((it, k) => rows[k % rows.length].assessment.push(it));
+    return { objectives, rows };
+  }
 
-    sheet.appendChild(el("div", "exam-title", "LESSON PLAN"));
+  // "1", "2", "2,3" — which objectives each period is expected to reach.
+  function defaultAchieved(nObj) {
+    if (nObj <= 1) return ["1", "1", "1"];
+    if (nObj === 2) return ["1", "2", "2"];
+    return ["1", "2", `2,${nObj}`];
+  }
 
-    const info = el("table", "tpl");
-    const r1 = el("tr");
-    [["Subject", "Mathematics"], ["Grade", `${spec.grade}${spec.section || ""}`], ["Duration", spec.duration]]
-      .forEach(([k, v]) => { r1.appendChild(el("td", "lbl", k)); r1.appendChild(el("td", "val", v)); });
-    const r2 = el("tr");
-    [["Topic", spec.title], ["Teacher", spec.teacher || "____________"], ["Date", spec.date]]
-      .forEach(([k, v]) => { r2.appendChild(el("td", "lbl", k)); r2.appendChild(el("td", "val", v)); });
-    info.appendChild(r1);
-    info.appendChild(r2);
-    sheet.appendChild(info);
+  function renderWeekly(spec, model, sheet) {
+    const wk = buildWeekly(spec, model);
+    sheet.classList.add("weekly-view");
 
-    // Objectives
-    let s = section("Learning objectives");
-    const ul = el("ul", "plan-list");
-    (spec.objectives.length ? spec.objectives : draftObjectives(spec.title))
-      .forEach((t) => ul.appendChild(el("li", "", t)));
-    s.appendChild(ul);
-    sheet.appendChild(s);
+    sheet.appendChild(el("h1", "wk-title", "Lesson Plan for Mathematics"));
 
-    // Success criteria
-    s = section("Success criteria");
-    const sc = el("ul", "plan-list");
-    (spec.criteria.length ? spec.criteria : DRAFT_CRITERIA)
-      .forEach((t) => sc.appendChild(el("li", "", t)));
-    s.appendChild(sc);
-    sheet.appendChild(s);
+    // ---- the week grid: label column, then one block of three periods per class
+    const grid = el("table", "wk-grid");
+    const dates = weekDates(spec.wkStart, spec.wkDays);
 
-    // Key idea
-    if (model.concept) {
-      s = section("Key idea");
-      s.appendChild(el("p", "", model.concept));
-      if (model.tips.length) {
-        const t = el("ul", "plan-list");
-        model.tips.forEach((x) => t.appendChild(el("li", "", x)));
-        s.appendChild(t);
-      }
-      sheet.appendChild(s);
-    }
-
-    // Starter
-    if (model.starter.length) {
-      s = section("Starter / retrieval", "5 min");
-      s.appendChild(qList(model.starter, spec.answers));
-      sheet.appendChild(s);
-    }
-
-    // Teaching sequence with worked examples
-    s = section("Teaching sequence — I do", "10 min");
-    if (model.example.length) {
-      const pre = el("pre", "example-block");
-      pre.textContent = model.example.join("\n");
-      s.appendChild(pre);
-    }
-    if (!model.hasQuestions) {
-      s.appendChild(el("p", "to-write",
-        "Worked examples: ____________________________________________________"));
-      s.appendChild(el("div", "space-3"));
-    }
-    model.examples.forEach((ex, i) => {
-      const box = el("div", "worked");
-      box.innerHTML = `<b>Example ${i + 1}.</b> ` + mathHTML(ex.q);
-      const ol = el("ol", "steps");
-      (ex.sol || []).forEach((st) => {
-        const li = el("li");
-        li.innerHTML = mathHTML(st.t);
-        ol.appendChild(li);
-      });
-      box.appendChild(ol);
-      if (spec.answers) {
-        const a = el("div", "ans");
-        a.innerHTML = "Answer: " + mathHTML(ex.a);
-        box.appendChild(a);
-      }
-      s.appendChild(box);
+    const rClass = el("tr");
+    rClass.appendChild(el("th", "wk-lbl", "Class"));
+    spec.wkClasses.forEach((c) => {
+      const td = el("th", "wk-class", c.name || "____");
+      td.colSpan = 3;
+      rClass.appendChild(td);
     });
-    sheet.appendChild(s);
+    grid.appendChild(rClass);
 
-    // Differentiated practice
-    s = section("Guided &amp; independent practice — We do / You do", "20 min");
-    s.querySelector(".plan-sec-head span").textContent = "Guided & independent practice — We do / You do";
-    [["Support", model.support], ["Core", model.core], ["Challenge", model.challenge]]
-      .forEach(([label, items]) => {
-        const g = el("div", "diff-group");
-        g.appendChild(el("div", "diff-label", label));
-        if (items.length) g.appendChild(qList(items, spec.answers));
-        else g.appendChild(el("div", "space-2"));   // room to write the task in
-        s.appendChild(g);
+    const gridRow = (label, cellFor) => {
+      const tr = el("tr");
+      tr.appendChild(el("th", "wk-lbl", label));
+      spec.wkClasses.forEach((c) => {
+        for (let i = 0; i < 3; i++) tr.appendChild(el("td", "", cellFor(c, i)));
       });
-    sheet.appendChild(s);
+      grid.appendChild(tr);
+    };
+    gridRow("Day & Date", (c, i) => dates[i]);
+    gridRow("Period", (c, i) => c.periods[i] || "");
+    gridRow("Objectives achieved", (c, i) => c.achieved[i] || "");
 
-    // Plenary
-    s = section("Plenary / exit ticket", "5 min");
-    const p = el("div", "worked");
-    if (model.plenary) {
-      p.innerHTML = mathHTML(model.plenary.q) +
-        (spec.answers ? ` <span class="ans">(${mathHTML(model.plenary.a)})</span>` : "");
-    } else {
-      p.appendChild(el("div", "space-1"));
-    }
-    s.appendChild(p);
-    sheet.appendChild(s);
+    const noteRow = el("tr");
+    const noteCell = el("td", "wk-notes");
+    noteCell.colSpan = 1 + spec.wkClasses.length * 3;
+    WK_NOTES.forEach((t) => noteCell.appendChild(el("div", "", "♦ " + t)));
+    noteRow.appendChild(noteCell);
+    grid.appendChild(noteRow);
+    sheet.appendChild(grid);
 
-    // Homework
-    s = section("Homework");
-    if (model.homework.length) s.appendChild(qList(model.homework, spec.answers));
-    else s.appendChild(el("div", "space-2"));
-    sheet.appendChild(s);
+    // ---- title and introduction, as the template lays them out
+    const t = el("p", "wk-line");
+    t.appendChild(el("b", "", "Title: "));
+    t.appendChild(document.createTextNode(spec.title || "……………….."));
+    sheet.appendChild(t);
 
-    // Resources
-    if (model.links.length) {
-      s = section("Resources");
-      const r = el("ul", "plan-list");
-      model.links.forEach((lk) => {
-        const li = el("li");
-        const a = el("a", "", lk.label);
-        a.href = lk.url;
-        a.target = "_blank";
-        a.rel = "noopener";
-        li.appendChild(a);
-        r.appendChild(li);
-      });
-      s.appendChild(r);
-      sheet.appendChild(s);
-    }
+    const intro = el("p", "wk-line");
+    intro.appendChild(el("b", "", "Introduction: "));
+    sheet.appendChild(intro);
+    const introGrid = el("div", "wk-intro-grid");
+    WK_INTRO.forEach((k) => introGrid.appendChild(el("span", "", `${tick(spec.wkIntro.includes(k))} ${k}`)));
+    sheet.appendChild(introGrid);
 
-    sheet.appendChild(el("div", "sig-block-plan",
-      "Teacher's Signature: ____________________     Head of Department: ____________________"));
+    // ---- the seven-column planning grid
+    const plan = el("table", "wk-plan");
+    const head = el("tr");
+    WK_COLS.forEach((c, i) => {
+      const th = el("th", "", c);
+      th.style.width = WK_W[i] + "%";
+      head.appendChild(th);
+    });
+    plan.appendChild(head);
+
+    const aidsCell = () => {
+      const d = el("div", "wk-stack");
+      WK_AIDS.forEach((a) => d.appendChild(el("div", "", `${tick(spec.wkAids.includes(a))} ${a}`)));
+      d.appendChild(el("div", "", `${tick(!!spec.wkAidsOther)} Others`));
+      if (spec.wkAidsOther) d.appendChild(el("div", "wk-other", spec.wkAidsOther));
+      return d;
+    };
+    const toolsCell = () => {
+      const d = el("div", "wk-stack");
+      WK_TOOLS.forEach((a) => d.appendChild(el("div", "", `${tick(spec.wkTools.includes(a))} ${a}`)));
+      const hw = el("div", "wk-hw");
+      hw.appendChild(el("b", "", "Homework: "));
+      hw.appendChild(document.createTextNode(spec.wkHome || "____________"));
+      d.appendChild(hw);
+      return d;
+    };
+
+    wk.rows.forEach((row, ri) => {
+      const tr = el("tr");
+
+      const objTd = el("td", "wk-obj");
+      if (ri === 0) objTd.appendChild(el("div", "wk-stem", "The student should be able to:"));
+      objTd.appendChild(el("div", "wk-objline", `${row.n}. ${row.objective}`));
+      tr.appendChild(objTd);
+
+      const actTd = el("td", "wk-act");
+      if (row.activities.length) {
+        row.activities.forEach((ex, i) => {
+          const b = el("div", "wk-item");
+          b.innerHTML = `<b>Example ${row.n}.${i + 1}</b> — ${mathHTML(ex.q)}`;
+          actTd.appendChild(b);
+          if (spec.answers && ex.sol && ex.sol.length) {
+            const ol = el("ol", "wk-steps");
+            ex.sol.forEach((st) => {
+              const li = el("li");
+              li.innerHTML = mathHTML(st.t);
+              ol.appendChild(li);
+            });
+            actTd.appendChild(ol);
+            const ans = el("div", "wk-ans");
+            ans.innerHTML = "Answer: " + mathHTML(ex.a);
+            actTd.appendChild(ans);
+          }
+        });
+      } else {
+        actTd.appendChild(el("div", "wk-blank", ""));
+      }
+      tr.appendChild(actTd);
+
+      tr.appendChild(el("td", "wk-time", row.minutes ? row.minutes + " min" : ""));
+      // The aids and the assessment tools are chosen once for the lesson, so
+      // they are written in the first row and span the rest, as a teacher
+      // filling the paper form by hand would do.
+      if (ri === 0) {
+        const td = el("td", "wk-aids");
+        td.rowSpan = wk.rows.length;
+        td.appendChild(aidsCell());
+        tr.appendChild(td);
+      }
+
+      const asTd = el("td", "wk-assess");
+      if (row.assessment.length) {
+        const ol = el("ol", "wk-qs");
+        row.assessment.forEach((it) => {
+          const li = el("li");
+          li.innerHTML = mathHTML(it.q) + (spec.answers ? ` <span class="ans">(${mathHTML(it.a)})</span>` : "");
+          ol.appendChild(li);
+        });
+        asTd.appendChild(ol);
+      } else {
+        asTd.appendChild(el("div", "wk-blank", ""));
+      }
+      tr.appendChild(asTd);
+
+      if (ri === 0) {
+        const td = el("td", "wk-tools");
+        td.rowSpan = wk.rows.length;
+        td.appendChild(toolsCell());
+        tr.appendChild(td);
+      }
+      tr.appendChild(el("td", "wk-remarks", ""));
+      plan.appendChild(tr);
+    });
+    sheet.appendChild(plan);
+
+    // ---- the template's four signature lines
+    const sig = el("div", "wk-sign");
+    ["Teacher's signature:", "Senior teacher's signature:",
+     "Supervisor's signature:", "Principle's signature:"]
+      .forEach((t) => sig.appendChild(el("span", "", t)));
+    sheet.appendChild(sig);
+  }
+
+  // ---------- Weekly plan as Word ----------
+
+  function weeklyWord(spec, model) {
+    const wk = buildWeekly(spec, model);
+    const dates = weekDates(spec.wkStart, spec.wkDays);
+    const cols = 1 + spec.wkClasses.length * 3;
+
+    let b = `<p class="wtitle">Lesson Plan for Mathematics</p>`;
+
+    // Week grid
+    b += `<table class="wgrid"><tr><td class="wlbl">Class</td>` +
+      spec.wkClasses.map((c) => `<td class="wclass" colspan="3">${esc(c.name || "____")}</td>`).join("") +
+      `</tr>`;
+    const gRow = (label, cellFor) => {
+      b += `<tr><td class="wlbl">${esc(label)}</td>` +
+        spec.wkClasses.map((c) => [0, 1, 2].map((i) =>
+          `<td class="wcell">${esc(cellFor(c, i))}</td>`).join("")).join("") + `</tr>`;
+    };
+    gRow("Day & Date", (c, i) => dates[i]);
+    gRow("Period", (c, i) => c.periods[i] || "");
+    gRow("Objectives achieved", (c, i) => c.achieved[i] || "");
+    b += `<tr><td class="wnotes" colspan="${cols}">` +
+      WK_NOTES.map((t) => `&#9670; ${esc(t)}`).join("<br>") + `</td></tr></table>`;
+
+    b += `<p><b>Title:</b> ${esc(spec.title || "………………..")}</p>`;
+    b += `<p><b>Introduction:</b></p>`;
+    b += `<p>` + WK_INTRO.map((k) =>
+      `${tick(spec.wkIntro.includes(k))} ${esc(k)}`).join("&nbsp;&nbsp;&nbsp;&nbsp;") + `</p>`;
+
+    // Planning grid
+    b += `<table class="wplan"><tr>` +
+      WK_COLS.map((c, i) => `<th style="width:${WK_W[i]}%">${esc(c)}</th>`).join("") + `</tr>`;
+
+    const aidsHTML = () =>
+      WK_AIDS.map((a) => `${tick(spec.wkAids.includes(a))} ${esc(a)}`).join("<br>") +
+      `<br>${tick(!!spec.wkAidsOther)} Others` +
+      (spec.wkAidsOther ? `<br>${esc(spec.wkAidsOther)}` : "");
+    const toolsHTML = () =>
+      WK_TOOLS.map((a) => `${tick(spec.wkTools.includes(a))} ${esc(a)}`).join("<br>") +
+      `<br><b>Homework:</b> ${esc(spec.wkHome || "____________")}`;
+
+    wk.rows.forEach((row) => {
+      let act = "";
+      if (row.activities.length) {
+        row.activities.forEach((ex, i) => {
+          act += `<p><b>Example ${row.n}.${i + 1}</b> — ${mathWord(ex.q)}</p>`;
+          if (spec.answers && ex.sol && ex.sol.length) {
+            act += "<ol>" + ex.sol.map((st) => `<li>${mathWord(st.t)} [${esc(st.m)}]</li>`).join("") + "</ol>";
+            act += `<p><i>Answer: ${mathWord(ex.a)}</i></p>`;
+          }
+        });
+      } else act = "&nbsp;";
+
+      let ass = row.assessment.length
+        ? "<ol>" + row.assessment.map((it) =>
+            `<li>${mathWord(it.q)}${spec.answers ? ` <i>(${mathWord(it.a)})</i>` : ""}</li>`).join("") + "</ol>"
+        : "&nbsp;";
+
+      const span = wk.rows.length;
+      b += `<tr>` +
+        (row.n === 1 ? `<td><p><b>The student should be able to:</b></p><p>${row.n}. ${esc(row.objective)}</p></td>`
+                     : `<td><p>${row.n}. ${esc(row.objective)}</p></td>`) +
+        `<td>${act}</td>` +
+        `<td class="wc">${row.minutes ? row.minutes + " min" : "&nbsp;"}</td>` +
+        (row.n === 1 ? `<td rowspan="${span}">${aidsHTML()}</td>` : "") +
+        `<td>${ass}</td>` +
+        (row.n === 1 ? `<td rowspan="${span}">${toolsHTML()}</td>` : "") +
+        `<td>&nbsp;</td></tr>`;
+    });
+    b += `</table>`;
+
+    // Word ignores flexbox, so the signature line is laid out as a borderless row.
+    b += `<p>&nbsp;</p><table class="wsign"><tr>` +
+      ["Teacher's signature:", "Senior teacher's signature:",
+       "Supervisor's signature:", "Principle's signature:"]
+        .map((t) => `<td>${esc(t)}</td>`).join("") + `</tr></table>`;
+
+    // A4 landscape with the template's own margins.
+    return `<html xmlns:o="urn:schemas-microsoft-com:office:office" ` +
+      `xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">` +
+      `<head><meta charset="utf-8"><title>${esc(spec.title)} — Weekly Plan</title>` +
+      `<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml><![endif]-->` +
+      `<style>@page WordSection1 { size: 29.7cm 21.0cm; mso-page-orientation: landscape;
+        margin: 1.25cm 2.5cm 0.75cm 2.5cm; }
+        div.WordSection1 { page: WordSection1; }
+        body,p,td,th,div,li { font-family:"Times New Roman",serif; font-size:10.0pt; color:#000; }
+        p { margin: 0 0 3pt 0; }
+        table { border-collapse: collapse; width:100%; }
+        td, th { border:1pt solid windowtext; padding:3pt 4pt; vertical-align:top; }
+        th { font-weight:bold; text-align:center; background:#EDEDED; }
+        .wtitle { text-align:center; font-weight:bold; font-size:18.0pt;
+                  font-family:"Nyala","Times New Roman",serif; margin-bottom:8pt; }
+        table.wgrid { width:60%; margin-bottom:8pt; }
+        table.wgrid td { text-align:center; }
+        td.wlbl { font-weight:bold; text-align:left; background:#EDEDED; }
+        td.wclass { font-weight:bold; background:#F6F6F6; }
+        td.wnotes { text-align:left; font-size:8.5pt; font-style:italic; }
+        table.wplan td { font-size:9.0pt; }
+        td.wc { text-align:center; }
+        ol { margin: 0 0 0 14pt; padding: 0; }
+        table.wsign { width:100%; }
+        table.wsign td { border:none; padding:0; font-weight:bold; font-size:11.0pt;
+                 font-family:"Tw Cen MT Condensed Extra Bold","Arial Narrow",sans-serif; }
+      </style></head><body><div class="WordSection1">${b}</div></body></html>`;
   }
 
   // ---------- Slides ----------
@@ -505,71 +762,6 @@
     else if (e.key === " ") { e.preventDefault(); state.revealed = !state.revealed; paintStage(); }
     else if (e.key === "Escape") closeStage();
   });
-
-  // ---------- Word export ----------
-
-  function wordDoc(spec, model) {
-    const pt = fontFor(spec.grade);
-    const li = (items, showAns) => "<ol>" + items.map((it) =>
-      `<li>${mathWord(it.q)}${showAns ? ` <i>(${mathWord(it.a)})</i>` : ""}</li>`).join("") + "</ol>";
-
-    let b = `<p><img src="${LETTERHEAD_DATA_URI}" width="640"></p>`;
-    b += `<p class="title">LESSON PLAN</p>`;
-    b += `<table class="tpl"><tr>` +
-      [["Subject", "Mathematics"], ["Grade", spec.grade + (spec.section || "")], ["Duration", spec.duration]]
-        .map(([k, v]) => `<td class="lbl">${esc(k)}</td><td class="val">${esc(v)}</td>`).join("") +
-      `</tr><tr>` +
-      [["Topic", spec.title], ["Teacher", spec.teacher || "____________"], ["Date", spec.date]]
-        .map(([k, v]) => `<td class="lbl">${esc(k)}</td><td class="val">${esc(v)}</td>`).join("") +
-      `</tr></table>`;
-
-    const bul = (items) => "<ul>" + items.map((t) => `<li>${esc(t)}</li>`).join("") + "</ul>";
-    b += `<p><b>Learning objectives</b></p>` +
-      bul(spec.objectives.length ? spec.objectives : draftObjectives(spec.title));
-    b += `<p><b>Success criteria</b></p>` + bul(spec.criteria.length ? spec.criteria : DRAFT_CRITERIA);
-
-    if (model.concept) {
-      b += `<p><b>Key idea</b></p><p>${esc(model.concept)}</p>`;
-      if (model.tips.length) b += "<ul>" + model.tips.map((t) => `<li>${esc(t)}</li>`).join("") + "</ul>";
-    }
-    if (model.starter.length) b += `<p><b>Starter / retrieval (5 min)</b></p>` + li(model.starter, spec.answers);
-
-    b += `<p><b>Teaching sequence — I do (10 min)</b></p>`;
-    if (model.example.length) b += `<p>${model.example.map(esc).join("<br>")}</p>`;
-    model.examples.forEach((ex, i) => {
-      b += `<p><b>Example ${i + 1}.</b> ${mathWord(ex.q)}</p><ol>` +
-        (ex.sol || []).map((st) => `<li>${mathWord(st.t)} [${esc(st.m)}]</li>`).join("") + `</ol>`;
-      if (spec.answers) b += `<p><i>Answer: ${mathWord(ex.a)}</i></p>`;
-    });
-
-    b += `<p><b>Guided &amp; independent practice — We do / You do (20 min)</b></p>`;
-    [["Support", model.support], ["Core", model.core], ["Challenge", model.challenge]].forEach(([k, items]) => {
-      if (items.length) b += `<p><b>${k}</b></p>` + li(items, spec.answers);
-    });
-
-    b += `<p><b>Plenary / exit ticket (5 min)</b></p>`;
-    b += model.plenary
-      ? `<p>${mathWord(model.plenary.q)}` + (spec.answers ? ` <i>(${mathWord(model.plenary.a)})</i>` : "") + `</p>`
-      : `<p>&nbsp;</p><p>&nbsp;</p>`;
-    if (model.homework.length) b += `<p><b>Homework</b></p>` + li(model.homework, spec.answers);
-    b += `<p>&nbsp;</p><p>Teacher's Signature: ____________________&nbsp;&nbsp;&nbsp; Head of Department: ____________________</p>`;
-
-    return `<html xmlns:o="urn:schemas-microsoft-com:office:office" ` +
-      `xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">` +
-      `<head><meta charset="utf-8"><title>${esc(spec.title)} — Lesson Plan</title>` +
-      `<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml><![endif]-->` +
-      `<style>@page WordSection1 { size: 21.0cm 29.7cm; margin: 1.2cm 1.4cm;
-        mso-page-border-surround-header:no; mso-page-border-surround-footer:no;
-        border: 1pt solid windowtext; padding: 12pt; }
-        div.WordSection1 { page: WordSection1; }
-        body,p,td,th,div,li { font-family:"Comic Sans MS"; font-size:${pt}.0pt; color:#000; }
-        p { margin: 0 0 4pt 0; }
-        table { border-collapse: collapse; } table.tpl { width:100%; }
-        table.tpl td { border:1pt solid windowtext; padding:3pt 5pt; }
-        table.tpl td.lbl { font-weight:bold; }
-        .title { text-align:center; font-weight:bold; font-size:${pt + 2}.0pt; }
-      </style></head><body><div class="WordSection1">${b}</div></body></html>`;
-  }
 
   // ---------- PowerPoint (.pptx) export ----------
 
@@ -784,8 +976,15 @@
       title: typed || t.name || "Lesson",
       section: $("section-input").value.trim(),
       teacher: $("teacher-input").value.trim(),
-      date: $("date-input").value.trim(),
-      duration: $("duration-input").value.trim(),
+      wkStart: $("week-start").value,
+      wkDays: $("wk-days").value.split(",").map((x) => x.trim()),
+      wkClasses: readClasses(),
+      wkTime: Math.max(0, +$("wk-time").value || 0),
+      wkIntro: checkedIn("wk-intro"),
+      wkAids: checkedIn("wk-aids"),
+      wkAidsOther: $("wk-aids-other").value.trim(),
+      wkTools: checkedIn("wk-tools"),
+      wkHome: $("wk-home").value.trim(),
       objectives: linesOf("objectives"),
       criteria: linesOf("criteria"),
       nExamples: Math.max(0, +$("n-examples").value || 0),
@@ -807,8 +1006,9 @@
     }
     sheet.style.setProperty("--sheet-size", fontFor(state.spec.grade) + "pt");
     sheet.classList.toggle("deck-view", state.view === "deck");
+    sheet.classList.toggle("weekly-view", state.view === "weekly");
     if (state.view === "deck") renderDeck(state.spec, state.model, sheet);
-    else renderPlan(state.spec, state.model, sheet);
+    else renderWeekly(state.spec, state.model, sheet);
   }
 
   function generate() {
@@ -818,27 +1018,59 @@
     writeStore(PREF_KEY, {
       teacher: $("teacher-input").value.trim(),
       section: $("section-input").value.trim(),
-      duration: $("duration-input").value.trim()
+      wkDays: $("wk-days").value.trim(),
+      wkHome: $("wk-home").value.trim(),
+      wkIntro: checkedIn("wk-intro"),
+      wkAids: checkedIn("wk-aids"),
+      wkAidsOther: $("wk-aids-other").value.trim(),
+      wkTools: checkedIn("wk-tools")
     });
     state.spec = readSpec();
     state.model = buildModel(state.spec);
     render();
   }
 
+  // The weekly plan prints on A4 landscape and the deck on portrait. An @page
+  // rule cannot be scoped to a class, so the rule itself is swapped instead.
+  function setPageSize(orientation) {
+    let tag = document.getElementById("page-size");
+    if (!tag) {
+      tag = document.createElement("style");
+      tag.id = "page-size";
+      document.head.appendChild(tag);
+    }
+    tag.textContent = orientation === "landscape"
+      ? "@page { size: A4 landscape; margin: 1.25cm 2.5cm 0.75cm 2.5cm; }"
+      : "@page { size: A4 portrait; margin: 1.2cm 1.4cm; }";
+  }
+
+  // Each section shows only the controls and the buttons it actually uses.
   function setView(v) {
     state.view = v;
-    $("view-plan").classList.toggle("active", v === "plan");
-    $("view-deck").classList.toggle("active", v === "deck");
+    const deck = v === "deck";
+    $("view-deck").classList.toggle("active", deck);
+    $("view-weekly").classList.toggle("active", !deck);
+    $("deck-opts").classList.toggle("hidden", !deck);
+    $("weekly-opts").classList.toggle("hidden", deck);
+    $("present").classList.toggle("hidden", !deck);
+    $("download-pptx").classList.toggle("hidden", !deck);
+    $("download-word").classList.toggle("hidden", deck);
+    $("mode-note").textContent = deck
+      ? "A slide deck for one sub-topic — present it, or export it as PowerPoint."
+      : "The department's weekly plan template, filled in from the sub-topic.";
+    setPageSize(deck ? "portrait" : "landscape");
+    document.body.classList.toggle("weekly-print", !deck);
     if (state.spec) render();
   }
 
-  $("view-plan").addEventListener("click", () => setView("plan"));
   $("view-deck").addEventListener("click", () => setView("deck"));
+  $("view-weekly").addEventListener("click", () => setView("weekly"));
   $("grade-select").addEventListener("change", (e) => {
     state.grade = +e.target.value;
     state.track = 0;
     buildTrackSelect();
     buildTopicSelect();
+    buildClassRows();
     loadFields($("topic-select").value, currentTitle());
   });
   $("track-select").addEventListener("change", (e) => {
@@ -856,6 +1088,7 @@
     const dept = deptFields(topic, currentTitle());
     $("objectives").value = dept.objectives.join("\n");
     $("criteria").value = dept.criteria.join("\n");
+    syncAchieved();
     // Forget this teacher's override so the department wording stays next time,
     // including any saved under the older generator-keyed form.
     const all = readStore(FIELD_KEY);
@@ -909,8 +1142,8 @@
   $("download-word").addEventListener("click", () => {
     if (!state.spec) generate();
     if (!state.spec) return;
-    saveBlob(new Blob(["﻿", wordDoc(state.spec, state.model)], { type: "application/msword" }),
-      `AlIPS_Grade${state.spec.grade}_LessonPlan_${state.spec.seed}.doc`);
+    saveBlob(new Blob(["﻿", weeklyWord(state.spec, state.model)], { type: "application/msword" }),
+      `AlIPS_Grade${state.spec.grade}_WeeklyPlan_${state.spec.seed}.doc`);
   });
 
   $("download-pptx").addEventListener("click", (e) => {
@@ -937,9 +1170,27 @@
   const prefs = readStore(PREF_KEY);
   if (prefs.teacher) $("teacher-input").value = prefs.teacher;
   if (prefs.section) $("section-input").value = prefs.section;
-  if (prefs.duration) $("duration-input").value = prefs.duration;
   loadFields($("topic-select").value, currentTitle());
+
+  // Weekly-plan controls. The default week starts on the coming Sunday, which
+  // is the first teaching day of the Omani school week.
+  const today = new Date();
+  today.setDate(today.getDate() + ((7 - today.getDay()) % 7));
+  $("week-start").value = today.toISOString().slice(0, 10);
+  if (prefs.wkDays) $("wk-days").value = prefs.wkDays;
+  if (prefs.wkHome) $("wk-home").value = prefs.wkHome;
+  buildChecks("wk-intro", WK_INTRO, prefs.wkIntro || ["Question"]);
+  buildChecks("wk-aids", WK_AIDS, prefs.wkAids || ["Books", "Board"]);
+  buildChecks("wk-tools", WK_TOOLS, prefs.wkTools || ["Oral work", "Written work"]);
+  if (prefs.wkAidsOther) $("wk-aids-other").value = prefs.wkAidsOther;
+  buildClassRows();
+  $("objectives").addEventListener("input", syncAchieved);
+  $("wk-classes").addEventListener("input", (e) => {
+    // Typing over an auto-filled cell hands it to the teacher for good.
+    if (e.target.classList.contains("wk-cach")) e.target.dataset.auto = "";
+  });
+
   $("seed").value = params.get("seed") || Math.floor(Math.random() * 899999) + 100000;
-  if (params.get("view") === "deck") setView("deck");
+  setView(params.get("view") === "weekly" ? "weekly" : "deck");
   if (params.get("auto")) generate(); else render();
 })();

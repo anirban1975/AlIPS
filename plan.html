@@ -17,7 +17,7 @@
   <header class="topbar no-print">
     <div class="brand">
       <img src="letterhead.png" alt="Al Injaz International Private School" class="letterhead">
-      <p class="brand-sub">Mathematics Department — Lesson Planner &amp; Slides</p>
+      <p class="brand-sub">Mathematics Department — Presentations &amp; Weekly Plans</p>
     </div>
     <div class="controls">
       <a href="index.html" class="nav-btn">Curriculum</a>
@@ -28,13 +28,15 @@
   <div class="gen-layout">
     <aside class="gen-panel no-print">
       <div class="panel-group">
-        <label>Output</label>
+        <label>What are you making?</label>
         <div class="view-toggle">
-          <button id="view-plan" class="toggle-btn active">Lesson plan</button>
-          <button id="view-deck" class="toggle-btn">Slides</button>
+          <button id="view-deck" class="toggle-btn active">Presentation</button>
+          <button id="view-weekly" class="toggle-btn">Weekly plan</button>
         </div>
+        <p class="hint" id="mode-note"></p>
       </div>
 
+      <!-- Shared: which sub-topic -->
       <div class="panel-group">
         <label for="grade-select">Grade</label>
         <select id="grade-select"></select>
@@ -42,24 +44,18 @@
           <label for="track-select">Stream</label>
           <select id="track-select"></select>
         </div>
-        <label for="topic-select">Topic <span class="hint" id="topic-count"></span></label>
+        <label for="topic-select">Sub-topic <span class="hint" id="topic-count"></span></label>
         <select id="topic-select"></select>
         <p class="hint" id="topic-note"></p>
         <label for="lesson-title">Lesson title</label>
-        <input id="lesson-title" type="text" placeholder="auto from topic">
-      </div>
-
-      <div class="panel-group">
-        <label for="section-input">Section / class</label>
-        <input id="section-input" type="text" value="A" maxlength="6">
+        <input id="lesson-title" type="text" placeholder="auto from sub-topic">
         <label for="teacher-input">Teacher</label>
         <input id="teacher-input" type="text" placeholder="Name">
-        <label for="date-input">Date</label>
-        <input id="date-input" type="text" value="___ / ___ / 20___">
-        <label for="duration-input">Duration</label>
-        <input id="duration-input" type="text" value="45 minutes">
+        <label for="section-input">Section / class</label>
+        <input id="section-input" type="text" value="A" maxlength="6">
       </div>
 
+      <!-- Shared: objectives drive both the slides and the weekly grid rows -->
       <div class="panel-group">
         <label>Learning objectives <span class="hint">one per line</span></label>
         <textarea id="objectives" class="field-area" rows="3"></textarea>
@@ -74,17 +70,61 @@
           title="Save all your edited wording to a file you can send to the Head of Department">Export my wording</button>
       </div>
 
+      <!-- Shared: both sections draw their questions from these counts -->
       <div class="panel-group">
-        <label>Lesson content</label>
+        <label>Questions drawn</label>
         <label class="sub" for="n-examples">Worked examples</label>
-        <input id="n-examples" type="number" min="0" max="6" value="2">
+        <input id="n-examples" type="number" min="0" max="6" value="3"
+               title="Slides: one per example. Weekly plan: dealt round the objectives.">
+        <label class="sub" for="n-practice">Practice questions</label>
+        <input id="n-practice" type="number" min="0" max="8" value="3"
+               title="Slides: the “Your turn” set. Weekly plan: the Assessment column.">
+        <label class="check-inline"><input id="show-answers" type="checkbox" checked> Include answers &amp; mark scheme</label>
+      </div>
+
+      <!-- ===== Section 1: Presentation ===== -->
+      <div class="panel-group" id="deck-opts">
+        <label>Slides only</label>
         <label class="sub" for="n-starter">Starter questions</label>
         <input id="n-starter" type="number" min="0" max="8" value="3">
-        <label class="sub" for="n-practice">Practice per level</label>
-        <input id="n-practice" type="number" min="0" max="8" value="3">
         <label class="sub" for="n-home">Homework questions</label>
         <input id="n-home" type="number" min="0" max="15" value="5">
-        <label class="check-inline"><input id="show-answers" type="checkbox" checked> Include answers &amp; mark scheme</label>
+      </div>
+
+      <!-- ===== Section 2: Weekly plan ===== -->
+      <div class="panel-group hidden" id="weekly-opts">
+        <label for="week-start">Week beginning</label>
+        <input id="week-start" type="date">
+        <p class="hint">The three teaching days are filled in from this date.</p>
+
+        <label>Classes and periods</label>
+        <table class="rubric-edit wk-edit" id="wk-classes">
+          <thead><tr><th>Class</th><th>Periods</th><th>Objectives achieved</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <p class="hint">Three periods per class, comma separated — the template
+          allows a lesson up to three periods. Objective numbers are separated
+          by a bar, so one period can reach two (<code>1 | 2 | 2,3</code>).</p>
+
+        <label class="sub" for="wk-days">Teaching days</label>
+        <input id="wk-days" type="text" value="SUN, MON, TUE"
+               title="Three day names, comma separated">
+
+        <label class="sub" for="wk-time">Minutes per objective</label>
+        <input id="wk-time" type="number" min="1" max="60" value="15">
+
+        <label>Introduction</label>
+        <div class="wk-checks" id="wk-intro"></div>
+
+        <label>Educational aids</label>
+        <div class="wk-checks" id="wk-aids"></div>
+        <input id="wk-aids-other" type="text" placeholder="Others — e.g. Pen, Pipes">
+
+        <label>Continuous assessment tools</label>
+        <div class="wk-checks" id="wk-tools"></div>
+        <label class="sub" for="wk-home">Homework</label>
+        <input id="wk-home" type="text" value="Exercise ___ , page ___"
+               title="The template asks for homework at most 3 times a week">
       </div>
 
       <div class="panel-group">
@@ -98,8 +138,8 @@
       <button id="generate" class="primary-btn">Generate</button>
       <button id="present" class="primary-btn present-btn">▶ Present full screen</button>
       <button id="print" class="primary-btn secondary">Print / Save as PDF</button>
-      <button id="download-word" class="primary-btn word">⬇ Lesson plan as Word</button>
-      <button id="download-pptx" class="primary-btn pptx">⬇ Slides as PowerPoint</button>
+      <button id="download-pptx" class="primary-btn pptx">⬇ Presentation as PowerPoint</button>
+      <button id="download-word" class="primary-btn word">⬇ Weekly plan as Word</button>
       <p class="panel-note" id="panel-note">Drafts are a starting point — review and
         adapt before teaching.</p>
     </aside>

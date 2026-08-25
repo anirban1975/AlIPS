@@ -5,7 +5,7 @@ Interactive math app for grades 1–12 at Al Injaz International Private School
 curriculum. **The app is English-only** — Arabic was removed at the
 department's request (v0.4). Do not re-introduce bilingual strings.
 
-## Current state (v1.6)
+## Current state (v1.7)
 
 - `index.html` / `app.js` — curriculum browser: grades 1–12 → stream → strands →
   topics, built from the department's Annual Syllabus 2026-27. Stream selector
@@ -16,8 +16,9 @@ department's request (v0.4). Do not re-introduce bilingual strings.
   exam-paper generator built to the department's Word templates
 - `topics.js` — the syllabus topic list and topic→generator matching, shared by
   the planner and the worksheet generator so both offer the same topics
-- `plan.html` / `plan.css` / `plan.js` — teacher tool: lesson planner and
-  slide deck (present mode, Word and PowerPoint export)
+- `plan.html` / `plan.css` / `plan.js` — teacher tool, two sections: a
+  **presentation** per sub-topic (present mode, PowerPoint export) and the
+  department's **weekly plan** template (print and Word export)
 - `zip.js` — minimal STORE-method ZIP writer, used to build a real `.pptx`
   in the browser with no library and no build step
 - `gen.js` — question engine: seeded RNG (`mulberry32`) + 182 generators in
@@ -190,10 +191,18 @@ and `DEFAULT_BANDS` in `sheet.js` are only starting values.
 - **"Save these settings as my default"** persists rubrics and options to
   `localStorage` under `alips-teacher-defaults`, per teacher, per browser.
 
-## Lesson Planner (v1.2)
+## Lesson Planner — two sections (v1.7)
 
-`plan.html` drafts a lesson from one topic and renders it two ways from a single
-model, so the printed plan and the presented slides always match.
+`plan.html` has **two sections**, both built from one model of the chosen
+sub-topic, so the slides a teacher presents and the plan they hand in always
+contain the same questions:
+
+1. **Presentation** — a slide deck for one sub-topic: on screen as cards, full
+   screen for the projector (← → to move, Space to reveal), and a real `.pptx`.
+2. **Weekly plan** — the department's own template, reproduced exactly.
+
+`setView()` swaps the panel controls, the buttons and the print page size; the
+grade, stream, sub-topic, objectives and question counts are shared by both.
 
 **The topic list is the curriculum, not the generator list.** All 896 syllabus
 sub-topics are selectable, grouped by strand; Grades 10-12 get a **Stream**
@@ -246,10 +255,6 @@ A topic with no generator still produces a full plan — objectives, success
 criteria, the syllabus's own description as the key idea, resource links, and
 ruled space for the teacher to write the examples and tasks in.
 
-- **Lesson plan** — objectives, success criteria, key idea, starter, I-do worked
-  examples with mark-scheme steps, differentiated practice (Support / Core /
-  Challenge), plenary, homework, resources, signature line. Prints, or exports
-  to Word.
 **Objectives and success criteria come in three layers**, highest first:
 
 1. **This teacher's saved wording** — `localStorage`, key `alips-lesson-fields`,
@@ -267,9 +272,9 @@ writes a readable file of everything this teacher has reworded, for the HOD to
 review and possibly fold into `DEPT_FIELDS`. Teacher name / section / duration
 persist under `alips-planner-prefs`.
 
-- **Slides** — the same content as 16:9 cards. **Present full screen** gives a
-  classroom projector view (← → to move, Space to reveal answers, Esc to exit).
-  **Slides as PowerPoint** writes a real `.pptx`.
+- **Presentation** — 16:9 cards. **Present full screen** gives a classroom
+  projector view (← → to move, Space to reveal answers, Esc to exit).
+  **Presentation as PowerPoint** writes a real `.pptx`.
 
 The `.pptx` is assembled part by part (content types, rels, presentation,
 slide master, layout, theme, slides) and zipped by `zip.js`. Verified with
@@ -302,6 +307,69 @@ model object, so a given paper number produces identical questions in both.
   `1/2` — use `frac()`.
 - Same seed ⇒ identical paper ("Paper no." printed on every sheet), so teachers
   can reprint or share a paper by its number.
+
+## The weekly plan is a Ministry form — match it exactly (v1.7)
+
+Source: the department's `example_of_lesson_plan.docx`. It is an Oman Ministry
+of Education form, not a design of ours, so **the wording, the column order and
+the grid shape are fixed**. Do not "improve" them.
+
+**Page:** A4 **landscape**, margins 1.25cm top / 2.5cm sides / 0.75cm bottom.
+An `@page` rule cannot be scoped to a class, so `setPageSize()` in `plan.js`
+swaps the rule itself when the section changes — otherwise the presentation
+would print on its side too. The form carries **no page border**, unlike the
+worksheets, so `.weekly-view` drops the `.sheet` border and hides `.page-frame`.
+
+**Title:** `Lesson Plan for Mathematics`, centred, bold, 18 pt.
+
+**Week grid** — label column, then one block of three periods per class:
+
+```
+Class               | 5\1                    | 5\2
+Day & Date          | SAT .. | SUN .. | MON ..| SAT .. | SUN .. | MON ..
+Period              | 1st    | 3rd    | 6th   | 2nd    | 1st    | 5th
+Objectives achieved | 1      | 2      | 2,3   | 1      | 2      | 2,3
+(spanning note) ♦ A lesson should be covered in maximum 3 periods (not days)
+                ♦ In grade (1-4): One objective can be achieved in 2-4 periods
+```
+
+The original is a right-to-left table (`bidiVisual`), which *displays* with the
+row label on the left — that display order is what is reproduced, LTR.
+Because a single period can reach two objectives ("2,3"), the panel separates
+the **Objectives achieved** cells with a **bar**, not a comma; periods still
+separate on commas.
+
+**Then:** `Title: ………………..`, `Introduction:` and its six tick options
+(Activity / Experiment / Story / Game / Question / Drawing a diagram).
+
+**Planning grid** — seven columns, in this order and at these widths
+(the template's own proportions, `WK_COLS` / `WK_W` in `plan.js`):
+
+| Objectives | Strategies & Activities | Time | Educational aids | Assessment | Continuous assessment tools | Remarks |
+|---|---|---|---|---|---|---|
+| 20.0% | 21.8% | 7.5% | 11.5% | 14.6% | 11.8% | 12.7% |
+
+**One row per objective.** The template's own guidance is to "write each
+Example\Activity corresponding to objective wanted to achieved", so
+`buildWeekly()` deals the worked examples and the practice questions round the
+objectives — every row carries something, none is left empty while another has
+three. The Objectives column opens with the template's stem, *"The student
+should be able to:"*. **Educational aids** and **Continuous assessment tools**
+are chosen once for the lesson, so they are written in the first row and
+`rowSpan` the rest, as a teacher filling the paper form by hand would.
+
+The tick lists (`WK_INTRO`, `WK_AIDS`, `WK_TOOLS`) are the template's own, and
+the panel checkboxes are built from the same arrays that print, so the two
+cannot drift.
+
+**Footer:** the four signature lines — Teacher's / Senior teacher's /
+Supervisor's / Principle's. ("Principle" is the template's spelling; keep it.)
+Word ignores flexbox, so the Word export lays that row out as a borderless
+table, the same trick `layRow()` uses in `sheet.js`.
+
+A sub-topic with no generator still produces the whole form, with the
+Strategies and Assessment cells left blank for the teacher to write in — which
+is exactly what the paper template expects.
 
 ## Difficulty must change the question, not just the numbers
 
@@ -340,7 +408,7 @@ No test suite. Verify visually with headless Chromium:
 
 URL params: `grade` (1–12), `mode` (worksheet/exam), `seed`, `auto=1`,
 `count`, `space`, `questions`, `parts`, `reward=0`, `answers=0`,
-`view` (student/teacher on the browser; plan/deck on the planner), `topic`.
+`view` (`deck` or `weekly` on the planner), `topic`.
 Check the printed border by exporting a PDF and looking for one full-page
 stroked rectangle per page:
 `chromium --headless --print-to-pdf=out.pdf --no-pdf-header-footer "<url>"`.
@@ -385,6 +453,8 @@ user and git-ignored.
    guided-learning/practice page removed~~ — done
 7. ~~v1.6 Every syllabus sub-topic reaches a generator; Student view and
    monthwise segregation removed~~ — done
-8. Editable starter/plenary text and per-topic keyword lists
-9. Diagram-bearing generators (constructions, histograms, transformations
-   drawn on a printed grid)
+8. ~~v1.7 Lesson planner split into Presentation and the department's own
+   weekly plan template~~ — done
+9. Editable starter/plenary text and per-topic keyword lists
+10. Diagram-bearing generators (constructions, histograms, transformations
+    drawn on a printed grid)
