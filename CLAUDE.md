@@ -16,9 +16,11 @@ department's request (v0.4). Do not re-introduce bilingual strings.
   exam-paper generator built to the department's Word templates
 - `topics.js` — the syllabus topic list and topic→generator matching, shared by
   the planner and the worksheet generator so both offer the same topics
-- `plan.html` / `plan.css` / `plan.js` — teacher tool, two sections: a
-  **presentation** per sub-topic (present mode, PowerPoint export) and the
-  department's **weekly plan** template (print and Word export)
+- `plan.html` / `plan.css` / `plan.js` — teacher tool, three sections:
+  **1 Preparing PPT** (a deck per sub-topic, present mode, PowerPoint export,
+  and links out to Canva, Figma, Gemini and Brisk), **2 Interactive
+  simulation** (the simulator on the main stage, plus video searches), and
+  **3 Weekly plan** (the department's template, print and Word export)
 - `zip.js` — minimal STORE-method ZIP writer, used to build a real `.pptx`
   in the browser with no library and no build step
 - `gen.js` — question engine: seeded RNG (`mulberry32`) + 182 generators in
@@ -26,9 +28,12 @@ department's request (v0.4). Do not re-introduce bilingual strings.
 - `lessons.js` — topic content library (concept, worked example, key points,
   resource links, and the `sim` attribute naming the topic's simulator) used to
   draft lesson plans and slides
-- `sims.js` — the interactive simulators: 29 manipulatives drawn with the
-  browser's own SVG (no library, no internet, no account), opened from the
-  Lesson Planner's simulator card
+- `sims.js` — the interactive simulators for Grades 5-12: 29 manipulatives
+  drawn with the browser's own SVG (no library, no internet, no account),
+  driven by sliders and selects
+- `sims-kids.js` — the Grade 1-4 simulators: 11 manipulatives a child moves by
+  hand (counters, coins, biscuits, cubes), each with Explore, Play and
+  step-by-step modes, stars, a streak and browser-made sound
 - `data.js` — curriculum dataset and UI strings (`UI_STRINGS`), transcribed from
   the seventeen annual plan documents. `TRACKS` holds each syllabus once (with
   its course book and the month each topic is taught), `GRADE_TRACKS` says which
@@ -297,11 +302,32 @@ Which simulator a sub-topic gets is decided in two steps, in `lessons.js`:
    twelve that do not (mock examinations, past-paper booklets, the complex
    plane, polar form) still get the links out.
 
-`simulatorsFor(generatorId, subTopicName)` in `lessons.js` is the single entry
-point and returns `{ builtIn, links }`. To add a simulator: write it in
-`sims.js` (`name`, a one-line `blurb` a teacher can read aloud, and
+`simulatorsFor(generatorId, subTopicName, grade)` in `lessons.js` is the single
+entry point and returns `{ builtIn, links, videos }`. To add a simulator: write
+it in `sims.js` (`name`, a one-line `blurb` a teacher can read aloud, and
 `mount(host, opts)` that fills the host), then point topics at it — by `sim` on
 the lesson, by a `SIM_KEYWORDS` row, or both.
+
+**Grades 1 to 4 are served different simulators.** A slider is no instrument
+for a six-year-old, so `sims-kids.js` holds eleven built from things a child
+picks up: ten frames, a number track, tens and ones, arrays, sharing biscuits,
+fractions of a shape, Omani coins, clock hands, sorting shapes, measuring with
+cubes, and a pictogram. Every one has three modes — Explore, Play (a question,
+a star, a streak) and step-by-step for the board — and every one takes both a
+drag and a tap-then-tap, because a drag misfires on an interactive whiteboard.
+Sound is made by the browser (`AudioContext`, no files) and the mute is
+remembered under `alips-sim-muted`.
+
+The grade decides: `simulatorsFor` tries `KID_SIM` (by generator id) then
+`KID_KEYWORDS` (by sub-topic wording) whenever the grade is 4 or below, and
+falls through to the senior simulators when neither matches — which is why a
+Grade 3 lesson on position still gets the senior grid. 202 of the 226 Grade 1-4
+sub-topic entries reach a junior simulator; the rest land on a senior one that
+suits them. `#sim-pick` in the panel lists every simulator in both files, so a
+teacher can override the match in either direction.
+
+Video links are searches (`videoLinks()`), never pinned ids — same rule as the
+research links, and the panel says so.
 
 - **Presentation** — 16:9 cards. **Present full screen** gives a classroom
   projector view (← → to move, Space to reveal answers, Esc to exit).

@@ -38,7 +38,8 @@
 
   const state = { view: "deck", grade: 5, track: 0, topic: null, topics: [],
                   model: null, spec: null, slide: 0, revealed: false,
-                  wkEdits: {} };   // what the teacher has typed on the weekly form
+                  wkEdits: {},
+                  simPick: null };   // a simulator the teacher chose by hand   // what the teacher has typed on the weekly form
 
   // Topic list and generator matching live in topics.js, shared with the
   // worksheet generator so both tools offer exactly the same topics.
@@ -291,9 +292,57 @@
   // The card is rebuilt whenever the chosen sub-topic changes.
 
   function simInfoFor(topicKey) {
-    if (typeof simulatorsFor !== "function") return { builtIn: null, links: [] };
+    if (typeof simulatorsFor !== "function") return { builtIn: null, links: [], videos: [] };
     const t = topicByKey(topicKey);
-    return simulatorsFor(t ? t.gen : null, t ? t.name : currentTitle());
+    // The grade decides which simulator a sub-topic gets: Grades 1-4 are served
+    // the junior ones, which are dragged rather than driven by sliders.
+    const info = simulatorsFor(t ? t.gen : null, t ? t.name : currentTitle(), state.grade);
+    if (state.simPick) {                       // the teacher chose one by hand
+      const [engine, id] = state.simPick.split(":");
+      const reg = engine === "kids" ? (typeof KIDS !== "undefined" ? KIDS : null)
+                                    : (typeof SIMS !== "undefined" ? SIMS : null);
+      if (reg && reg.has(id)) {
+        const def = reg.get(id);
+        info.builtIn = { id, name: def.name, blurb: def.blurb, opts: {},
+                         matched: "chosen", engine, junior: engine === "kids" };
+      }
+    }
+    return info;
+  }
+
+  // Everything the planner has, so a teacher can reach for a simulator the
+  // matcher would not have picked — a Grade 6 class that needs the ten frames
+  // again, or a Grade 2 class ready for the number line.
+  function buildSimPicker() {
+    const sel = $("sim-pick");
+    if (!sel) return;
+    sel.innerHTML = "";
+    const auto = el("option", "", "Best match for this sub-topic");
+    auto.value = "";
+    sel.appendChild(auto);
+    const add = (label, reg, engine) => {
+      if (typeof reg === "undefined" || !reg) return;
+      const g = document.createElement("optgroup");
+      g.label = label;
+      Object.keys(reg.list).forEach((id) => {
+        const o = el("option", "", reg.list[id].name);
+        o.value = engine + ":" + id;
+        g.appendChild(o);
+      });
+      sel.appendChild(g);
+    };
+    add("Grades 1-4 — drag, play and score", typeof KIDS !== "undefined" ? KIDS : null, "kids");
+    add("Grades 5-12 — sliders and graphs", typeof SIMS !== "undefined" ? SIMS : null, "sims");
+    sel.value = state.simPick || "";
+  }
+
+  // Put the chosen simulator into `host`, whichever engine it belongs to.
+  function mountSim(host, info) {
+    if (!info || !info.builtIn || !host) return false;
+    const reg = info.builtIn.engine === "kids" ? (typeof KIDS !== "undefined" ? KIDS : null)
+                                               : (typeof SIMS !== "undefined" ? SIMS : null);
+    if (!reg) return false;
+    return reg.mount(host, info.builtIn.id, info.builtIn.opts);
   }
 
   function renderSimCard(topicKey) {
@@ -302,15 +351,19 @@
     card.textContent = "";
     const info = simInfoFor(topicKey);
     if (info.builtIn) {
-      card.appendChild(el("h4", "", info.builtIn.name));
+      const head = el("h4", "", info.builtIn.name);
+      if (info.builtIn.junior) head.appendChild(el("span", "sim-tag", "Grades 1-4"));
+      card.appendChild(head);
       card.appendChild(el("p", "sim-blurb", info.builtIn.blurb));
-      const open = el("button", "sim-open", "▶ Open the simulator");
+      const open = el("button", "sim-open", "▶ Open full screen");
       open.type = "button";
       open.addEventListener("click", () => openSim(topicKey));
       card.appendChild(open);
-      card.appendChild(el("p", "sim-offline", info.builtIn.matched === "keyword"
-        ? "Closest simulator for this sub-topic. Runs in this browser — no internet, no sign-in."
-        : "Runs in this browser — no internet and no sign-in needed."));
+      card.appendChild(el("p", "sim-offline", info.builtIn.junior
+        ? "Drag things, play for stars, or run it step by step. Works in this browser with no internet."
+        : info.builtIn.matched === "keyword"
+          ? "Closest simulator for this sub-topic. Runs in this browser — no internet, no sign-in."
+          : "Runs in this browser — no internet and no sign-in needed."));
     } else {
       card.appendChild(el("p", "sim-blurb",
         "No built-in simulator for this sub-topic yet — these libraries have one."));
@@ -326,14 +379,47 @@
       });
       card.appendChild(row);
     }
+    const vids = $("sim-videos");
+    if (vids) {
+      vids.textContent = "";
+      (info.videos || []).forEach((l) => {
+        const a = el("a", "", l.label);
+        a.href = l.url;
+        a.target = "_blank";
+        a.rel = "noopener";
+        vids.appendChild(a);
+      });
+    }
+    if (state.view === "sim") renderSimStage();
+  }
+
+  // Section 2 puts the simulator itself in the main area, at the size a class
+  // can see, rather than hiding it behind a button.
+  function renderSimStage() {
+    const sheet = $("sheet");
+    if (!sheet || state.view !== "sim") return;
+    sheet.innerHTML = "";
+    sheet.className = "sheet sim-view";
+    sheet.style.removeProperty("--sheet-size");
+    const info = simInfoFor($("topic-select").value);
+    const head = el("div", "sim-stage-head");
+    head.appendChild(el("h3", "", info.builtIn ? info.builtIn.name : "No simulator for this sub-topic"));
+    head.appendChild(el("p", "", currentTitle()));
+    sheet.appendChild(head);
+    const host = el("div", "sim-stage-host");
+    sheet.appendChild(host);
+    if (!mountSim(host, info)) {
+      host.appendChild(el("p", "placeholder-hint",
+        "Nothing built in for this one yet — the links in the panel have a simulator for it."));
+    }
   }
 
   function openSim(topicKey) {
     const info = simInfoFor(topicKey);
-    if (!info.builtIn || typeof SIMS === "undefined") return;
+    if (!info.builtIn) return;
     $("sim-modal-title").textContent = info.builtIn.name;
     $("sim-modal-topic").textContent = currentTitle();
-    SIMS.mount($("sim-host"), info.builtIn.id, info.builtIn.opts);
+    mountSim($("sim-host"), info);
     $("sim-modal").classList.remove("hidden");
     $("sim-modal").setAttribute("aria-hidden", "false");
   }
@@ -1147,7 +1233,9 @@
 
   function render() {
     const sheet = $("sheet");
+    if (state.view === "sim") { renderSimStage(); return; }
     sheet.innerHTML = "";
+    sheet.className = "sheet";
     if (!state.spec) {
       sheet.style.removeProperty("--sheet-size");
       sheet.appendChild(el("p", "placeholder-hint", "Choose a grade and topic, then press Generate."));
@@ -1198,24 +1286,45 @@
   // Each section shows only the controls and the buttons it actually uses.
   function setView(v) {
     state.view = v;
-    const deck = v === "deck";
+    const deck = v === "deck", sim = v === "sim", weekly = v === "weekly";
     $("view-deck").classList.toggle("active", deck);
-    $("view-weekly").classList.toggle("active", !deck);
+    $("view-sim").classList.toggle("active", sim);
+    $("view-weekly").classList.toggle("active", weekly);
+    $("ppt-opts").classList.toggle("hidden", !deck);
     $("deck-opts").classList.toggle("hidden", !deck);
-    $("weekly-opts").classList.toggle("hidden", deck);
+    $("sim-opts").classList.toggle("hidden", !sim);
+    $("weekly-opts").classList.toggle("hidden", !weekly);
+    // The lesson wording and the question counts belong to the deck and the
+    // weekly plan; the simulator needs neither.
+    $("fields-opts").classList.toggle("hidden", sim);
+    $("questions-opts").classList.toggle("hidden", sim);
+    $("generate").classList.toggle("hidden", sim);
+    $("print").classList.toggle("hidden", sim);
     $("present").classList.toggle("hidden", !deck);
     $("download-pptx").classList.toggle("hidden", !deck);
-    $("download-word").classList.toggle("hidden", deck);
+    $("download-word").classList.toggle("hidden", !weekly);
     $("mode-note").textContent = deck
-      ? "A slide deck for one sub-topic — present it, or export it as PowerPoint."
+      ? "A slide deck for one sub-topic — present it, export it as PowerPoint, then finish it in Canva or Figma."
+      : sim
+      ? "A simulator for the board. Grades 1-4 get the junior version: drag, play for stars, or run it step by step."
       : "The department's weekly plan template, filled in from the sub-topic.";
-    setPageSize(deck ? "portrait" : "landscape");
-    document.body.classList.toggle("weekly-print", !deck);
-    if (state.spec) render();
+    $("panel-note").textContent = sim
+      ? "Nothing here is printed — a simulator is for the screen."
+      : "Drafts are a starting point — review and adapt before teaching.";
+    setPageSize(weekly ? "landscape" : "portrait");
+    document.body.classList.toggle("weekly-print", weekly);
+    if (sim) renderSimStage();
+    else if (state.spec) render();
+    else render();
   }
 
   $("view-deck").addEventListener("click", () => setView("deck"));
+  $("view-sim").addEventListener("click", () => setView("sim"));
   $("view-weekly").addEventListener("click", () => setView("weekly"));
+  $("sim-pick").addEventListener("change", (e) => {
+    state.simPick = e.target.value || null;
+    renderSimCard($("topic-select").value);
+  });
 
   // Typing anywhere on the weekly form is kept against this sub-topic.
   $("sheet").addEventListener("input", (e) => {
@@ -1228,6 +1337,8 @@
   });
   $("grade-select").addEventListener("change", (e) => {
     state.grade = +e.target.value;
+    state.simPick = null;             // the junior/senior choice follows the grade
+    if ($("sim-pick")) $("sim-pick").value = "";
     state.track = 0;
     buildTrackSelect();
     buildTopicSelect();
@@ -1348,6 +1459,7 @@
   if (params.get("track")) state.track = +params.get("track") || 0;
   buildGradeSelect();
   buildTrackSelect();
+  buildSimPicker();
   if (params.get("topic")) state.topic = params.get("topic");
   buildTopicSelect();
   const prefs = readStore(PREF_KEY);
@@ -1376,6 +1488,7 @@
   });
 
   $("seed").value = params.get("seed") || Math.floor(Math.random() * 899999) + 100000;
-  setView(params.get("view") === "weekly" ? "weekly" : "deck");
+  const wanted = params.get("view");
+  setView(wanted === "weekly" || wanted === "sim" ? wanted : "deck");
   if (params.get("auto")) generate(); else render();
 })();

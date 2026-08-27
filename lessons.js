@@ -407,21 +407,117 @@ function simByKeyword(name) {
   return null;
 }
 
+// ---------------------------------------------------------------------------
+// Grades 1 to 4 get different simulators.
+//
+// A slider is a poor instrument for a six-year-old. The junior simulators in
+// sims-kids.js are built from things a child picks up and puts somewhere —
+// counters, coins, biscuits, cubes — and each one has a Play mode with a
+// question and a star, and a step-by-step mode for the board. Below, the
+// generator-backed primary topics are pointed at one by name; everything else
+// is matched from the sub-topic's own wording, as with the senior simulators.
+// ---------------------------------------------------------------------------
+
+const KID_GRADE_MAX = 4;
+
+const KID_SIM = {
+  addWithin20:        ["tenFrame", {}],
+  subWithin20:        ["numberTrack", { max: 20 }],
+  missingNumber:      ["numberTrack", { max: 20 }],
+  placeValue:         ["tensOnes", {}],
+  columnAdd:          ["tensOnes", {}],
+  columnSub:          ["tensOnes", {}],
+  timesTables:        ["arrayBuild", {}],
+  divisionRemainder:  ["shareOut", {}],
+  fractionOfAmount:   ["fractionShape", {}],
+  equivalentFractions:["fractionShape", {}],
+  addFractions:       ["fractionShape", {}],
+  areaPerimeterRect:  ["arrayBuild", {}],
+  meanOfNumbers:      ["pictoKids", {}]
+};
+
+const KID_KEYWORDS = [
+  [/clock|\btime\b|hour|minute|o.clock|half past|timetable|calendar|days, weeks|duration|how long/, "clockKids", {}],
+  [/money|coin|note|baisa|rial|price|shopping|change|making amounts/, "coinPurse", {}],
+  [/pictogram|tally|block graph|bar chart|chart|table|graph|\bdata\b|survey|venn|carroll|sorting information/,
+    "pictoKids", {}],
+  [/shape|circle|square|triangle|rectangle|polygon|symmetr|3d|2d|solid|\bnet|corner|side|sort/, "shapeSort", {}],
+  [/length|measur|metre|centimetre|\bmass\b|weigh|capacity|litre|longer|shorter|taller|heavier|compare.*size|estimate/,
+    "measureUp", {}],
+  [/fraction|halves|\bhalf\b|quarter|third|equal part|whole|parts and wholes/, "fractionShape", {}],
+  [/divi(de|sion|sib)|shar(e|ing)|equal group|group|remainder/, "shareOut", {}],
+  [/multipl|times table|array|repeated addition|double|lots of|groups of|\bfactor/, "arrayBuild", {}],
+  [/place value|tens and ones|hundred|thousand|digit|partition|column|round|two.digit|three.digit|decimal/,
+    "tensOnes", {}],
+  [/number bond|make ten|pairs that total|complement|total|\bsum\b|addition fact/, "tenFrame", {}],
+  [/counting on|counting back|number line|number track|one more|one less|order|compar|larger|smaller|before|after|\bodd\b|even|position of/,
+    "numberTrack", { max: 20 }],
+  [/subtract|take away|taking away|difference|minus/, "numberTrack", { max: 20 }],
+  [/add|plus|missing number|equation|inverse/, "tenFrame", {}],
+  [/count|number|how many|first, second|ordinal|numeral|trac(e|ing)|writing numbers/, "tenFrame", {}]
+];
+
+function kidSimFor(id, name) {
+  if (id && KID_SIM[id]) return { use: KID_SIM[id][0], opts: KID_SIM[id][1], matched: "topic" };
+  const s = String(name || "").toLowerCase();
+  for (let i = 0; i < KID_KEYWORDS.length; i++) {
+    if (KID_KEYWORDS[i][0].test(s))
+      return { use: KID_KEYWORDS[i][1], opts: KID_KEYWORDS[i][2], matched: "keyword" };
+  }
+  return null;
+}
+
+// Watch-first resources. Searches, never pinned video ids — a search still
+// works in a year, and nothing unvetted ever plays by itself in a classroom.
+function videoLinks(q, junior) {
+  const enc = encodeURIComponent;
+  if (!q) return [];
+  return junior
+    ? [
+        { label: "▶ YouTube", url: `https://www.youtube.com/results?search_query=${enc(q + " for kids")}` },
+        { label: "▶ Numberblocks / songs", url: `https://www.youtube.com/results?search_query=${enc(q + " song for children")}` },
+        { label: "Khan Academy Kids", url: `https://www.khanacademy.org/search?page_search_query=${enc(q)}` }
+      ]
+    : [
+        { label: "▶ YouTube", url: `https://www.youtube.com/results?search_query=${enc(q + " maths")}` },
+        { label: "▶ Math Antics", url: `https://www.youtube.com/results?search_query=${enc("math antics " + q)}` },
+        { label: "Khan Academy", url: `https://www.khanacademy.org/search?page_search_query=${enc(q)}` }
+      ];
+}
+
 // What the planner should offer for one sub-topic: the built-in simulator (null
-// only if nothing matches, or sims.js has not loaded), whether it was chosen
-// for the topic or matched from its wording, and the links out.
-function simulatorsFor(id, fallbackName) {
+// only if nothing matches, or the simulator files have not loaded), whether it
+// was chosen for the topic or matched from its wording, the links out, and the
+// videos. Grades 1 to 4 are served the junior simulators first.
+function simulatorsFor(id, fallbackName, grade) {
   const L = (id && typeof LESSONS !== "undefined" && LESSONS[id]) || null;
   const q = (L && L.q) || fallbackName || "";
+  const junior = !!grade && grade <= KID_GRADE_MAX;
+
+  if (junior && typeof KIDS !== "undefined") {
+    const kid = kidSimFor(id, fallbackName);
+    if (kid && KIDS.has(kid.use)) {
+      const def = KIDS.get(kid.use);
+      return {
+        builtIn: { id: kid.use, name: def.name, blurb: def.blurb, opts: kid.opts || {},
+                   matched: kid.matched, engine: "kids", junior: true },
+        links: q ? SIM_SITES.map((s) => ({ label: s.label, url: s.url(q) })) : [],
+        videos: videoLinks(q, true)
+      };
+    }
+  }
+
   let sim = L && L.sim ? L.sim : null;
   let matched = "topic";
   if (!sim) { sim = simByKeyword(fallbackName); matched = "keyword"; }
   const def = sim && typeof SIMS !== "undefined" && SIMS.has(sim.use) ? SIMS.get(sim.use) : null;
   return {
     builtIn: def
-      ? { id: sim.use, name: def.name, blurb: def.blurb, opts: sim.opts || {}, matched }
+      ? { id: sim.use, name: def.name, blurb: def.blurb, opts: sim.opts || {}, matched,
+          engine: "sims", junior: false }
       : null,
-    links: q ? SIM_SITES.map((s) => ({ label: s.label, url: s.url(q) })) : []
+    links: q ? SIM_SITES.map((s) => ({ label: s.label, url: s.url(q) })) : [],
+    videos: videoLinks(q, junior)
   };
 }
 
