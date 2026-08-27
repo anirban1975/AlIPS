@@ -331,3 +331,196 @@
 @media print {
   .sheet.weekly-view .wk-editable { outline: none; background: none; }
 }
+
+/* ---------- Interactive simulators ----------
+   The card sits in the planning panel; opening a simulator lifts it into an
+   overlay big enough for the projector. Everything here is screen-only — a
+   simulator has no place on a printed Ministry form. */
+
+.sim-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+  padding: 10px 12px;
+  margin-top: 6px;
+}
+.sim-card h4 {
+  font-size: 0.86rem;
+  color: var(--primary);
+  margin-bottom: 2px;
+}
+.sim-card .sim-blurb {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  margin-bottom: 8px;
+}
+.sim-card .sim-open {
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--primary);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.sim-card .sim-open:hover { background: #17497f; }
+.sim-card .sim-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.sim-card .sim-links a {
+  font-size: 0.72rem;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--primary);
+  text-decoration: none;
+  background: var(--paper);
+}
+.sim-card .sim-links a:hover { background: var(--primary-soft); }
+.sim-card .sim-offline {
+  font-size: 0.7rem;
+  color: var(--ink-soft);
+  margin-top: 8px;
+}
+
+/* The overlay the simulator opens into. */
+.sim-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(16, 24, 38, 0.62);
+}
+.sim-modal.hidden { display: none; }
+.sim-modal-box {
+  width: min(980px, 100%);
+  max-height: 92vh;
+  overflow: auto;
+  background: var(--card);
+  border-radius: 14px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.34);
+}
+.sim-modal-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 2px solid var(--primary);
+}
+.sim-modal-head h3 { font-size: 1.05rem; color: var(--primary); }
+.sim-modal-head .sim-topic { font-size: 0.82rem; color: var(--ink-soft); flex: 1; }
+.sim-modal-close {
+  border: 0;
+  background: var(--paper);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font: inherit;
+  cursor: pointer;
+}
+.sim-modal-close:hover { background: var(--primary-soft); }
+.sim-host { padding: 16px 18px 20px; }
+
+/* ---------- inside a simulator ---------- */
+.sim-body { display: flex; flex-direction: column; gap: 12px; }
+.sim-ctrls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 8px 18px;
+}
+.sim-ctrl { display: flex; align-items: center; gap: 8px; }
+.sim-lab { font-size: 0.8rem; color: var(--ink-soft); min-width: 9ch; }
+.sim-range { flex: 1; min-width: 90px; accent-color: var(--primary); }
+.sim-val {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  min-width: 4ch;
+  text-align: end;
+}
+.sim-select, .sim-btn {
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  cursor: pointer;
+}
+.sim-btn:hover, .sim-select:hover { background: var(--primary-soft); }
+.sim-note { font-size: 0.76rem; color: var(--ink-soft); }
+.sim-stage {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 6px;
+}
+.sim-svg { display: block; width: 100%; height: auto; touch-action: none; }
+.sim-read {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  padding: 10px 12px;
+  border-inline-start: 3px solid var(--primary);
+  background: var(--primary-soft);
+  border-radius: 0 8px 8px 0;
+}
+
+/* Drawing parts, shared by every simulator so the colours mean the same
+   thing wherever a teacher sees them. */
+/* Labels are drawn on top of the shapes, so they must never swallow a click
+   or a drag meant for the handle underneath. */
+.sim-svg text { pointer-events: none; user-select: none; }
+.sim-svg .sim-t { font: 600 15px "Segoe UI", Tahoma, Arial, sans-serif; fill: var(--ink); }
+.sim-svg .sim-t.bold { font-weight: 700; }
+.sim-svg .sim-t.soft { fill: var(--ink-soft); font-weight: 400; font-size: 13px; }
+.sim-svg .sim-t.small { font-size: 12px; fill: #fff; }
+.sim-svg .sim-t.big { font-size: 19px; }
+.sim-svg .sim-t.huge { font-size: 30px; }
+.sim-svg .sim-axis { stroke: #46536b; stroke-width: 2; fill: none; }
+.sim-svg .sim-grid { stroke: #e7ebf2; stroke-width: 1; }
+.sim-svg .sim-arc { stroke: var(--primary); stroke-width: 3; fill: none; }
+.sim-svg .sim-ray { stroke: var(--primary); stroke-width: 5; }
+.sim-svg .sim-fill { fill: var(--primary); }
+.sim-svg .sim-fill-soft { fill: #cfd8e6; }
+.sim-svg .sim-dot { fill: var(--primary); }
+.sim-svg .sim-dot-open { fill: #fff; stroke: var(--primary); stroke-width: 3; }
+.sim-svg .sim-dot-warn { fill: var(--accent); }
+.sim-svg .sim-cell { fill: #d9e6f6; stroke: var(--primary); stroke-width: 1.5; }
+.sim-svg .sim-col { fill: #fbfcfe; stroke: var(--line); stroke-width: 2; }
+.sim-svg .sim-group { fill: #eef4fc; stroke: var(--primary); stroke-width: 2; rx: 8; }
+.sim-svg .sim-group-left { fill: #fdf3e2; stroke: var(--accent); stroke-width: 2; stroke-dasharray: 6 4; }
+.sim-svg .sim-bar-a { fill: #7fb1e6; stroke: #fff; stroke-width: 1; }
+.sim-svg .sim-bar-b { fill: #8fcaa8; stroke: #fff; stroke-width: 1; }
+.sim-svg .sim-bar-sum { fill: #c3a3dd; stroke: #fff; stroke-width: 1; }
+.sim-svg .sim-bar-empty { fill: #f1f4f9; stroke: #fff; stroke-width: 1; }
+.sim-svg .sim-bar-outline { fill: none; stroke: var(--ink); stroke-width: 2; }
+.sim-svg .sim-q1 { fill: #9fc6ee; stroke: var(--primary); stroke-width: 1.5; }
+.sim-svg .sim-q2 { fill: #bfe0c9; stroke: var(--oman); stroke-width: 1.5; }
+.sim-svg .sim-q3 { fill: #f0dcb4; stroke: var(--accent); stroke-width: 1.5; }
+.sim-svg .sim-q4 { fill: #d8d2ea; stroke: var(--both); stroke-width: 1.5; }
+.sim-svg .sim-shape { fill: #e3edf9; stroke: var(--primary); stroke-width: 2.5; }
+.sim-svg .sim-right { fill: none; stroke: var(--primary); stroke-width: 2; }
+.sim-svg .sim-radius { stroke: var(--accent); stroke-width: 3; }
+.sim-svg .sim-curve { stroke: var(--primary); stroke-width: 3; fill: none; }
+.sim-svg .sim-line-a { stroke: var(--primary); stroke-width: 3; fill: none; }
+.sim-svg .sim-line-b { stroke: var(--oman); stroke-width: 3; fill: none; }
+.sim-svg .sim-tri { stroke: var(--accent); stroke-width: 2; fill: none; stroke-dasharray: 5 4; }
+.sim-svg .sim-strip { fill: rgba(127, 177, 230, 0.5); stroke: none; }
+.sim-svg .sim-band { fill: rgba(176, 125, 43, 0.14); }
+.sim-svg .sim-mean { stroke: var(--accent); stroke-width: 3; stroke-dasharray: 6 4; }
+.sim-svg .sim-dev { stroke: #b9c6d8; stroke-width: 2; }
+.sim-svg .sim-beam { stroke: #46536b; stroke-width: 6; stroke-linecap: round; }
+.sim-svg .sim-pan { fill: #dbe6f4; stroke: var(--primary); stroke-width: 2; }
+.sim-svg .sim-xbox { fill: #9fc6ee; stroke: var(--primary); stroke-width: 2; }
+.sim-svg .sim-handle { stroke: #fff; stroke-width: 2.5; }
+
+@media print {
+  .sim-card, .sim-modal { display: none !important; }
+}

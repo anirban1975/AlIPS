@@ -55,6 +55,14 @@
         <input id="section-input" type="text" value="A" maxlength="6">
       </div>
 
+      <!-- Shared: the interactive simulator that goes with this sub-topic.
+           The built-in one runs in this browser with no internet; the links
+           below it are the extras, for when there is a connection. -->
+      <div class="panel-group">
+        <label>Interactive simulator</label>
+        <div id="sim-card" class="sim-card"></div>
+      </div>
+
       <!-- Shared: objectives drive both the slides and the weekly grid rows -->
       <div class="panel-group">
         <label>Learning objectives <span class="hint">one per line</span></label>
@@ -179,9 +187,23 @@
     </div>
   </div>
 
+  <!-- Simulator overlay — big enough for the projector. -->
+  <div id="sim-modal" class="sim-modal hidden no-print" aria-hidden="true"
+       role="dialog" aria-modal="true" aria-labelledby="sim-modal-title">
+    <div class="sim-modal-box">
+      <div class="sim-modal-head">
+        <h3 id="sim-modal-title"></h3>
+        <span class="sim-topic" id="sim-modal-topic"></span>
+        <button id="sim-modal-close" class="sim-modal-close">✕ Close</button>
+      </div>
+      <div id="sim-host" class="sim-host"></div>
+    </div>
+  </div>
+
   <script src="data.js"></script>
   <script src="gen.js"></script>
   <script src="lessons.js"></script>
+  <script src="sims.js"></script>
   <script src="letterhead-data.js"></script>
   <script src="zip.js"></script>
   <script src="topics.js"></script>

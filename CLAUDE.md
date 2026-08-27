@@ -24,7 +24,11 @@ department's request (v0.4). Do not re-introduce bilingual strings.
 - `gen.js` — question engine: seeded RNG (`mulberry32`) + 182 generators in
   `GENERATORS`, mapped to grades via `GRADE_GENS`
 - `lessons.js` — topic content library (concept, worked example, key points,
-  resource links) used to draft lesson plans and slides
+  resource links, and the `sim` attribute naming the topic's simulator) used to
+  draft lesson plans and slides
+- `sims.js` — the interactive simulators: 29 manipulatives drawn with the
+  browser's own SVG (no library, no internet, no account), opened from the
+  Lesson Planner's simulator card
 - `data.js` — curriculum dataset and UI strings (`UI_STRINGS`), transcribed from
   the seventeen annual plan documents. `TRACKS` holds each syllabus once (with
   its course book and the month each topic is taught), `GRADE_TRACKS` says which
@@ -272,6 +276,33 @@ writes a readable file of everything this teacher has reworded, for the HOD to
 review and possibly fold into `DEPT_FIELDS`. Teacher name / section / duration
 persist under `alips-planner-prefs`.
 
+**Interactive simulators** are the planner's fourth attribute of a sub-topic,
+next to objectives, criteria and questions. The card sits in the planning panel
+and changes with the chosen sub-topic; `▶ Open the simulator` lifts it into an
+overlay big enough for a projector (Escape or a click on the dark edge closes
+it). Simulators are screen-only — they never appear in the print, the Word file
+or the PowerPoint.
+
+Which simulator a sub-topic gets is decided in two steps, in `lessons.js`:
+
+1. **The topic's own `sim` attribute** — `{ use: "<id from sims.js>", opts: {…} }`
+   on the `LESSONS` entry. All 40 generator-backed topics have one. This is the
+   department's choice for that topic, and it is what should be edited when a
+   teacher says the wrong tool comes up.
+2. **`SIM_KEYWORDS`** — the syllabus has 896 sub-topic entries against 40
+   generators, so most sub-topics have no `sim` of their own. Their wording is
+   matched against a keyword table, first match wins, and the card says
+   *“Closest simulator for this sub-topic”* so nobody mistakes a match for a
+   departmental choice. 884 of the 896 entries reach a simulator this way; the
+   twelve that do not (mock examinations, past-paper booklets, the complex
+   plane, polar form) still get the links out.
+
+`simulatorsFor(generatorId, subTopicName)` in `lessons.js` is the single entry
+point and returns `{ builtIn, links }`. To add a simulator: write it in
+`sims.js` (`name`, a one-line `blurb` a teacher can read aloud, and
+`mount(host, opts)` that fills the host), then point topics at it — by `sim` on
+the lesson, by a `SIM_KEYWORDS` row, or both.
+
 - **Presentation** — 16:9 cards. **Present full screen** gives a classroom
   projector view (← → to move, Space to reveal answers, Esc to exit).
   **Presentation as PowerPoint** writes a real `.pptx`.
@@ -452,6 +483,10 @@ fallback face — that is expected; check sizes, not the letterforms.
   must be kept in step with this.
 - No hard-coded YouTube video IDs — research links are searches. A teacher can
   pin a vetted video by setting `yt: "<videoId>"` on a lesson; it then embeds.
+- The same rule holds for simulators: the links out to GeoGebra and PhET are
+  searches built from the topic's `q`, not fixed pages, so they do not rot.
+  Desmos and Polypad are linked as tools. Nothing a lesson depends on lives on
+  someone else's server — that is what the built-in simulators are for.
 
 ## Deployment
 

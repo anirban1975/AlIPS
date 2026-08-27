@@ -114,6 +114,8 @@
     // Each sub-topic keeps its own copy of whatever the teacher has typed on
     // the weekly form.
     state.wkEdits = wkEditsFor(topic);
+    // The simulator belongs to the sub-topic, so it changes with it.
+    renderSimCard(topic);
     const msg = $("wk-edit-msg");
     if (msg) msg.textContent = Object.keys(state.wkEdits).length
       ? "your wording is saved on this device" : "";
@@ -279,6 +281,68 @@
       ? `Questions from: ${GENERATORS[t.gen].name}`
       : "No question generator for this topic yet — the plan is drafted without questions.";
     note.classList.toggle("warn", !t.gen);
+  }
+
+  // ---------- Interactive simulator ----------
+  //
+  // Every sub-topic offers one. The built-in simulator (sims.js) is drawn by
+  // this browser, so it opens with the network down and asks nobody to sign
+  // in; the links under it are the extras for when there is a connection.
+  // The card is rebuilt whenever the chosen sub-topic changes.
+
+  function simInfoFor(topicKey) {
+    if (typeof simulatorsFor !== "function") return { builtIn: null, links: [] };
+    const t = topicByKey(topicKey);
+    return simulatorsFor(t ? t.gen : null, t ? t.name : currentTitle());
+  }
+
+  function renderSimCard(topicKey) {
+    const card = $("sim-card");
+    if (!card) return;
+    card.textContent = "";
+    const info = simInfoFor(topicKey);
+    if (info.builtIn) {
+      card.appendChild(el("h4", "", info.builtIn.name));
+      card.appendChild(el("p", "sim-blurb", info.builtIn.blurb));
+      const open = el("button", "sim-open", "▶ Open the simulator");
+      open.type = "button";
+      open.addEventListener("click", () => openSim(topicKey));
+      card.appendChild(open);
+      card.appendChild(el("p", "sim-offline", info.builtIn.matched === "keyword"
+        ? "Closest simulator for this sub-topic. Runs in this browser — no internet, no sign-in."
+        : "Runs in this browser — no internet and no sign-in needed."));
+    } else {
+      card.appendChild(el("p", "sim-blurb",
+        "No built-in simulator for this sub-topic yet — these libraries have one."));
+    }
+    if (info.links.length) {
+      const row = el("div", "sim-links");
+      info.links.forEach((l) => {
+        const a = el("a", "", l.label);
+        a.href = l.url;
+        a.target = "_blank";
+        a.rel = "noopener";
+        row.appendChild(a);
+      });
+      card.appendChild(row);
+    }
+  }
+
+  function openSim(topicKey) {
+    const info = simInfoFor(topicKey);
+    if (!info.builtIn || typeof SIMS === "undefined") return;
+    $("sim-modal-title").textContent = info.builtIn.name;
+    $("sim-modal-topic").textContent = currentTitle();
+    SIMS.mount($("sim-host"), info.builtIn.id, info.builtIn.opts);
+    $("sim-modal").classList.remove("hidden");
+    $("sim-modal").setAttribute("aria-hidden", "false");
+  }
+
+  function closeSim() {
+    const host = $("sim-host");
+    while (host.firstChild) host.removeChild(host.firstChild);
+    $("sim-modal").classList.add("hidden");
+    $("sim-modal").setAttribute("aria-hidden", "true");
   }
 
   // ---------- Model ----------
@@ -834,6 +898,11 @@
   }
 
   document.addEventListener("keydown", (e) => {
+    // A simulator on screen takes the keyboard first — Escape closes it.
+    if (!$("sim-modal").classList.contains("hidden")) {
+      if (e.key === "Escape") closeSim();
+      return;
+    }
     if ($("stage").classList.contains("hidden")) return;
     if (e.key === "ArrowRight" || e.key === "PageDown") moveStage(1);
     else if (e.key === "ArrowLeft" || e.key === "PageUp") moveStage(-1);
@@ -1247,6 +1316,10 @@
   $("stage-prev").addEventListener("click", () => moveStage(-1));
   $("stage-next").addEventListener("click", () => moveStage(1));
   $("stage-close").addEventListener("click", closeStage);
+  $("sim-modal-close").addEventListener("click", closeSim);
+  $("sim-modal").addEventListener("click", (e) => {
+    if (e.target === $("sim-modal")) closeSim();     // clicking the dark edge closes it
+  });
   $("stage-reveal").addEventListener("click", () => { state.revealed = !state.revealed; paintStage(); });
 
   $("download-word").addEventListener("click", () => {
