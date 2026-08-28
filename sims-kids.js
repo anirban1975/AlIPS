@@ -96,6 +96,20 @@ const KIDS = (function () {
     score.appendChild(streak);
     bar.appendChild(score);
 
+    // Support / Core / Challenge. The same simulator, harder or easier numbers,
+    // so a teacher can put the right question in front of the right child.
+    const LEVEL_KEY = "alips-sim-level";
+    const levels = el("div", "kid-levels");
+    levels.appendChild(el("span", "kid-lev-label", "Level"));
+    const levBtns = {};
+    [[1, "Support"], [2, "Core"], [3, "Challenge"]].forEach(([n, label]) => {
+      const b = el("button", "kid-lev", label);
+      b.type = "button";
+      levBtns[n] = b;
+      levels.appendChild(b);
+    });
+    bar.appendChild(levels);
+
     const mute = el("button", "kid-mute", isMuted() ? "🔇 Sound off" : "🔊 Sound on");
     mute.type = "button";
     mute.addEventListener("click", () => {
@@ -119,9 +133,15 @@ const KIDS = (function () {
     wrap.appendChild(read);
     host.appendChild(wrap);
 
+    const simId = activeId;
+    let startLevel = 2;
+    try { startLevel = +localStorage.getItem("alips-sim-level") || 2; } catch { /* no storage */ }
+
     const K = {
       board, actions, wrap,
+      simId,
       mode: MODES[0],
+      level: Math.min(3, Math.max(1, startLevel)),
       stars: 0,
       streak: 0,
       best: 0,
@@ -131,7 +151,11 @@ const KIDS = (function () {
         stars.textContent = K.stars ? "★".repeat(Math.min(K.stars, 10)) + (K.stars > 10 ? ` ${K.stars}` : "") : "";
         streak.textContent = K.streak > 1 ? `${K.streak} in a row!` : "";
       },
+      // The three numbers a simulator needs for Support, Core and Challenge.
+      lvl(a, b, c) { return [a, b, c][K.level - 1]; },
+      onLevel(fn) { K._levelFn = fn; },
       right(msg) {
+        if (K.mode === "play") notify({ sim: simId, level: K.level, correct: true });
         K.stars += 1;
         K.streak += 1;
         K.best = Math.max(K.best, K.streak);
@@ -143,6 +167,7 @@ const KIDS = (function () {
         setTimeout(() => say.classList.remove("kid-yay"), 700);
       },
       wrong(msg) {
+        if (K.mode === "play") notify({ sim: simId, level: K.level, correct: false });
         K.streak = 0;
         K.showScore();
         SOUND.nope();
@@ -168,6 +193,17 @@ const KIDS = (function () {
         btns[K.mode].classList.add("on");
       }
     };
+    const paintLevels = () => {
+      [1, 2, 3].forEach((n) => levBtns[n].classList.toggle("on", K.level === n));
+    };
+    [1, 2, 3].forEach((n) => levBtns[n].addEventListener("click", () => {
+      K.level = n;
+      try { localStorage.setItem(LEVEL_KEY, String(n)); } catch { /* no storage */ }
+      paintLevels();
+      SOUND.tap();
+      if (K._levelFn) K._levelFn(n);
+    }));
+    paintLevels();
     K.showScore();
     return K;
   }
@@ -299,6 +335,15 @@ const KIDS = (function () {
 
   const defs = {};
 
+  // Which simulator is on screen, and anything that wants to know how a child
+  // did. The planner listens here to build the differentiation record; nothing
+  // is recorded unless something has subscribed.
+  let activeId = null;
+  const listeners = [];
+  const notify = (payload) => {
+    listeners.forEach((fn) => { try { fn(payload); } catch { /* a listener must never break a lesson */ } });
+  };
+
   // ---------- 1. Ten frames ----------
   defs.tenFrame = {
     name: "Ten frames",
@@ -362,18 +407,18 @@ const KIDS = (function () {
         make: () => {
           const kind = pickOne(["make", "bond", "add"]);
           if (kind === "make") {
-            const t = rnd(3, 18);
+            const t = rnd(K.lvl(2, 3, 6), K.lvl(10, 18, 20));
             st.n = 0;
             return { ask: `Put ${plural(t, "counter", "counters")} in the frames.`,
               ok: () => st.n === t, hint: `Count them again — you need ${t}.` };
           }
           if (kind === "bond") {
-            const a = rnd(1, 9);
+            const a = rnd(1, K.lvl(5, 9, 9));
             st.n = a;
             return { ask: `There are ${a}. Add counters until you have ten.`,
               ok: () => st.n === 10, hint: `${a} and how many more make ten?` };
           }
-          const a = rnd(2, 8), b = rnd(2, 8);
+          const a = rnd(1, K.lvl(4, 8, 9)), b = rnd(1, K.lvl(3, 8, 9));
           st.n = a;
           return { ask: `There are ${a}. Add ${b} more. How many now?`,
             ok: () => st.n === a + b, hint: `Count on ${b} from ${a}.` };
@@ -393,6 +438,7 @@ const KIDS = (function () {
       K.button("New question", () => P.next());
       K.button("Clear the frames", () => { st.n = 0; draw(); });
 
+      K.onLevel(() => { if (K.mode === "play") P.next(); });
       K.onMode((m) => {
         if (m === "play") P.next();
         else if (m === "guided") G.start();
@@ -455,9 +501,9 @@ const KIDS = (function () {
       const P = play(K, {
         draw,
         make: () => {
-          const back = Math.random() < 0.45;
+          const back = K.level > 1 && Math.random() < 0.45;   // Support counts on only
           const a = rnd(back ? 8 : 0, back ? max : max - 8);
-          const b = rnd(2, 8);
+          const b = rnd(1, K.lvl(3, 8, 9));
           st.from = a; st.at = a; st.hops = 0;
           const answer = back ? a - b : a + b;
           return {
@@ -481,6 +527,7 @@ const KIDS = (function () {
       K.button("New question", () => P.next());
       K.button("Back to the start", () => { st.at = 0; st.from = 0; st.hops = 0; draw(); });
 
+      K.onLevel(() => { if (K.mode === "play") P.next(); });
       K.onMode((m) => {
         if (m === "play") P.next();
         else if (m === "guided") G.start();
@@ -556,7 +603,7 @@ const KIDS = (function () {
       const P = play(K, {
         draw,
         make: () => {
-          const t = rnd(11, 79);
+          const t = rnd(11, K.lvl(39, 79, 99));
           st.tens = 0; st.ones = 0;
           return { ask: `Build the number ${t}.`, ok: () => value() === t,
             hint: `${Math.floor(t / 10)} sticks and ${t % 10} cubes.` };
@@ -577,6 +624,7 @@ const KIDS = (function () {
       K.button("New question", () => P.next());
       K.button("Clear the mat", () => { st.tens = 0; st.ones = 0; draw(); });
 
+      K.onLevel(() => { if (K.mode === "play") P.next(); });
       K.onMode((m) => {
         if (m === "play") P.next();
         else if (m === "guided") G.start();
@@ -622,8 +670,8 @@ const KIDS = (function () {
       const P = play(K, {
         draw,
         make: () => {
-          const r = rnd(2, 6), c = rnd(2, 8);
-          const kind = pickOne(["make", "answer"]);
+          const r = rnd(2, K.lvl(3, 6, 6)), c = rnd(2, K.lvl(5, 8, 8));
+          const kind = K.level === 1 ? "make" : pickOne(["make", "answer"]);
           st.r = 1; st.c = 1;
           if (kind === "make") {
             return { ask: `Show ${r} rows of ${c}.`, ok: () => st.r === r && st.c === c,
@@ -647,6 +695,7 @@ const KIDS = (function () {
       K.button("Check my answer", () => P.check(false));
       K.button("New question", () => P.next());
 
+      K.onLevel(() => { if (K.mode === "play") P.next(); });
       K.onMode((m) => {
         if (m === "play") P.next();
         else if (m === "guided") G.start();
@@ -715,9 +764,9 @@ const KIDS = (function () {
       const P = play(K, {
         draw,
         make: () => {
-          const plates = rnd(2, 4);
-          const each = rnd(2, 5);
-          const rem = pickOne([0, 0, 1, 2]);
+          const plates = rnd(2, K.lvl(2, 4, 4));
+          const each = rnd(2, K.lvl(3, 5, 6));
+          const rem = K.level === 3 ? pickOne([0, 1, 2]) : 0;   // leftovers are the hard part
           const total = plates * each + Math.min(rem, plates - 1);
           st.total = total;
           setPlates(plates);
@@ -745,6 +794,7 @@ const KIDS = (function () {
       K.button("Take them all back", () => { st.on = Array(st.plates).fill(0); draw(); });
       [2, 3, 4].forEach((n) => K.button(`${n} plates`, () => { setPlates(n); st.on = Array(n).fill(0); draw(); }, "kid-small"));
 
+      K.onLevel(() => { if (K.mode === "play") P.next(); });
       K.onMode((m) => {
         if (m === "play") P.next();
         else if (m === "guided") G.start();
@@ -806,8 +856,8 @@ const KIDS = (function () {
       const P = play(K, {
         draw,
         make: () => {
-          const parts = pickOne([2, 3, 4, 6, 8]);
-          const want = rnd(1, parts - 1);
+          const parts = pickOne(K.lvl([2, 4], [2, 3, 4, 6, 8], [3, 4, 6, 8]));
+          const want = K.level === 1 ? 1 : rnd(1, parts - 1);
           reset(parts);
           const NAME = { 2: "half", 3: "third", 4: "quarter", 6: "sixth", 8: "eighth" };
           return {
@@ -835,6 +885,7 @@ const KIDS = (function () {
       K.button("Bar / circle", () => { st.shape = st.shape === "bar" ? "circle" : "bar"; draw(); });
       K.button("Clear the colour", () => { st.on = Array(st.parts).fill(false); draw(); });
 
+      K.onLevel(() => { if (K.mode === "play") P.next(); });
       K.onMode((m) => {
         if (m === "play") P.next();
         else if (m === "guided") G.start();
@@ -895,7 +946,10 @@ const KIDS = (function () {
       const P = play(K, {
         draw,
         make: () => {
-          const t = pickOne([15, 20, 30, 35, 45, 55, 60, 75, 80, 95, 110, 125, 150, 175, 200]);
+          const t = pickOne(K.lvl(
+            [10, 15, 20, 25, 30, 35, 50],
+            [15, 20, 30, 35, 45, 55, 60, 75, 80, 95, 110, 125, 150, 175, 200],
+            [65, 85, 95, 115, 135, 155, 185, 215, 240, 285, 305]));
           st.inPurse = [];
           return { ask: `Make ${t} baisa.`, ok: () => total() === t,
             hint: "Start with the biggest coin that still fits." };
@@ -915,6 +969,7 @@ const KIDS = (function () {
       K.button("New question", () => P.next());
       K.button("Empty the purse", () => { st.inPurse = []; draw(); });
 
+      K.onLevel(() => { if (K.mode === "play") P.next(); });
       K.onMode((m) => {
         if (m === "play") P.next();
         else if (m === "guided") G.start();
@@ -1015,7 +1070,8 @@ const KIDS = (function () {
       const P = play(K, {
         draw,
         make: () => {
-          const h = rnd(1, 12), m = pickOne([0, 0, 15, 30, 30, 45]);
+          const h = rnd(1, 12);
+          const m = pickOne(K.lvl([0, 0, 30], [0, 0, 15, 30, 30, 45], [0, 15, 30, 45, 45, 15]));
           st.h = (h + 5) % 12; st.m = (m + 20) % 60;
           const say = m === 0 ? `${NAMES[h % 12]} o'clock` : m === 15 ? `quarter past ${NAMES[h % 12]}`
             : m === 30 ? `half past ${NAMES[h % 12]}` : `quarter to ${NAMES[(h + 1) % 12]}`;
@@ -1042,6 +1098,7 @@ const KIDS = (function () {
       K.button("Check my answer", () => P.check(false));
       K.button("New question", () => P.next());
 
+      K.onLevel(() => { if (K.mode === "play") P.next(); });
       K.onMode((m) => {
         if (m === "play") P.next();
         else if (m === "guided") G.start();
@@ -1127,7 +1184,7 @@ const KIDS = (function () {
       const P = play(K, {
         draw,
         make: () => {
-          st.rule = pickOne(RULES);
+          st.rule = pickOne(K.level === 1 ? RULES.slice(0, 2) : RULES);
           st.hoops = { yes: [], no: [] };
           return { ask: `Sort every shape: ${st.rule.label} on the left, the rest on the right.`,
             ok: allRight, hint: "Count the straight sides of the shape you are holding." };
@@ -1150,6 +1207,7 @@ const KIDS = (function () {
       K.button("New question", () => P.next());
       K.button("Empty the hoops", () => { st.hoops = { yes: [], no: [] }; draw(); });
 
+      K.onLevel(() => { if (K.mode === "play") P.next(); });
       K.onMode((m) => {
         if (m === "play") P.next();
         else if (m === "guided") G.start();
@@ -1214,7 +1272,7 @@ const KIDS = (function () {
       const P = play(K, {
         draw,
         make: () => {
-          st.len = rnd(3, 10);
+          st.len = rnd(2, K.lvl(6, 10, 12));
           st.laid = 0;
           st.compare = false;
           return { ask: "How long is the ribbon? Lay cubes along it to find out.",
@@ -1239,6 +1297,7 @@ const KIDS = (function () {
         draw();
       });
 
+      K.onLevel(() => { if (K.mode === "play") P.next(); });
       K.onMode((m) => {
         if (m === "play") P.next();
         else if (m === "guided") G.start();
@@ -1309,8 +1368,8 @@ const KIDS = (function () {
       const P = play(K, {
         draw,
         make: () => {
-          const r = pickOne(ROWS), n = rnd(2, 8);
-          const kind = pickOne(["set", "more"]);
+          const r = pickOne(ROWS), n = rnd(2, K.lvl(5, 8, 9));
+          const kind = K.level === 1 ? "set" : pickOne(["set", "more"]);
           if (kind === "set") {
             return { ask: `Make the chart show ${n} ${r.label.toLowerCase()}.`,
               ok: () => st.n[r.key] === n, hint: "Drag a picture onto that row, or tap one to take it off." };
@@ -1337,6 +1396,7 @@ const KIDS = (function () {
       K.button("New question", () => P.next());
       K.button("Clear the chart", () => { st.n = { cat: 0, dog: 0, fish: 0, bird: 0 }; draw(); });
 
+      K.onLevel(() => { if (K.mode === "play") P.next(); });
       K.onMode((m) => {
         if (m === "play") P.next();
         else if (m === "guided") G.start();
@@ -1347,13 +1407,289 @@ const KIDS = (function () {
     }
   };
 
+  // ---------- 12. Tracing numbers (jungle) ----------
+  //
+  // The numeral, dotted, with a green spot to start on and an arrow saying
+  // which way to go — the same thing a child meets in a handwriting book, but
+  // it can tell them when they have finished it properly.
+  //
+  // How the marking works: each stroke is sampled into points along the path,
+  // and the child's pointer must pass near them IN ORDER. That is what makes
+  // it tracing rather than scribbling — going backwards or starting at the
+  // wrong end does not fill the numeral in.
+
+  // One entry per digit; two paths where the numeral is written with two
+  // strokes. Drawn in a 100 x 140 box, starting where a child is taught to
+  // start.
+  const DIGIT = {
+    "0": ["M 50 14 C 26 14 15 42 15 71 C 15 100 26 127 50 127 C 74 127 85 100 85 71 C 85 42 74 14 50 14"],
+    "1": ["M 26 38 L 54 14 L 54 127"],
+    "2": ["M 20 42 C 20 22 38 13 55 13 C 76 13 88 31 80 50 C 70 72 42 94 18 127 L 86 127"],
+    "3": ["M 22 34 C 32 18 52 11 66 16 C 84 23 85 46 64 58 C 55 63 48 64 48 64 C 66 61 88 74 84 99 C 80 123 50 134 24 117"],
+    "4": ["M 64 14 L 15 92 L 88 92", "M 64 14 L 64 127"],
+    "5": ["M 76 15 L 33 15 L 27 65 C 45 53 74 57 82 81 C 90 107 66 131 38 126 C 28 124 20 119 15 113"],
+    "6": ["M 74 18 C 52 24 26 46 22 83 C 19 111 36 128 54 128 C 72 128 84 112 84 96 C 84 78 68 68 52 70 C 38 72 26 82 22 93"],
+    "7": ["M 16 17 L 86 17 L 44 127"],
+    "8": ["M 50 68 C 30 60 24 44 30 30 C 36 16 62 10 72 22 C 82 34 76 56 50 68 C 22 80 14 100 22 114 C 30 128 62 132 76 118 C 90 104 78 80 50 68"],
+    "9": ["M 78 60 C 70 73 52 78 40 70 C 26 61 24 40 36 26 C 50 10 76 16 80 38 C 84 62 76 100 62 127"]
+  };
+  const JUNGLE = ["🐒", "🦜", "🐍", "🦋", "🐘", "🐅", "🦧", "🦎"];
+  const FRUIT = "🍌";
+
+  defs.traceNumber = {
+    name: "Tracing numbers",
+    blurb: "Start on the green spot, follow the arrow and trace the number — then count the bananas.",
+    mount(host, opts) {
+      const o = opts || {};
+      const K = kidShell(host);
+      K.wrap.classList.add("kid-jungle");
+      const st = { value: 1, done: false, animal: JUNGLE[0] };
+      const panels = [];
+
+      const tol = () => K.lvl(26, 19, 15);
+      const maxNumber = () => K.lvl(5, 10, 20);
+
+      // One numeral: the dotted guide, the child's ink, and the marking.
+      function digitPanel(ch) {
+        const NS = "http://www.w3.org/2000/svg";
+        const mk = (tag, attrs) => {
+          const n = document.createElementNS(NS, tag);
+          Object.keys(attrs || {}).forEach((k) => n.setAttribute(k, attrs[k]));
+          return n;
+        };
+        const wrap = el("div", "trace-panel");
+        const s = mk("svg", { viewBox: "0 0 100 140", class: "trace-svg" });
+        wrap.appendChild(s);
+
+        const strokes = (DIGIT[ch] || DIGIT["0"]).map((d, i) => {
+          // Three layers: the pale road a child stays inside, a dashed line
+          // down the middle of it, and their own ink revealed on top.
+          const guide = mk("path", { d, class: "trace-road" });
+          s.appendChild(guide);
+          s.appendChild(mk("path", { d, class: "trace-dash" }));
+          const ink = mk("path", { d, class: "trace-ink" });
+          s.appendChild(ink);
+          const len = guide.getTotalLength ? guide.getTotalLength() : 0;
+          const n = Math.max(20, Math.round(len / 5));
+          const pts = [];
+          for (let k = 0; k <= n; k++) {
+            const pt = guide.getPointAtLength ? guide.getPointAtLength(len * k / n) : { x: 0, y: 0 };
+            pts.push({ x: pt.x, y: pt.y });
+          }
+          // The ink is revealed by shortening the dash gap as the child gets on.
+          ink.style.strokeDasharray = len;
+          ink.style.strokeDashoffset = len;
+          return { guide, ink, pts, len, at: 0, i };
+        });
+
+        // Start spot and direction arrow for each stroke.
+        strokes.forEach((str, i) => {
+          const p0 = str.pts[0], p1 = str.pts[Math.min(3, str.pts.length - 1)];
+          const dx = p1.x - p0.x, dy = p1.y - p0.y;
+          const L = Math.hypot(dx, dy) || 1;
+          const ang = Math.atan2(dy, dx) * 180 / Math.PI;
+          // The 4 and the 5 start their second stroke where the first one began,
+          // so the markers step sideways rather than sitting on top of each other.
+          const off = i * 15;
+          const cx = p0.x + (-dy / L) * off, cy = p0.y + (dx / L) * off;
+          if (off) s.appendChild(mk("line", { x1: cx, y1: cy, x2: p0.x, y2: p0.y, class: "trace-lead" }));
+          s.appendChild(mk("circle", { cx, cy, r: 8, class: "trace-start s" + i }));
+          s.appendChild(mk("polygon", { points: "0,-5 13,0 0,5", class: "trace-arrow",
+            transform: `translate(${p0.x} ${p0.y}) rotate(${ang}) translate(13 0)` }));
+          const badge = mk("text", { x: cx, y: cy + 3.5, class: "trace-badge", "text-anchor": "middle" });
+          badge.textContent = String(i + 1);
+          s.appendChild(badge);
+        });
+
+        const api = {
+          node: wrap, ch, strokes, current: 0,
+          progress() {
+            const total = strokes.reduce((a, b) => a + b.pts.length, 0);
+            const got = strokes.reduce((a, b) => a + b.at, 0);
+            return total ? got / total : 0;
+          },
+          finished() { return strokes.every((str) => str.at >= str.pts.length - 2); },
+          reset() {
+            strokes.forEach((str) => {
+              str.at = 0;
+              str.ink.style.strokeDashoffset = str.len;
+            });
+            api.current = 0;
+            wrap.classList.remove("trace-done");
+          }
+        };
+
+        const local = (ev) => {
+          const r = s.getBoundingClientRect();
+          return { x: (ev.clientX - r.left) / r.width * 100, y: (ev.clientY - r.top) / r.height * 140 };
+        };
+        const advance = (pos) => {
+          const str = strokes[api.current];
+          if (!str) return;
+          // Look a little way ahead, so a quick hand is not punished, but never
+          // backwards — the order is the point.
+          for (let k = str.at; k < Math.min(str.at + 6, str.pts.length); k++) {
+            const p = str.pts[k];
+            if (Math.hypot(p.x - pos.x, p.y - pos.y) <= tol()) {
+              str.at = k + 1;
+              str.ink.style.strokeDashoffset = str.len * (1 - str.at / str.pts.length);
+            }
+          }
+          if (str.at >= str.pts.length - 2 && api.current < strokes.length - 1) {
+            api.current += 1;                       // on to the second stroke
+            SOUND.place();
+          }
+          if (api.onMove) api.onMove();
+        };
+
+        s.addEventListener("pointerdown", (ev) => {
+          ev.preventDefault();
+          s.setPointerCapture(ev.pointerId);
+          advance(local(ev));
+          const move = (e) => advance(local(e));
+          const up = () => {
+            s.removeEventListener("pointermove", move);
+            s.removeEventListener("pointerup", up);
+            if (api.onRelease) api.onRelease();
+          };
+          s.addEventListener("pointermove", move);
+          s.addEventListener("pointerup", up);
+        });
+        // A keyboard and a whiteboard pen are not the same thing: tapping the
+        // numeral once walks it along, so the simulator still works on a board
+        // where dragging is unreliable.
+        s.addEventListener("click", () => {
+          const str = strokes[api.current];
+          if (!str) return;
+          str.at = Math.min(str.pts.length, str.at + Math.ceil(str.pts.length / 6));
+          str.ink.style.strokeDashoffset = str.len * (1 - str.at / str.pts.length);
+          if (str.at >= str.pts.length - 2 && api.current < strokes.length - 1) api.current += 1;
+          if (api.onMove) api.onMove();
+          if (api.onRelease) api.onRelease();
+        });
+        return api;
+      }
+
+      function draw() {
+        clear(K.board);
+        panels.length = 0;
+        const scene = el("div", "trace-scene");
+        const vine = el("div", "trace-vine");
+        ["🌿", "🍃", "🌴", "🌺", "🍃", "🌴", "🌿"].forEach((g) => vine.appendChild(el("span", "", g)));
+        scene.appendChild(vine);
+
+        const row = el("div", "trace-row");
+        row.appendChild(el("span", "trace-mate left", st.animal));
+        String(st.value).split("").forEach((ch) => {
+          const panel = digitPanel(ch);
+          panel.onMove = () => { if (K.mode !== "guided") check(); };
+          panel.onRelease = () => check();
+          panels.push(panel);
+          row.appendChild(panel.node);
+        });
+        row.appendChild(el("span", "trace-mate right", "🦜"));
+        scene.appendChild(row);
+
+        // The numeral means something: this many animals came to look.
+        const count = el("div", "trace-count");
+        for (let i = 0; i < Math.min(st.value, 20); i++) {
+          const b = el("span", "trace-fruit", i % 4 === 3 ? st.animal : FRUIT);
+          b.style.animationDelay = (i * 0.05) + "s";
+          count.appendChild(b);
+        }
+        scene.appendChild(count);
+        K.board.appendChild(scene);
+        tell();
+      }
+
+      function tell() {
+        const pct = Math.round(panels.reduce((a, p) => a + p.progress(), 0) / Math.max(panels.length, 1) * 100);
+        K.tell(`Number ${st.value} — ${pct}% traced. `
+          + (st.value === 1 ? "One banana for one monkey."
+             : `Count them: ${st.value} things altogether.`)
+          + "  Start on the green spot and follow the arrow.");
+      }
+
+      function allDone() { return panels.length && panels.every((p) => p.finished()); }
+
+      function check() {
+        tell();
+        if (!allDone() || st.done) return;
+        st.done = true;
+        panels.forEach((p) => p.node.classList.add("trace-done"));
+        if (K.mode === "play") {
+          K.right(`Beautiful ${st.value}!`);
+          setTimeout(() => { if (K.mode === "play") P.next(); }, 1600);
+        } else {
+          SOUND.cheer();
+          K.say(`That's a lovely ${st.value}. Try another one.`);
+        }
+        G.check();
+      }
+
+      const P = play(K, {
+        draw,
+        make: () => {
+          const max = maxNumber();
+          const t = rnd(K.level === 3 ? 10 : 0, max);
+          st.value = t;
+          st.done = false;
+          st.animal = pickOne(JUNGLE);
+          return {
+            ask: `Trace the number ${t}.`,
+            ok: () => allDone(),
+            hint: "Put your finger on the green spot first, then follow the arrow all the way."
+          };
+        }
+      });
+
+      const G = guide(K, [
+        { say: "Put your finger on the green spot at the top.",
+          set: () => { st.value = 1; st.done = false; }, done: () => panels.some((p) => p.progress() > 0.1) },
+        { say: "Now follow the arrow all the way down to the bottom.",
+          done: () => allDone() },
+        { say: "Well done. Now count the bananas — that is what the number means.",
+          done: () => allDone() }
+      ], draw);
+
+      K.button("Try again", () => { panels.forEach((p) => p.reset()); st.done = false; draw(); });
+      K.button("Next number", () => {
+        const floor = K.level === 3 ? 10 : 0;
+        st.value = st.value >= maxNumber() || st.value < floor ? floor : st.value + 1;
+        st.done = false;
+        st.animal = pickOne(JUNGLE);
+        draw();
+      });
+      K.button("New question", () => P.next());
+
+      K.onLevel(() => {
+        if (K.mode === "play") P.next();
+        else {
+          st.value = clamp(st.value, K.level === 3 ? 10 : 0, maxNumber());
+          st.done = false;
+          draw();
+        }
+      });
+      K.onMode((m) => {
+        st.done = false;
+        if (m === "play") P.next();
+        else if (m === "guided") G.start();
+        else { K.say("Trace with your finger, or tap the number to walk along it."); draw(); }
+      });
+      K.say("Trace with your finger, or tap the number to walk along it.");
+      draw();
+    }
+  };
+
   return {
     list: defs,
     has: (id) => Object.prototype.hasOwnProperty.call(defs, id),
     get: (id) => defs[id] || null,
+    onAttempt(fn) { if (typeof fn === "function") listeners.push(fn); },
     mount(host, id, opts) {
       const sim = defs[id];
       if (!host || !sim) return false;
+      activeId = id;
       try { sim.mount(host, opts || {}); return true; }
       catch (err) {
         clear(host);

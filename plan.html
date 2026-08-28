@@ -74,6 +74,30 @@
           you show it to a class.</p>
       </div>
 
+      <!-- Section 2, second half: the differentiation record. A turn at the
+           board is assessment; this keeps it. First names only, stored in this
+           browser on this computer, never sent anywhere. -->
+      <div class="panel-group hidden" id="diff-opts">
+        <label>Who is at the board? <span class="hint" id="class-line"></span></label>
+        <div id="kid-chips" class="kid-chips"></div>
+        <div class="row-btns">
+          <input id="kid-name" type="text" placeholder="First name" maxlength="24">
+          <button id="kid-add" class="mini-btn">Add to the class</button>
+        </div>
+        <label class="check-inline"><input id="diff-on" type="checkbox" checked>
+          Record answers given in Play mode</label>
+        <p class="hint">First names only, kept in this browser on this computer.
+          Nothing is uploaded. The record follows the class you set by Grade and
+          Section / class.</p>
+        <div class="row-btns">
+          <button id="diff-export" class="mini-btn"
+            title="A file for the Head of Department">Export the record</button>
+          <button id="diff-clear" class="mini-btn"
+            title="Delete this class and every answer recorded for it">Delete this class</button>
+        </div>
+        <p class="hint" id="diff-msg"></p>
+      </div>
+
       <!-- Shared by sections 1 and 3: objectives drive both the slides and the
            weekly grid rows. -->
       <div class="panel-group" id="fields-opts">
@@ -232,6 +256,7 @@
   <script src="lessons.js"></script>
   <script src="sims.js"></script>
   <script src="sims-kids.js"></script>
+  <script src="learners.js"></script>
   <script src="letterhead-data.js"></script>
   <script src="zip.js"></script>
   <script src="topics.js"></script>

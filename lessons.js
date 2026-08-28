@@ -454,7 +454,9 @@ const KID_KEYWORDS = [
     "numberTrack", { max: 20 }],
   [/subtract|take away|taking away|difference|minus/, "numberTrack", { max: 20 }],
   [/add|plus|missing number|equation|inverse/, "tenFrame", {}],
-  [/count|number|how many|first, second|ordinal|numeral|trac(e|ing)|writing numbers/, "tenFrame", {}]
+  [/trac(e|ing)|writing numbers|number formation|forming numbers|handwriting|numeral/,
+    "traceNumber", {}],
+  [/count|number|how many|first, second|ordinal/, "tenFrame", {}]
 ];
 
 function kidSimFor(id, name) {

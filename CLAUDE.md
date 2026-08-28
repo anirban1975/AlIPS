@@ -31,9 +31,13 @@ department's request (v0.4). Do not re-introduce bilingual strings.
 - `sims.js` — the interactive simulators for Grades 5-12: 29 manipulatives
   drawn with the browser's own SVG (no library, no internet, no account),
   driven by sliders and selects
-- `sims-kids.js` — the Grade 1-4 simulators: 11 manipulatives a child moves by
-  hand (counters, coins, biscuits, cubes), each with Explore, Play and
-  step-by-step modes, stars, a streak and browser-made sound
+- `sims-kids.js` — the Grade 1-4 simulators: 12 manipulatives a child moves by
+  hand (counters, coins, biscuits, cubes) plus a jungle-themed number-tracing
+  board, each with Explore, Play and step-by-step modes, Support/Core/Challenge
+  levels, stars, a streak and browser-made sound
+- `learners.js` — the differentiation record: class lists (first names, on the
+  machine only), the log of answers given in Play mode, the banding into needs
+  support / secure / ready for more, the next-lesson suggestions and the export
 - `data.js` — curriculum dataset and UI strings (`UI_STRINGS`), transcribed from
   the seventeen annual plan documents. `TRACKS` holds each syllabus once (with
   its course book and the month each topic is taught), `GRADE_TRACKS` says which
@@ -318,6 +322,19 @@ drag and a tap-then-tap, because a drag misfires on an interactive whiteboard.
 Sound is made by the browser (`AudioContext`, no files) and the mute is
 remembered under `alips-sim-muted`.
 
+**Tracing numbers** (`traceNumber`) is the one that is not a manipulative. Each
+digit is an SVG path in `DIGIT` — one entry per numeral, two paths where the
+numeral takes two strokes, drawn in a 100x140 box starting where a child is
+taught to start. Three layers are stacked per stroke: a pale wide *road*, a
+dashed centre line, and the child's ink revealed by shrinking a dash offset.
+Marking is what makes it tracing rather than scribbling: each stroke is sampled
+into points and the pointer must pass near them **in order** (looking at most
+six ahead), so going backwards or starting at the wrong end fills nothing in.
+Tolerance follows the level (26 / 19 / 15 user units), Challenge is two digits,
+and a single tap walks along the stroke for boards where dragging misfires.
+The jungle skin is the `kid-jungle` class on the wrapper — it re-colours the
+shell, so any other junior simulator can wear it by adding the class.
+
 The grade decides: `simulatorsFor` tries `KID_SIM` (by generator id) then
 `KID_KEYWORDS` (by sub-topic wording) whenever the grade is 4 or below, and
 falls through to the senior simulators when neither matches — which is why a
@@ -328,6 +345,35 @@ teacher can override the match in either direction.
 
 Video links are searches (`videoLinks()`), never pinned ids — same rule as the
 research links, and the panel says so.
+
+## The differentiation record
+
+A turn at the board is assessment, and it is normally lost. Section 2 keeps it.
+The teacher types a class list once (first names), taps whose turn it is, and
+every answer given in **Play** mode is logged against that child, the sub-topic
+and the level. The report under the simulator fills in as the lesson runs, so
+the groups form in front of the teacher rather than being guessed at later.
+
+- **Storage.** `alips-classes` (lists), `alips-diff-log` (attempts, capped at
+  4000), `alips-diff-current` (whose turn). First names only, in that browser
+  on that machine. Nothing is uploaded and there is no server to upload to.
+  `Delete this class` needs two taps and removes the names and their answers;
+  every read and write is wrapped, so a locked-down machine simply records
+  nothing rather than breaking.
+- **Nothing is recorded unless a name is tapped.** No selected child, no log
+  entry — which is also how a teacher demonstrates without polluting the record.
+- **Bands** (`bandOf`): under 3 answers is "not enough yet"; then 85%+ first-try
+  is *ready for more*, 60-85% *secure*, below that *needs support*, over that
+  child's last twelve answers on the sub-topic.
+- **Suggestions** (`suggest`): each band gets named children and an action, with
+  `NEXT` giving the simulator to move on to when a group is ready.
+- **Export** (`exportText`): a readable file for the HOD — by child, then by
+  sub-topic — with the raw log as JSON underneath.
+
+`KIDS.onAttempt(fn)` is the hook: the junior engine calls it on every marked
+answer in Play mode with `{sim, level, correct}`, and `plan.js` turns that into
+a log entry. The senior simulators explore rather than test, so they record
+nothing — the report says so when one is on screen.
 
 - **Presentation** — 16:9 cards. **Present full screen** gives a classroom
   projector view (← → to move, Space to reveal answers, Esc to exit).

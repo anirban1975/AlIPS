@@ -412,6 +412,142 @@
       host.appendChild(el("p", "placeholder-hint",
         "Nothing built in for this one yet — the links in the panel have a simulator for it."));
     }
+    const slot = el("div", "");
+    slot.id = "diff-report-slot";
+    sheet.appendChild(slot);
+    refreshReport();
+  }
+
+  // ---------- The differentiation record ----------
+  //
+  // Play mode is assessment: each answer is written against the child who gave
+  // it, the sub-topic and the level. The report under the simulator fills in as
+  // the lesson runs, so a teacher can see the groups forming rather than
+  // guessing at them afterwards. First names, on this machine, and nowhere else.
+
+  const ready = () => typeof LEARNERS !== "undefined";
+  const classKeyNow = () =>
+    ready() ? LEARNERS.classKey(state.grade, $("section-input").value) : "";
+  const classLabelNow = () =>
+    ready() ? LEARNERS.classLabel(state.grade, $("section-input").value) : "";
+
+  function renderLearnerPanel() {
+    if (!ready() || !$("kid-chips")) return;
+    const key = classKeyNow();
+    const cls = LEARNERS.getClass(key, classLabelNow());
+    const cur = LEARNERS.current(key);
+    $("class-line").textContent = cls.kids.length
+      ? `${classLabelNow()} — ${cls.kids.length} in the list`
+      : `${classLabelNow()} — no names yet`;
+    const wrap = $("kid-chips");
+    wrap.textContent = "";
+    cls.kids.forEach((kid) => {
+      const chip = el("button", "kid-chip" + (kid.id === cur ? " on" : ""), kid.name);
+      chip.type = "button";
+      chip.title = "Tap to say this child is answering. Long name? Double-tap to remove.";
+      chip.addEventListener("click", () => {
+        LEARNERS.setCurrent(key, kid.id === cur ? null : kid.id);
+        renderLearnerPanel();
+        refreshReport();
+      });
+      chip.addEventListener("dblclick", () => {
+        LEARNERS.removeKid(key, kid.id);
+        renderLearnerPanel();
+        refreshReport();
+      });
+      wrap.appendChild(chip);
+    });
+    if (!cls.kids.length) {
+      wrap.appendChild(el("p", "hint", "Add a few first names to start the record."));
+    }
+    const who = cls.kids.find((k) => k.id === cur);
+    $("diff-msg").textContent = who
+      ? `Answers are being recorded for ${who.name}.`
+      : cls.kids.length ? "Tap a name before a child answers." : "";
+  }
+
+  function logAttempt(ev) {
+    if (!ready() || !$("diff-on") || !$("diff-on").checked) return;
+    const key = classKeyNow();
+    const kid = LEARNERS.current(key);
+    if (!kid) return;                       // nobody claimed the turn: record nothing
+    const t = topicByKey($("topic-select").value);
+    LEARNERS.log({ cls: key, kid, topic: $("topic-select").value,
+                   name: t ? t.name : currentTitle(), sim: ev.sim, lvl: ev.level, ok: ev.correct });
+    renderLearnerPanel();
+    refreshReport();
+  }
+
+  const simNameOf = (id) => {
+    if (typeof KIDS !== "undefined" && KIDS.has(id)) return KIDS.get(id).name;
+    if (typeof SIMS !== "undefined" && SIMS.has(id)) return SIMS.get(id).name;
+    return null;
+  };
+
+  function buildReport() {
+    const box = el("div", "diff-report");
+    if (!ready()) return box;
+    const key = classKeyNow();
+    const cls = LEARNERS.getClass(key, classLabelNow());
+    const info = simInfoFor($("topic-select").value);
+    const simId = info.builtIn ? info.builtIn.id : "";
+    const rep = LEARNERS.report(key, $("topic-select").value, classLabelNow());
+
+    const head = el("div", "diff-head");
+    head.appendChild(el("h4", "", "Where the class is on this sub-topic"));
+    head.appendChild(el("span", "diff-sub", rep.total.n
+      ? `${rep.total.c} right out of ${rep.total.n} first attempts`
+      : "no answers recorded yet"));
+    box.appendChild(head);
+
+    if (!cls.kids.length) {
+      box.appendChild(el("p", "diff-empty",
+        "Add first names in the panel, tap a name, then run Play mode. "
+        + "Each answer is recorded against that child and the picture builds here."));
+      return box;
+    }
+    if (info.builtIn && !info.builtIn.junior) {
+      box.appendChild(el("p", "diff-empty",
+        "Recording works with the Grades 1-4 simulators, which ask questions and mark them. "
+        + "The older simulators explore rather than test."));
+    }
+
+    const table = el("div", "diff-rows");
+    rep.kids.forEach((k) => {
+      const row = el("div", "diff-row");
+      row.appendChild(el("span", "diff-name", k.name));
+      const bar = el("div", "diff-bar");
+      const fill = el("div", "diff-fill " + k.band.cls);
+      fill.style.width = (k.n ? Math.round(k.rate * 100) : 0) + "%";
+      bar.appendChild(fill);
+      row.appendChild(bar);
+      row.appendChild(el("span", "diff-n", k.n ? `${k.c}/${k.n}` : "—"));
+      row.appendChild(el("span", "diff-band " + k.band.cls, k.band.label));
+      table.appendChild(row);
+    });
+    box.appendChild(table);
+
+    const groups = LEARNERS.suggest(rep, simId, simNameOf(simId) || "this simulator", simNameOf);
+    if (groups.length) {
+      box.appendChild(el("h4", "diff-next", "What to do next"));
+      const list = el("div", "diff-groups");
+      groups.forEach((g) => {
+        const card = el("div", "diff-group " + g.band.cls);
+        card.appendChild(el("h5", "", g.band.label));
+        card.appendChild(el("p", "diff-who", g.who));
+        card.appendChild(el("p", "diff-do", g.action));
+        list.appendChild(card);
+      });
+      box.appendChild(list);
+    }
+    return box;
+  }
+
+  function refreshReport() {
+    const old = document.getElementById("diff-report-slot");
+    if (!old) return;
+    old.textContent = "";
+    old.appendChild(buildReport());
   }
 
   function openSim(topicKey) {
@@ -1293,6 +1429,7 @@
     $("ppt-opts").classList.toggle("hidden", !deck);
     $("deck-opts").classList.toggle("hidden", !deck);
     $("sim-opts").classList.toggle("hidden", !sim);
+    $("diff-opts").classList.toggle("hidden", !sim);
     $("weekly-opts").classList.toggle("hidden", !weekly);
     // The lesson wording and the question counts belong to the deck and the
     // weekly plan; the simulator needs neither.
@@ -1326,6 +1463,57 @@
     renderSimCard($("topic-select").value);
   });
 
+  // ---------- the record's own controls ----------
+  const addKidFromBox = () => {
+    if (typeof LEARNERS === "undefined") return;
+    const box = $("kid-name");
+    const added = LEARNERS.addKid(classKeyNow(), classLabelNow(), box.value);
+    if (added) {
+      LEARNERS.setCurrent(classKeyNow(), added.id);   // the child just added is up next
+      box.value = "";
+    } else if (box.value.trim()) {
+      $("diff-msg").textContent = "That name is already in the list.";
+    }
+    renderLearnerPanel();
+    refreshReport();
+  };
+  $("kid-add").addEventListener("click", addKidFromBox);
+  $("kid-name").addEventListener("keydown", (e) => { if (e.key === "Enter") addKidFromBox(); });
+  $("section-input").addEventListener("change", () => { renderLearnerPanel(); refreshReport(); });
+  $("diff-export").addEventListener("click", (e) => {
+    if (typeof LEARNERS === "undefined") return;
+    const key = classKeyNow();
+    const rep = LEARNERS.report(key, "", classLabelNow());
+    if (!rep.total.n) {
+      e.target.textContent = "Nothing recorded yet";
+      setTimeout(() => { e.target.textContent = "Export the record"; }, 2500);
+      return;
+    }
+    const who = $("teacher-input").value.trim();
+    saveBlob(new Blob([LEARNERS.exportText(key, who, classLabelNow())], { type: "text/plain" }),
+      `AlIPS_differentiation_${classLabelNow().replace(/[^\w]+/g, "_")}.txt`);
+  });
+  $("diff-clear").addEventListener("click", (e) => {
+    if (typeof LEARNERS === "undefined") return;
+    // Two taps to delete: the second one, within a few seconds, does it.
+    if (e.target.dataset.armed) {
+      LEARNERS.clearClass(classKeyNow());
+      delete e.target.dataset.armed;
+      e.target.textContent = "Delete this class";
+      $("diff-msg").textContent = "The class and its record have been deleted from this computer.";
+      renderLearnerPanel();
+      refreshReport();
+      return;
+    }
+    e.target.dataset.armed = "1";
+    e.target.textContent = "Tap again to delete";
+    setTimeout(() => {
+      delete e.target.dataset.armed;
+      e.target.textContent = "Delete this class";
+    }, 4000);
+  });
+  if (typeof KIDS !== "undefined") KIDS.onAttempt(logAttempt);
+
   // Typing anywhere on the weekly form is kept against this sub-topic.
   $("sheet").addEventListener("input", (e) => {
     const cellEl = e.target.closest("[data-edit]");
@@ -1339,6 +1527,7 @@
     state.grade = +e.target.value;
     state.simPick = null;             // the junior/senior choice follows the grade
     if ($("sim-pick")) $("sim-pick").value = "";
+    renderLearnerPanel();             // a different grade is a different class
     state.track = 0;
     buildTrackSelect();
     buildTopicSelect();
@@ -1460,6 +1649,7 @@
   buildGradeSelect();
   buildTrackSelect();
   buildSimPicker();
+  renderLearnerPanel();
   if (params.get("topic")) state.topic = params.get("topic");
   buildTopicSelect();
   const prefs = readStore(PREF_KEY);

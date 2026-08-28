@@ -942,3 +942,187 @@
   .kid-counter, .kid-biscuit, .kid-rod, .kid-cube, .kid-mcube, .kid-pic { animation: none; }
   .kid-zone, .kid-part { transition: none; }
 }
+
+/* ---------- The differentiation record ---------- */
+
+.kid-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.kid-chip {
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 5px 11px;
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+}
+.kid-chip:hover { border-color: var(--primary); }
+.kid-chip.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+.gen-panel #kid-name { flex: 1; min-width: 90px; }
+
+.diff-report {
+  margin: 4px 20px 22px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+}
+.diff-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.diff-head h4 { font-size: 0.98rem; color: var(--primary); }
+.diff-sub { font-size: 0.8rem; color: var(--ink-soft); }
+.diff-empty { font-size: 0.88rem; color: var(--ink-soft); line-height: 1.5; }
+
+.diff-rows { display: flex; flex-direction: column; gap: 6px; }
+.diff-row { display: flex; align-items: center; gap: 10px; }
+.diff-name { width: 8.5ch; font-weight: 700; font-size: 0.88rem; }
+.diff-bar {
+  flex: 1;
+  height: 16px;
+  border-radius: 999px;
+  background: #e7ebf2;
+  overflow: hidden;
+}
+.diff-fill { height: 100%; border-radius: 999px; transition: width 0.3s ease-out; }
+.diff-n {
+  width: 5ch;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+.diff-band {
+  min-width: 12ch;
+  white-space: nowrap;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-align: center;
+}
+/* One colour per band, used on the bar and on the label, so the eye learns it once. */
+.band-support { background: #f0dcb4; color: #6b4407; }
+.diff-fill.band-support { background: #d9a441; }
+.band-secure { background: #cfe4d8; color: #1c5b36; }
+.diff-fill.band-secure { background: #4f9c72; }
+.band-ready { background: #cfe0f5; color: #123f70; }
+.diff-fill.band-ready { background: #2f7ac4; }
+.band-thin { background: #e7ebf2; color: var(--ink-soft); }
+.diff-fill.band-thin { background: #b9c6d8; }
+
+.diff-next { margin: 16px 0 8px; font-size: 0.98rem; color: var(--primary); }
+.diff-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+.diff-group {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--card);
+  border-inline-start: 4px solid currentColor;
+}
+.diff-group h5 { font-size: 0.84rem; margin-bottom: 3px; }
+.diff-who { font-size: 0.88rem; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+.diff-do { font-size: 0.82rem; line-height: 1.45; color: var(--ink); }
+
+/* levels inside a junior simulator */
+.kid-levels { display: flex; align-items: center; gap: 4px; }
+.kid-lev-label { font-size: 0.72rem; color: var(--ink-soft); margin-inline-end: 2px; }
+.kid-lev {
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 4px 9px;
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  cursor: pointer;
+}
+.kid-lev:hover { border-color: var(--accent); }
+.kid-lev.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+@media print { .diff-report { display: none; } }
+
+/* ---------- Tracing numbers: the jungle ---------- */
+
+.kid.kid-jungle .kid-board {
+  background:
+    radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.35) 0 22%, transparent 23%),
+    linear-gradient(160deg, #eaf7e4 0%, #cfeccb 45%, #b6e0b2 100%);
+  border-color: #79b06a;
+  position: relative;
+  overflow: hidden;
+}
+.kid.kid-jungle .kid-say { background: #e2f4dc; color: #1d4a20; }
+.kid.kid-jungle .kid-say.kid-yay { background: #c8ecc4; color: #14401b; }
+.kid.kid-jungle .kid-read { border-inline-start-color: #3f8b46; background: #f1faee; }
+.kid.kid-jungle .kid-mode.on { background: #3f8b46; border-color: #3f8b46; }
+.kid.kid-jungle .kid-btn { background: #3f8b46; border-color: #3f8b46; }
+.kid.kid-jungle .kid-btn:hover { background: #2f6c35; }
+
+.trace-scene {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.trace-vine {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  font-size: 1.5rem;
+  line-height: 1;
+  opacity: 0.75;
+  pointer-events: none;
+}
+.trace-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; align-items: center; }
+.trace-mate { font-size: 2.6rem; line-height: 1; }
+.trace-mate.left { transform: scaleX(-1); }
+.trace-panel {
+  width: 232px;
+  height: 310px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.86);
+  border: 3px solid #79b06a;
+  box-shadow: 0 3px 0 #5d9152;
+  transition: background 0.25s, transform 0.25s;
+}
+.trace-panel.trace-done { background: #dff5d6; transform: scale(1.03); }
+.trace-svg { display: block; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+/* The road a child keeps inside, and the dashed line down the middle of it. */
+.trace-svg .trace-road {
+  fill: none;
+  stroke: #cfe0cd;
+  stroke-width: 19;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.trace-svg .trace-dash {
+  fill: none;
+  stroke: #8aa98d;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 5 9;
+}
+.trace-svg .trace-lead { stroke: #34a04a; stroke-width: 2; stroke-dasharray: 3 3; }
+.trace-svg .trace-ink {
+  fill: none;
+  stroke: #b07d2b;
+  stroke-width: 15;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.trace-panel.trace-done .trace-ink { stroke: #2f6c35; }
+.trace-svg .trace-start { fill: #34a04a; stroke: #fff; stroke-width: 2.5; }
+.trace-svg .trace-arrow { fill: #34a04a; }
+.trace-svg .trace-badge {
+  font: 700 9px "Segoe UI", Tahoma, Arial, sans-serif;
+  fill: #fff;
+  pointer-events: none;
+}
+.trace-count { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; min-height: 30px; }
+.trace-fruit { font-size: 1.8rem; line-height: 1; animation: kid-pop 0.3s ease-out both; }
+.trace-vine span { font-size: 1.7rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .trace-fruit { animation: none; }
+  .trace-panel { transition: none; }
+}
