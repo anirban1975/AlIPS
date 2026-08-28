@@ -1057,14 +1057,14 @@
 .kid.kid-jungle .kid-btn { background: #3f8b46; border-color: #3f8b46; }
 .kid.kid-jungle .kid-btn:hover { background: #2f6c35; }
 
-.trace-scene {
+.kt-scene {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
   width: 100%;
 }
-.trace-vine {
+.kt-vine {
   display: flex;
   justify-content: space-between;
   width: 100%;
@@ -1073,10 +1073,10 @@
   opacity: 0.75;
   pointer-events: none;
 }
-.trace-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; align-items: center; }
-.trace-mate { font-size: 2.6rem; line-height: 1; }
-.trace-mate.left { transform: scaleX(-1); }
-.trace-panel {
+.kt-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; align-items: center; }
+.kt-mate { font-size: 2.6rem; line-height: 1; }
+.kt-mate.left { transform: scaleX(-1); }
+.kt-panel {
   width: 232px;
   height: 310px;
   border-radius: 16px;
@@ -1085,44 +1085,44 @@
   box-shadow: 0 3px 0 #5d9152;
   transition: background 0.25s, transform 0.25s;
 }
-.trace-panel.trace-done { background: #dff5d6; transform: scale(1.03); }
-.trace-svg { display: block; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+.kt-panel.kt-done { background: #dff5d6; transform: scale(1.03); }
+.kt-svg { display: block; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
 /* The road a child keeps inside, and the dashed line down the middle of it. */
-.trace-svg .trace-road {
+.kt-svg .kt-road {
   fill: none;
   stroke: #cfe0cd;
   stroke-width: 19;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-.trace-svg .trace-dash {
+.kt-svg .kt-dash {
   fill: none;
   stroke: #8aa98d;
   stroke-width: 2.5;
   stroke-linecap: round;
   stroke-dasharray: 5 9;
 }
-.trace-svg .trace-lead { stroke: #34a04a; stroke-width: 2; stroke-dasharray: 3 3; }
-.trace-svg .trace-ink {
+.kt-svg .kt-lead { stroke: #34a04a; stroke-width: 2; stroke-dasharray: 3 3; }
+.kt-svg .kt-ink {
   fill: none;
   stroke: #b07d2b;
   stroke-width: 15;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-.trace-panel.trace-done .trace-ink { stroke: #2f6c35; }
-.trace-svg .trace-start { fill: #34a04a; stroke: #fff; stroke-width: 2.5; }
-.trace-svg .trace-arrow { fill: #34a04a; }
-.trace-svg .trace-badge {
+.kt-panel.kt-done .kt-ink { stroke: #2f6c35; }
+.kt-svg .kt-start { fill: #34a04a; stroke: #fff; stroke-width: 2.5; }
+.kt-svg .kt-arrow { fill: #34a04a; }
+.kt-svg .kt-badge {
   font: 700 9px "Segoe UI", Tahoma, Arial, sans-serif;
   fill: #fff;
   pointer-events: none;
 }
-.trace-count { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; min-height: 30px; }
-.trace-fruit { font-size: 1.8rem; line-height: 1; animation: kid-pop 0.3s ease-out both; }
-.trace-vine span { font-size: 1.7rem; }
+.kt-count { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; min-height: 30px; }
+.kt-fruit { font-size: 1.8rem; line-height: 1; animation: kid-pop 0.3s ease-out both; }
+.kt-vine span { font-size: 1.7rem; }
 
 @media (prefers-reduced-motion: reduce) {
-  .trace-fruit { animation: none; }
-  .trace-panel { transition: none; }
+  .kt-fruit { animation: none; }
+  .kt-panel { transition: none; }
 }

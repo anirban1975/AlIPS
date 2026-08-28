@@ -1457,17 +1457,17 @@ const KIDS = (function () {
           Object.keys(attrs || {}).forEach((k) => n.setAttribute(k, attrs[k]));
           return n;
         };
-        const wrap = el("div", "trace-panel");
-        const s = mk("svg", { viewBox: "0 0 100 140", class: "trace-svg" });
+        const wrap = el("div", "kt-panel");
+        const s = mk("svg", { viewBox: "0 0 100 140", class: "kt-svg" });
         wrap.appendChild(s);
 
         const strokes = (DIGIT[ch] || DIGIT["0"]).map((d, i) => {
           // Three layers: the pale road a child stays inside, a dashed line
           // down the middle of it, and their own ink revealed on top.
-          const guide = mk("path", { d, class: "trace-road" });
+          const guide = mk("path", { d, class: "kt-road" });
           s.appendChild(guide);
-          s.appendChild(mk("path", { d, class: "trace-dash" }));
-          const ink = mk("path", { d, class: "trace-ink" });
+          s.appendChild(mk("path", { d, class: "kt-dash" }));
+          const ink = mk("path", { d, class: "kt-ink" });
           s.appendChild(ink);
           const len = guide.getTotalLength ? guide.getTotalLength() : 0;
           const n = Math.max(20, Math.round(len / 5));
@@ -1492,11 +1492,11 @@ const KIDS = (function () {
           // so the markers step sideways rather than sitting on top of each other.
           const off = i * 15;
           const cx = p0.x + (-dy / L) * off, cy = p0.y + (dx / L) * off;
-          if (off) s.appendChild(mk("line", { x1: cx, y1: cy, x2: p0.x, y2: p0.y, class: "trace-lead" }));
-          s.appendChild(mk("circle", { cx, cy, r: 8, class: "trace-start s" + i }));
-          s.appendChild(mk("polygon", { points: "0,-5 13,0 0,5", class: "trace-arrow",
+          if (off) s.appendChild(mk("line", { x1: cx, y1: cy, x2: p0.x, y2: p0.y, class: "kt-lead" }));
+          s.appendChild(mk("circle", { cx, cy, r: 8, class: "kt-start s" + i }));
+          s.appendChild(mk("polygon", { points: "0,-5 13,0 0,5", class: "kt-arrow",
             transform: `translate(${p0.x} ${p0.y}) rotate(${ang}) translate(13 0)` }));
-          const badge = mk("text", { x: cx, y: cy + 3.5, class: "trace-badge", "text-anchor": "middle" });
+          const badge = mk("text", { x: cx, y: cy + 3.5, class: "kt-badge", "text-anchor": "middle" });
           badge.textContent = String(i + 1);
           s.appendChild(badge);
         });
@@ -1515,7 +1515,7 @@ const KIDS = (function () {
               str.ink.style.strokeDashoffset = str.len;
             });
             api.current = 0;
-            wrap.classList.remove("trace-done");
+            wrap.classList.remove("kt-done");
           }
         };
 
@@ -1573,13 +1573,13 @@ const KIDS = (function () {
       function draw() {
         clear(K.board);
         panels.length = 0;
-        const scene = el("div", "trace-scene");
-        const vine = el("div", "trace-vine");
+        const scene = el("div", "kt-scene");
+        const vine = el("div", "kt-vine");
         ["🌿", "🍃", "🌴", "🌺", "🍃", "🌴", "🌿"].forEach((g) => vine.appendChild(el("span", "", g)));
         scene.appendChild(vine);
 
-        const row = el("div", "trace-row");
-        row.appendChild(el("span", "trace-mate left", st.animal));
+        const row = el("div", "kt-row");
+        row.appendChild(el("span", "kt-mate left", st.animal));
         String(st.value).split("").forEach((ch) => {
           const panel = digitPanel(ch);
           panel.onMove = () => { if (K.mode !== "guided") check(); };
@@ -1587,13 +1587,13 @@ const KIDS = (function () {
           panels.push(panel);
           row.appendChild(panel.node);
         });
-        row.appendChild(el("span", "trace-mate right", "🦜"));
+        row.appendChild(el("span", "kt-mate right", "🦜"));
         scene.appendChild(row);
 
         // The numeral means something: this many animals came to look.
-        const count = el("div", "trace-count");
+        const count = el("div", "kt-count");
         for (let i = 0; i < Math.min(st.value, 20); i++) {
-          const b = el("span", "trace-fruit", i % 4 === 3 ? st.animal : FRUIT);
+          const b = el("span", "kt-fruit", i % 4 === 3 ? st.animal : FRUIT);
           b.style.animationDelay = (i * 0.05) + "s";
           count.appendChild(b);
         }
@@ -1616,7 +1616,7 @@ const KIDS = (function () {
         tell();
         if (!allDone() || st.done) return;
         st.done = true;
-        panels.forEach((p) => p.node.classList.add("trace-done"));
+        panels.forEach((p) => p.node.classList.add("kt-done"));
         if (K.mode === "play") {
           K.right(`Beautiful ${st.value}!`);
           setTimeout(() => { if (K.mode === "play") P.next(); }, 1600);
