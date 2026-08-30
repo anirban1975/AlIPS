@@ -418,6 +418,209 @@ function simByKeyword(name) {
 // is matched from the sub-topic's own wording, as with the senior simulators.
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Which simulator belongs to which topic.
+//
+// The 40 generators with a `sim` attribute above name their own. This table
+// covers the rest — every other question generator in gen.js — so a sub-topic
+// gets the simulator for the topic it is actually teaching.
+//
+// This exists because matching on wording alone is a trap at senior level:
+// "the factor theorem" contains the word factor, so a Grade 12 class was shown
+// the times-table array; "the remainder theorem" was shown biscuits being
+// shared onto plates; "partial fractions" was shown halves and quarters. The
+// generator is the topic, so it is what the simulator should follow. Keyword
+// matching is now only the last resort, for sub-topics with no generator at
+// all, and at Grades 9-12 it is not allowed to reach for a primary tool.
+//
+// null means "nothing here really fits" — the card then says so and offers the
+// external libraries, which is more use than a confident wrong answer.
+// ---------------------------------------------------------------------------
+
+const GEN_SIM = {
+  // ----- number, Primary -----
+  traceNumbers: ["traceNumber", {}],
+  readWriteNumbers: ["placeValue", {}],
+  countingSequence: ["numberLine", { min: 0, max: 20 }],
+  compareNumbers: ["numberLine", { min: 0, max: 20 }],
+  oneMoreLess: ["numberLine", { min: 0, max: 20, jump: 1 }],
+  oddEven: ["arrayGrid", { rows: 2, cols: 6 }],
+  ordinals: ["numberLine", { min: 0, max: 20 }],
+  numberHierarchy: ["numberLine", { min: -10, max: 10 }],
+  doubleHalve: ["arrayGrid", { rows: 2, cols: 6 }],
+  rounding: ["placeValue", {}],
+  multiplesOf10: ["placeValue", {}],
+  complementsTo100: ["placeValue", {}],
+  placeValueParts: ["placeValue", {}],
+  multiplyBy10: ["placeValue", {}],
+  decimalPlaceValue: ["placeValue", {}],
+  addDecimals: ["placeValue", {}],
+  recurringDecimals: ["placeValue", {}],
+  multiplyDecimals: ["areaModel", {}],
+  factorsMultiples: ["arrayGrid", { rows: 4, cols: 6 }],
+  primeNumbers: ["arrayGrid", { rows: 3, cols: 7 }],
+  primeFactorisation: ["arrayGrid", { rows: 4, cols: 6 }],
+  divisibility: ["groupSplit", { total: 24, size: 4 }],
+  squareCubeNumbers: ["powerTool", { mode: "power" }],
+  surds: ["powerTool", { mode: "power" }],
+  missingOperation: ["balanceScale", {}],
+  arraysMultiplication: ["arrayGrid", { rows: 4, cols: 5 }],
+  moneyTotals: ["coinPurse", {}],
+  interestProfitLoss: ["partOfAmount", { mode: "percent" }],
+  percentChange: ["partOfAmount", { mode: "percent" }],
+  fdpEquivalence: ["partOfAmount", { mode: "percent" }],
+  proportionOfWhole: ["partOfAmount", { mode: "fraction" }],
+  directProportion: ["linePlot", {}],
+
+  // ----- fractions -----
+  fractionOfShape: ["fractionShape", {}],
+  equalSharing: ["groupSplit", { total: 12, size: 3 }],
+  compareFractions: ["fractionBar", { mode: "compare" }],
+  improperMixed: ["fractionBar", { mode: "compare" }],
+  multiplyFraction: ["fractionBar", { mode: "compare" }],
+  algebraicFractions: ["areaModel", { algebra: true }],
+  partialFractions: ["areaModel", { algebra: true }],
+
+  // ----- shape, space and measure -----
+  shapeProperties: ["shapeExplorer", {}],
+  symmetryLines: ["shapeExplorer", {}],
+  rotationalSymmetry: ["shapeExplorer", {}],
+  netsOfSolids: ["shapeExplorer", { mode: "3d" }],
+  volumeCuboid: ["shapeExplorer", { mode: "3d" }],
+  prismVolume: ["shapeExplorer", { mode: "3d" }],
+  polygonAngles: ["shapeExplorer", {}],
+  angleTypes: ["triangleAngles", {}],
+  angleFacts: ["triangleAngles", {}],
+  sineCosineRule: ["triangleAngles", {}],
+  constructionSteps: ["triangleAngles", {}],
+  perimeterShapes: ["arrayGrid", { mode: "area", rows: 4, cols: 7 }],
+  compoundArea: ["arrayGrid", { mode: "area", rows: 4, cols: 7 }],
+  parallelogramTrapezium: ["arrayGrid", { mode: "area", rows: 4, cols: 7 }],
+  circularMeasure: ["circleTool", {}],
+  circleEquation: ["circleTool", {}],
+  unitConversion: ["measureConvert", {}],
+  bounds: ["measureConvert", {}],
+  digitalStorage: ["measureConvert", {}],
+  tellTime: ["clockFace", {}],
+  timeIntervals: ["clockFace", {}],
+  timeZones: ["clockFace", {}],
+  speedDistanceTime: ["linePlot", {}],
+  compassDirections: ["directionGrid", {}],
+  bearings: ["directionGrid", {}],
+  coordinates: ["linePlot", {}],
+  midpointSegment: ["linePlot", {}],
+  reflectionCoords: ["transformGrid", { kind: "reflect" }],
+  rotationCoords: ["transformGrid", { kind: "rotate" }],
+  enlargement: ["transformGrid", { kind: "enlarge" }],
+  scaleDrawing: ["transformGrid", { kind: "enlarge" }],
+  similarShapes: ["transformGrid", { kind: "enlarge" }],
+  trig3D: ["rightTriangle", { mode: "trig" }],
+
+  // ----- algebra and functions -----
+  substitution: ["functionMachine", {}],
+  simplifyExpressions: ["areaModel", { algebra: true }],
+  functionMachine: ["functionMachine", {}],
+  compositeFunctions: ["functionMachine", {}],
+  shapePatterns: ["sequenceBuilder", {}],
+  arithmeticSeries: ["sequenceBuilder", {}],
+  geometricSeries: ["powerTool", { mode: "power" }],
+  completeSquare: ["curvePlot", { mode: "roots" }],
+  polynomialTheorems: ["curvePlot", { mode: "roots" }],
+  polynomialDivision: ["areaModel", { algebra: true }],
+  modulusFunction: ["linePlot", {}],
+  lineIntersection: ["linePlot", { two: true }],
+  conversionGraphs: ["linePlot", {}],
+  travelGraphs: ["linePlot", {}],
+  linearForm: ["linePlot", {}],
+  growthDecay: ["powerTool", { mode: "power" }],
+  naturalExpLog: ["powerTool", { mode: "log" }],
+  iterativeSolution: ["curvePlot", { mode: "roots" }],
+  vectors2D: ["vectorTool", {}],
+  scalarProduct: ["vectorTool", {}],
+
+  // ----- calculus -----
+  increasingDecreasing: ["curvePlot", { mode: "tangent" }],
+  tangentGradient: ["curvePlot", { mode: "tangent" }],
+  productQuotientRule: ["curvePlot", { mode: "tangent" }],
+  diffTrigFns: ["curvePlot", { mode: "tangent" }],
+  implicitDiff: ["curvePlot", { mode: "tangent" }],
+  definiteIntegral: ["curvePlot", { mode: "area" }],
+  trapeziumRule: ["curvePlot", { mode: "area" }],
+  recogniseIntegrals: ["curvePlot", { mode: "area" }],
+  separableDE: ["curvePlot", { mode: "area" }],
+
+  // ----- trigonometry beyond the right angle -----
+  reciprocalTrig: ["rightTriangle", { mode: "trig" }],
+  compoundAngle: ["rightTriangle", { mode: "trig" }],
+  doubleAngle: ["rightTriangle", { mode: "trig" }],
+  trigIdentityProof: ["rightTriangle", { mode: "trig" }],
+  rFormTrig: ["rightTriangle", { mode: "trig" }],
+  trigGraphTransform: null,          // a wave grapher would be needed; the links have one
+
+  // ----- complex numbers -----
+  complexArithmetic: ["vectorTool", {}],
+  argandDiagram: ["vectorTool", {}],
+  complexLoci: ["vectorTool", {}],
+  complexRoots: ["curvePlot", { mode: "roots" }],
+
+  // ----- data and probability -----
+  readTable: ["tallyChart", {}],
+  tallyCharts: ["tallyChart", {}],
+  twoWayTables: ["vennSort", { view: "carroll" }],
+  vennDiagram: ["vennSort", {}],
+  carrollDiagram: ["vennSort", { view: "carroll" }],
+  sortingDiagrams: ["vennSort", {}],
+  pieChart: ["tallyChart", {}],
+  stemAndLeaf: ["tallyChart", {}],
+  frequencyTableStats: ["tallyChart", {}],
+  dataTypes: ["tallyChart", {}],
+  modeMedianRange: ["dataDots", { mode: "mean" }],
+  cumulativeFrequency: ["dataDots", { mode: "sd" }],
+  boxPlots: ["dataDots", { mode: "sd" }],
+  scatterGraphs: ["linePlot", {}],
+  samplingMethods: ["dataDots", { mode: "mean" }],
+  chanceLanguage: ["spinner", {}],
+  simpleProbability: ["spinner", {}],
+  combinedProbability: ["spinner", {}],
+  experimentalProbability: ["spinner", {}],
+  normalDistribution: ["distribution", { kind: "normal" }],
+  binomialDistribution: ["distribution", { kind: "binomial" }],
+  geometricDistribution: ["distribution", { kind: "binomial" }],
+  poissonDistribution: ["distribution", { kind: "poisson" }],
+  discreteRandomVariable: ["distribution", { kind: "binomial" }],
+  continuousRV: ["distribution", { kind: "normal" }],
+  sumIndependentRV: ["distribution", { kind: "normal" }],
+  sampleMeans: ["distribution", { kind: "normal" }],
+  unbiasedEstimates: ["distribution", { kind: "normal" }],
+  confidenceInterval: ["distribution", { kind: "normal" }],
+  hypothesisTest: ["distribution", { kind: "normal" }],
+  typeErrors: ["distribution", { kind: "normal" }]
+};
+
+// At Grades 9 to 12 a guessed match may only be one of these. A Grade 12 class
+// shown a ten frame or a plate of biscuits is worse than a class shown nothing.
+// A few manipulatives are the right idea at any age but the wrong dress for an
+// older class: the coin purse teaches money, but "Money and finance" at IGCSE
+// means interest and profit. Above Grade 8 these swap to the senior version.
+const SENIOR_SWAP = {
+  coinPurse: ["partOfAmount", { mode: "percent" }],
+  fractionShape: ["fractionBar", { mode: "compare" }],
+  clockKids: ["clockFace", {}],
+  measureUp: ["measureConvert", {}],
+  shapeSort: ["shapeExplorer", {}],
+  pictoKids: ["tallyChart", {}],
+  arrayBuild: ["arrayGrid", {}],
+  shareOut: ["groupSplit", {}],
+  tenFrame: ["numberLine", { min: 0, max: 20 }],
+  numberTrack: ["numberLine", { min: 0, max: 20 }],
+  tensOnes: ["placeValue", {}]
+};
+
+const SENIOR_OK = ["linePlot", "curvePlot", "rightTriangle", "triangleAngles", "circleTool",
+  "powerTool", "dataDots", "pascal", "bidmas", "distribution", "vectorTool", "vennSort",
+  "transformGrid", "shapeExplorer", "functionMachine", "sequenceBuilder", "areaModel",
+  "spinner", "tallyChart", "measureConvert", "numberLine", "balanceScale", "partOfAmount"];
+
 const KID_GRADE_MAX = 4;
 
 const KID_SIM = {
@@ -491,36 +694,65 @@ function videoLinks(q, junior) {
 // only if nothing matches, or the simulator files have not loaded), whether it
 // was chosen for the topic or matched from its wording, the links out, and the
 // videos. Grades 1 to 4 are served the junior simulators first.
+// Which registry owns a simulator id — the junior manipulatives are in
+// sims-kids.js, everything else in sims.js.
+function simRegistry(useId) {
+  if (typeof KIDS !== "undefined" && KIDS.has(useId)) return { reg: KIDS, engine: "kids" };
+  if (typeof SIMS !== "undefined" && SIMS.has(useId)) return { reg: SIMS, engine: "sims" };
+  return null;
+}
+
 function simulatorsFor(id, fallbackName, grade) {
   const L = (id && typeof LESSONS !== "undefined" && LESSONS[id]) || null;
   const q = (L && L.q) || fallbackName || "";
   const junior = !!grade && grade <= KID_GRADE_MAX;
-
-  if (junior && typeof KIDS !== "undefined") {
-    const kid = kidSimFor(id, fallbackName);
-    if (kid && KIDS.has(kid.use)) {
-      const def = KIDS.get(kid.use);
-      return {
-        builtIn: { id: kid.use, name: def.name, blurb: def.blurb, opts: kid.opts || {},
-                   matched: kid.matched, engine: "kids", junior: true },
-        links: q ? SIM_SITES.map((s) => ({ label: s.label, url: s.url(q) })) : [],
-        videos: videoLinks(q, true)
-      };
+  const senior = !!grade && grade >= 9;
+  const out = (use, opts, matched) => {
+    if (senior && SENIOR_SWAP[use]) {          // right idea, wrong dress for this age
+      opts = SENIOR_SWAP[use][1];
+      use = SENIOR_SWAP[use][0];
     }
-  }
-
-  let sim = L && L.sim ? L.sim : null;
-  let matched = "topic";
-  if (!sim) { sim = simByKeyword(fallbackName); matched = "keyword"; }
-  const def = sim && typeof SIMS !== "undefined" && SIMS.has(sim.use) ? SIMS.get(sim.use) : null;
-  return {
-    builtIn: def
-      ? { id: sim.use, name: def.name, blurb: def.blurb, opts: sim.opts || {}, matched,
-          engine: "sims", junior: false }
-      : null,
+    const found = simRegistry(use);
+    if (!found) return null;
+    const def = found.reg.get(use);
+    return { id: use, name: def.name, blurb: def.blurb, opts: opts || {}, matched,
+             engine: found.engine, junior: found.engine === "kids" };
+  };
+  const wrap = (builtIn) => ({
+    builtIn: builtIn || null,
     links: q ? SIM_SITES.map((s) => ({ label: s.label, url: s.url(q) })) : [],
     videos: videoLinks(q, junior)
-  };
+  });
+
+  // 1. Grades 1-4 get the junior version of the topic wherever there is one.
+  if (junior && typeof KIDS !== "undefined") {
+    const kid = kidSimFor(id, fallbackName);
+    if (kid && KIDS.has(kid.use)) return wrap(out(kid.use, kid.opts, kid.matched));
+  }
+
+  // 2. The topic's own simulator, named on the lesson.
+  if (L && L.sim) {
+    const hit = out(L.sim.use, L.sim.opts, "topic");
+    if (hit) return wrap(hit);
+  }
+
+  // 3. The simulator for this topic's question generator. This is the one that
+  //    keeps a Grade 12 class away from the times-table array.
+  if (id && Object.prototype.hasOwnProperty.call(GEN_SIM, id)) {
+    const entry = GEN_SIM[id];
+    if (!entry) return wrap(null);            // deliberately nothing: say so
+    const hit = out(entry[0], entry[1], "topic");
+    if (hit) return wrap(hit);
+  }
+
+  // 4. Last resort: the sub-topic's own wording. Senior classes only accept a
+  //    guess from the list of simulators that suit them.
+  const guess = simByKeyword(fallbackName);
+  if (guess && (!senior || SENIOR_OK.indexOf(guess.use) !== -1)) {
+    const hit = out(guess.use, guess.opts, "keyword");
+    if (hit) return wrap(hit);
+  }
+  return wrap(null);
 }
 
 // ---------------------------------------------------------------------------

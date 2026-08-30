@@ -306,6 +306,25 @@ Which simulator a sub-topic gets is decided in two steps, in `lessons.js`:
    twelve that do not (mock examinations, past-paper booklets, the complex
    plane, polar form) still get the links out.
 
+**Which simulator a sub-topic gets is decided by its question generator, not by
+its wording.** `GEN_SIM` in `lessons.js` maps every generator in `gen.js` to a
+simulator; the order is: the junior map for Grades 1-4, then the lesson's own
+`sim`, then `GEN_SIM`, then — only for sub-topics with no generator at all —
+the `SIM_KEYWORDS` wording match. A `null` entry in `GEN_SIM` means nothing
+honest fits, and the card says so instead of guessing.
+
+This order exists because wording matching humiliated itself at senior level:
+"the factor theorem" contains *factor*, so Grade 12 was shown the times-table
+array; "the remainder theorem" was shown biscuits shared onto plates; "partial
+fractions" got halves and quarters; "the modulus function" got the Grade 6
+function machine. Two guards back it up: at Grades 9-12 a wording guess is only
+accepted if the simulator is in `SENIOR_OK`, and `SENIOR_SWAP` re-dresses the
+handful of junior manipulatives that are the right idea at the wrong age (the
+coin purse becomes percentages for "Money and finance" at IGCSE). After the
+change, 752 of the 896 sub-topic entries match on their topic, 141 on wording
+(all Grade 8 and below), and 3 have no simulator — mock exams, past-paper
+booklets, and transforming trigonometric graphs.
+
 `simulatorsFor(generatorId, subTopicName, grade)` in `lessons.js` is the single
 entry point and returns `{ builtIn, links, videos }`. To add a simulator: write
 it in `sims.js` (`name`, a one-line `blurb` a teacher can read aloud, and
