@@ -366,6 +366,9 @@ const SIM_KEYWORDS = [
     "measureConvert", {}],
   [/percent|interest|profit|loss|discount|\btax\b/, "partOfAmount", { mode: "percent" }],
   [/ratio|proportion/, "partOfAmount", { mode: "ratio" }],
+  // Ahead of the general fraction rule below, which would otherwise hand a
+  // Grade 12 class a fraction bar.
+  [/partial fraction/, "partialFractions", {}],
   [/fraction|numerator|denominator|equivalent|mixed number|quarter|\bhalf\b|whole|equal part/,
     "fractionBar", { mode: "compare" }],
   [/differentiat|derivative|rate of change|gradient function|stationary point|increasing and decreasing/,
@@ -479,7 +482,9 @@ const GEN_SIM = {
   improperMixed: ["fractionBar", { mode: "compare" }],
   multiplyFraction: ["fractionBar", { mode: "compare" }],
   algebraicFractions: ["areaModel", { algebra: true }],
-  partialFractions: ["areaModel", { algebra: true }],
+  // Not the area model: the four Cambridge cases each demand a different form,
+  // and choosing the form is where the marks are won and lost.
+  partialFractions: ["partialFractions", {}],
 
   // ----- shape, space and measure -----
   shapeProperties: ["shapeExplorer", {}],
@@ -619,7 +624,8 @@ const SENIOR_SWAP = {
 const SENIOR_OK = ["linePlot", "curvePlot", "rightTriangle", "triangleAngles", "circleTool",
   "powerTool", "dataDots", "pascal", "bidmas", "distribution", "vectorTool", "vennSort",
   "transformGrid", "shapeExplorer", "functionMachine", "sequenceBuilder", "areaModel",
-  "spinner", "tallyChart", "measureConvert", "numberLine", "balanceScale", "partOfAmount"];
+  "spinner", "tallyChart", "measureConvert", "numberLine", "balanceScale", "partOfAmount",
+  "partialFractions"];
 
 const KID_GRADE_MAX = 4;
 

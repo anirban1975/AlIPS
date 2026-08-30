@@ -2057,6 +2057,435 @@ const SIMS = (function () {
     }
   };
 
+  // ---------- 30. Partial fractions ----------
+  //
+  // Cambridge sets four shapes of question, and a candidate who writes the
+  // wrong FORM on line one has lost the question before any arithmetic starts.
+  // So this simulator shows the form first, says why that form and no other,
+  // and only then substitutes — one line at a time, for the board.
+  //
+  //   1  two different linear factors      A/(ax+b) + B/(cx+d)
+  //   2  a repeated linear factor          A/(x+p) + B/(x+q) + C/(x+q)²
+  //   3  an irreducible quadratic factor   A/(x+p) + (Bx+C)/(x²+k)
+  //   4  an improper fraction              k + A/(x+p) + B/(x+q)
+  //
+  // Every example is built backwards from whole-number constants, so the answer
+  // on the board is exact — nothing here is rounded. The working shown is not
+  // the construction, though: each constant is re-derived by the substitution a
+  // pupil would actually do, and the last line checks both sides at a test
+  // value. If the two ever disagreed the simulator says so on the board rather
+  // than quietly printing a wrong answer.
+  defs.partialFractions = {
+    name: "Partial fractions",
+    blurb: "All four Cambridge cases — two linear factors, a repeated factor, a quadratic factor, and an improper fraction — with the form named before any working starts.",
+    mount(host, o) {
+      const opts = o || {};
+
+      // ---- exact fractions ----
+      const gcd = (a, b) => (b ? gcd(b, a % b) : Math.abs(a));
+      const F = (n, d) => {
+        d = d === undefined ? 1 : d;
+        if (d < 0) { n = -n; d = -d; }
+        const k = gcd(Math.abs(n), d) || 1;
+        return { n: n / k, d: d / k };
+      };
+      const Fadd = (a, b) => F(a.n * b.d + b.n * a.d, a.d * b.d);
+      const Fsub = (a, b) => F(a.n * b.d - b.n * a.d, a.d * b.d);
+      const Fmul = (a, b) => F(a.n * b.n, a.d * b.d);
+      const Fdiv = (a, b) => F(a.n * b.d, a.d * b.n);
+      const Feq = (a, b) => a.n * b.d === b.n * a.d;
+      const Fpow = (x, k) => { let r = F(1); for (let i = 0; i < k; i++) r = Fmul(r, x); return r; };
+      const Ftxt = (a) => (a.d === 1 ? String(a.n) : a.n + "/" + a.d).replace("-", "−");
+      // "A", "−A", "3A", "(4/3)A" — a coefficient written in front of an unknown.
+      const coefTxt = (a, letter) => {
+        if (a.d === 1 && a.n === 1) return letter;
+        if (a.d === 1 && a.n === -1) return "−" + letter;
+        if (a.d === 1) return Ftxt(a) + letter;
+        return "(" + Ftxt(a) + ")" + letter;
+      };
+      const inBr = (n) => (n < 0 ? "(−" + -n + ")" : String(n));
+
+      // ---- polynomials: ascending coefficients, whole numbers ----
+      const pmul = (a, b) => {
+        const out = new Array(a.length + b.length - 1).fill(0);
+        a.forEach((u, i) => b.forEach((v, j) => { out[i + j] += u * v; }));
+        return out;
+      };
+      const padd = (a, b) => {
+        const big = (a.length >= b.length ? a : b).slice();
+        const small = a.length >= b.length ? b : a;
+        small.forEach((v, i) => { big[i] += v; });
+        return big;
+      };
+      const pscale = (a, k) => a.map((v) => v * k);
+      const pev = (p, x) => p.reduce((acc, c, i) => Fadd(acc, Fmul(F(c), Fpow(x, i))), F(0));
+      const SUP = ["", "x", "x²", "x³"];
+      function ptxt(p) {
+        let s = "";
+        for (let i = p.length - 1; i >= 0; i--) {
+          const c = p[i];
+          if (!c) continue;
+          const first = s === "";
+          const sign = c < 0 ? (first ? "−" : " − ") : (first ? "" : " + ");
+          const a = Math.abs(c);
+          s += sign + (a === 1 && i > 0 ? "" : String(a)) + SUP[i];
+        }
+        return s || "0";
+      }
+      // "3x − 2", "−x", "5" — the numerator that sits over a quadratic factor.
+      function linNumTxt(B, C) {
+        if (B.n === 0) return Ftxt(C);
+        const bx = B.d === 1 && Math.abs(B.n) === 1 ? (B.n < 0 ? "−x" : "x") : Ftxt(B) + "x";
+        if (C.n === 0) return bx;
+        return bx + (C.n < 0 ? " − " : " + ") + Ftxt(F(Math.abs(C.n), C.d));
+      }
+
+      // ---- linear factors, written {a, b} for ax + b ----
+      const linTxt = (f) => (f.a === 1 ? "x" : f.a === -1 ? "−x" : f.a + "x")
+        + (f.b === 0 ? "" : f.b > 0 ? " + " + f.b : " − " + -f.b);
+      const br = (f) => "(" + linTxt(f) + ")";
+      const linP = (f) => [f.b, f.a];
+      const rootOf = (f) => F(-f.b, f.a);
+
+      const rnd = (a) => a[Math.floor(Math.random() * a.length)];
+      const NZ = [-5, -4, -3, -2, -1, 1, 2, 3, 4, 5];
+      const SMALL = [-4, -3, -2, -1, 1, 2, 3, 4];
+
+      // Two lines of working: the substituted equation, then the constant.
+      const solved = (lhs, coef, letter, val) => [
+        [{ t: Ftxt(lhs) + " = " + coefTxt(coef, letter) }],
+        [{ t: "so  " + letter + " = " + Ftxt(val), cls: "pf-then" }]
+      ];
+
+      // A test value for the final check that no denominator kills.
+      function testX(bad) {
+        const tries = [2, 1, 3, 0, -1, 4, 5, -2, 6];
+        for (let i = 0; i < tries.length; i++) {
+          const x = F(tries[i]);
+          if (bad.every((b) => !Feq(x, b))) return x;
+        }
+        return F(11);
+      }
+
+      // ---------- case 1: two different linear factors ----------
+      function buildDistinct() {
+        const p = rnd(SMALL);
+        const a2 = rnd([1, 1, 1, 2, 3]);
+        let q;
+        // The two roots must differ, and a bracket like (2x − 4) would be
+        // marked down for not being written 2(x − 2), so keep them coprime.
+        do { q = rnd(SMALL); } while (p * a2 === q || gcd(a2, Math.abs(q)) > 1);
+        const f1 = { a: 1, b: p }, f2 = { a: a2, b: q };
+        const A = rnd(NZ), B = rnd(NZ);
+        const N = padd(pscale(linP(f2), A), pscale(linP(f1), B));
+        const den = br(f1) + br(f2);
+        const r1 = rootOf(f1), r2 = rootOf(f2);
+        // Re-derived by covering up, not taken from the construction.
+        const Av = Fdiv(pev(N, r1), pev(linP(f2), r1));
+        const Bv = Fdiv(pev(N, r2), pev(linP(f1), r2));
+
+        return {
+          title: "two different linear factors",
+          question: [[{ n: ptxt(N), d: den }]],
+          steps: [
+            { why: "Two different linear factors on the bottom, so each one carries a single "
+                + "constant on top — a numerator is always one degree lower than its own "
+                + "denominator, and one degree below linear is a number.",
+              expr: [[{ n: ptxt(N), d: den }, { t: " ≡ " },
+                      { n: "A", d: linTxt(f1) }, { t: " + " }, { n: "B", d: linTxt(f2) }]] },
+            { why: "Multiply every term by " + den + ". The fractions go, and what is left is "
+                + "an identity — true for every x, not just for one value.",
+              expr: [[{ t: ptxt(N) + " ≡ A" + br(f2) + " + B" + br(f1) }]] },
+            { why: "Choose x = " + Ftxt(r1) + ", the value that makes " + br(f1) + " zero. "
+                + "Every term carrying that bracket disappears, so only A is left.",
+              expr: solved(pev(N, r1), pev(linP(f2), r1), "A", Av) },
+            { why: "Now x = " + Ftxt(r2) + ", which makes " + br(f2) + " zero and leaves B.",
+              expr: solved(pev(N, r2), pev(linP(f1), r2), "B", Bv) }
+          ],
+          answer: [[{ n: ptxt(N), d: den }, { t: " ≡ " },
+                    { n: Ftxt(Av), d: linTxt(f1) }, { t: " + " }, { n: Ftxt(Bv), d: linTxt(f2) }]],
+          point: "Cover a bracket, put in the x that kills it, and the constant over that "
+            + "bracket falls out on its own. No simultaneous equations are needed here.",
+          bad: [r1, r2],
+          check(x) {
+            const l1 = pev(linP(f1), x), l2 = pev(linP(f2), x);
+            return { lhs: Fdiv(pev(N, x), Fmul(l1, l2)),
+                     rhs: Fadd(Fdiv(Av, l1), Fdiv(Bv, l2)) };
+          }
+        };
+      }
+
+      // ---------- case 2: a repeated linear factor ----------
+      function buildRepeated() {
+        const p = rnd(SMALL);
+        let q;
+        do { q = rnd(SMALL); } while (q === p);
+        const f1 = { a: 1, b: p }, f2 = { a: 1, b: q };
+        const A = rnd(NZ), B = rnd(NZ), C = rnd(NZ);
+        const N = padd(padd(pscale(pmul(linP(f2), linP(f2)), A),
+                            pscale(pmul(linP(f1), linP(f2)), B)),
+                       pscale(linP(f1), C));
+        const den = br(f1) + br(f2) + "²";
+        const r1 = rootOf(f1), r2 = rootOf(f2);
+        const Cv = Fdiv(pev(N, r2), pev(linP(f1), r2));
+        const Av = Fdiv(pev(N, r1), Fpow(pev(linP(f2), r1), 2));
+        const x2 = F(N[2] || 0);                            // x² coefficient on the left
+        const Bv = Fsub(x2, Av);                            // on the right it is A + B
+
+        return {
+          title: "a repeated linear factor",
+          question: [[{ n: ptxt(N), d: den }]],
+          steps: [
+            { why: br(f2) + " is repeated, so it appears twice — once on its own and once "
+                + "squared. Leave the middle term out and the identity cannot balance, "
+                + "whatever constants you choose.",
+              expr: [[{ n: ptxt(N), d: den }, { t: " ≡ " },
+                      { n: "A", d: linTxt(f1) }, { t: " + " }, { n: "B", d: linTxt(f2) },
+                      { t: " + " }, { n: "C", d: br(f2) + "²" }]] },
+            { why: "Multiply every term by " + den + ".",
+              expr: [[{ t: ptxt(N) + " ≡ A" + br(f2) + "² + B" + br(f1) + br(f2)
+                        + " + C" + br(f1) }]] },
+            { why: "Choose x = " + Ftxt(r2) + ", the repeated root. It kills the A term and "
+                + "the B term at the same time, so C comes out first.",
+              expr: solved(pev(N, r2), pev(linP(f1), r2), "C", Cv) },
+            { why: "Now x = " + Ftxt(r1) + ", which kills the B and C terms and leaves A.",
+              expr: solved(pev(N, r1), Fpow(pev(linP(f2), r1), 2), "A", Av) },
+            { why: "There is no third root to substitute, so compare coefficients instead. "
+                + "On the right, an x² can only come out of A" + br(f2) + "² and "
+                + "B" + br(f1) + br(f2) + " — one from each.",
+              expr: [[{ t: "x²:   " + Ftxt(x2) + " = A + B = " + Ftxt(Av) + " + B" }],
+                     [{ t: "so  B = " + Ftxt(Bv), cls: "pf-then" }]] }
+          ],
+          answer: [[{ n: ptxt(N), d: den }, { t: " ≡ " },
+                    { n: Ftxt(Av), d: linTxt(f1) }, { t: " + " },
+                    { n: Ftxt(Bv), d: linTxt(f2) }, { t: " + " },
+                    { n: Ftxt(Cv), d: br(f2) + "²" }]],
+          point: "A squared bracket needs two terms, not one. Substitution hands you A and C; "
+            + "the middle constant has to be found by comparing coefficients.",
+          bad: [r1, r2],
+          check(x) {
+            const l1 = pev(linP(f1), x), l2 = pev(linP(f2), x);
+            return { lhs: Fdiv(pev(N, x), Fmul(l1, Fpow(l2, 2))),
+                     rhs: Fadd(Fadd(Fdiv(Av, l1), Fdiv(Bv, l2)), Fdiv(Cv, Fpow(l2, 2))) };
+          }
+        };
+      }
+
+      // ---------- case 3: an irreducible quadratic factor ----------
+      function buildQuadratic() {
+        const p = rnd(SMALL), k = rnd([1, 2, 3, 4, 5, 9]);
+        const f1 = { a: 1, b: p };
+        const A = rnd(NZ), B = rnd(NZ), C = rnd(NZ);
+        const quad = [k, 0, 1];                             // x² + k, no real roots
+        const qTxt = "x² + " + k;
+        const N = padd(pscale(quad, A), pmul([C, B], linP(f1)));
+        const den = br(f1) + "(" + qTxt + ")";
+        const r1 = rootOf(f1);
+        const Av = Fdiv(pev(N, r1), pev(quad, r1));
+        const x2 = F(N[2] || 0);
+        const Bv = Fsub(x2, Av);
+        const c0 = F(N[0] || 0);
+        const Cv = Fdiv(Fsub(c0, Fmul(Av, F(k))), F(p));
+
+        return {
+          title: "an irreducible quadratic factor",
+          question: [[{ n: ptxt(N), d: den }]],
+          steps: [
+            { why: qTxt + " has no real roots, so it will not split any further. Its "
+                + "numerator must be one degree lower than it is — a linear expression "
+                + "Bx + C, not a single constant. This is the line most marks are lost on.",
+              expr: [[{ n: ptxt(N), d: den }, { t: " ≡ " },
+                      { n: "A", d: linTxt(f1) }, { t: " + " }, { n: "Bx + C", d: qTxt }]] },
+            { why: "Multiply every term by " + den + ".",
+              expr: [[{ t: ptxt(N) + " ≡ A(" + qTxt + ") + (Bx + C)" + br(f1) }]] },
+            { why: "Choose x = " + Ftxt(r1) + " to kill the second bracket. " + qTxt
+                + " has no root to substitute, so this is the only value that helps.",
+              expr: solved(pev(N, r1), pev(quad, r1), "A", Av) },
+            { why: "The rest must come from comparing coefficients. An x² appears on the "
+                + "right in A(" + qTxt + ") and again from Bx multiplied by x.",
+              expr: [[{ t: "x²:   " + Ftxt(x2) + " = A + B = " + Ftxt(Av) + " + B" }],
+                     [{ t: "so  B = " + Ftxt(Bv), cls: "pf-then" }]] },
+            { why: "Then the constant terms — putting x = 0 is the quickest way to see them.",
+              expr: [[{ t: "x = 0:   " + Ftxt(c0) + " = " + k + "A + " + inBr(p) + "C" }],
+                     [{ t: Ftxt(c0) + " = " + Ftxt(Fmul(Av, F(k))) + " + "
+                          + coefTxt(F(p), "C"), cls: "pf-then" }],
+                     [{ t: "so  C = " + Ftxt(Cv), cls: "pf-then" }]] }
+          ],
+          answer: [[{ n: ptxt(N), d: den }, { t: " ≡ " },
+                    { n: Ftxt(Av), d: linTxt(f1) }, { t: " + " },
+                    { n: linNumTxt(Bv, Cv), d: qTxt }]],
+          point: "A quadratic that will not factorise still takes a numerator one degree "
+            + "below itself: Bx + C. One substitution gives A; the other two constants come "
+            + "from comparing coefficients.",
+          bad: [r1],
+          check(x) {
+            const l1 = pev(linP(f1), x), qv = pev(quad, x);
+            return { lhs: Fdiv(pev(N, x), Fmul(l1, qv)),
+                     rhs: Fadd(Fdiv(Av, l1), Fdiv(Fadd(Fmul(Bv, x), Cv), qv)) };
+          }
+        };
+      }
+
+      // ---------- case 4: an improper fraction ----------
+      function buildImproper() {
+        const p = rnd(SMALL);
+        let q;
+        do { q = rnd(SMALL); } while (q === p);
+        const f1 = { a: 1, b: p }, f2 = { a: 1, b: q };
+        const D = rnd([1, 2, 3, 4, -1, -2, -3]), A = rnd(NZ), B = rnd(NZ);
+        const N = padd(pscale(pmul(linP(f1), linP(f2)), D),
+                       padd(pscale(linP(f2), A), pscale(linP(f1), B)));
+        const den = br(f1) + br(f2);
+        const denOut = ptxt(pmul(linP(f1), linP(f2)));
+        const r1 = rootOf(f1), r2 = rootOf(f2);
+        const kv = F(N[2] || 0);                            // both sides are degree 2
+        const Av = Fdiv(pev(N, r1), pev(linP(f2), r1));
+        const Bv = Fdiv(pev(N, r2), pev(linP(f1), r2));
+
+        return {
+          title: "an improper fraction — divide before you split",
+          question: [[{ n: ptxt(N), d: den }]],
+          steps: [
+            { why: "Check the degrees first. The top is degree 2, and so is the bottom — "
+                + den + " multiplies out to " + denOut + ". The fraction is improper, and A/" + br(f1)
+                + " + B/" + br(f2) + " on its own could never equal it: those two terms "
+                + "shrink away for large x and this fraction does not. A whole term goes "
+                + "in front.",
+              expr: [[{ n: ptxt(N), d: den }, { t: " ≡ k + " },
+                      { n: "A", d: linTxt(f1) }, { t: " + " }, { n: "B", d: linTxt(f2) }]] },
+            { why: "Multiply every term by " + den + ".",
+              expr: [[{ t: ptxt(N) + " ≡ k" + br(f1) + br(f2) + " + A" + br(f2)
+                        + " + B" + br(f1) }]] },
+            { why: "Only the k term carries an x², so comparing x² coefficients gives k "
+                + "straight away. That is the long division, done in one line.",
+              expr: [[{ t: "x²:   " + Ftxt(kv) + " = k" }],
+                     [{ t: "so  k = " + Ftxt(kv), cls: "pf-then" }]] },
+            { why: "Now the roots, exactly as in case 1: x = " + Ftxt(r1) + " kills the k "
+                + "term and the B term together.",
+              expr: solved(pev(N, r1), pev(linP(f2), r1), "A", Av) },
+            { why: "And x = " + Ftxt(r2) + " kills the k term and the A term.",
+              expr: solved(pev(N, r2), pev(linP(f1), r2), "B", Bv) }
+          ],
+          answer: [[{ n: ptxt(N), d: den }, { t: " ≡ " + Ftxt(kv) + " + " },
+                    { n: Ftxt(Av), d: linTxt(f1) }, { t: " + " },
+                    { n: Ftxt(Bv), d: linTxt(f2) }]],
+          point: "Compare the degrees before anything else. A top as high as the bottom, or "
+            + "higher, means a whole term comes out first — by long division, or by putting "
+            + "k into the form and reading it off the x² coefficients.",
+          bad: [r1, r2],
+          check(x) {
+            const l1 = pev(linP(f1), x), l2 = pev(linP(f2), x);
+            return { lhs: Fdiv(pev(N, x), Fmul(l1, l2)),
+                     rhs: Fadd(kv, Fadd(Fdiv(Av, l1), Fdiv(Bv, l2))) };
+          }
+        };
+      }
+
+      const CASES = [
+        { key: "distinct", label: "1 · two different linear factors", build: buildDistinct },
+        { key: "repeated", label: "2 · a repeated linear factor", build: buildRepeated },
+        { key: "quadratic", label: "3 · an irreducible quadratic factor", build: buildQuadratic },
+        { key: "improper", label: "4 · an improper fraction", build: buildImproper }
+      ];
+
+      // ---- the board ----
+      const { ctrls, stage, read } = shell(host);
+      const st = { key: CASES[0].key, model: null, shown: 0 };
+
+      // An expression is a list of lines; a line is a list of pieces, and a
+      // piece is either plain text or a fraction drawn as one.
+      function exprEl(lines, cls) {
+        const box = el("div", "pf-lines" + (cls ? " " + cls : ""));
+        lines.forEach((pieces) => {
+          const row = el("div", "pf-expr");
+          pieces.forEach((p) => {
+            if (p.t !== undefined) {
+              row.appendChild(el("span", "pf-tx" + (p.cls ? " " + p.cls : ""), p.t));
+              return;
+            }
+            const f = el("span", "pf-frac");
+            f.appendChild(el("span", "pf-n", p.n));
+            f.appendChild(el("span", "pf-d", p.d));
+            row.appendChild(f);
+          });
+          box.appendChild(row);
+        });
+        return box;
+      }
+
+      function draw() {
+        const m = st.model;
+        const total = m.steps.length + 1;                   // the steps, then the answer
+        clear(stage);
+        const wrap = el("div", "pf");
+        const idx = CASES.map((c) => c.key).indexOf(st.key);
+        wrap.appendChild(el("div", "pf-case", "Case " + (idx + 1) + " · " + m.title));
+        wrap.appendChild(el("div", "pf-ask", "Express in partial fractions:"));
+        wrap.appendChild(exprEl(m.question, "pf-big"));
+
+        const list = el("div", "pf-list");
+        for (let i = 0; i < Math.min(st.shown, m.steps.length); i++) {
+          const s = m.steps[i];
+          const row = el("div", "pf-step" + (i === st.shown - 1 ? " pf-now" : ""));
+          row.appendChild(el("div", "pf-why", s.why));
+          row.appendChild(exprEl(s.expr));
+          list.appendChild(row);
+        }
+        if (st.shown >= total) {
+          const row = el("div", "pf-step pf-now");
+          row.appendChild(el("div", "pf-why", "The answer:"));
+          row.appendChild(exprEl(m.answer, "pf-big"));
+          const x = testX(m.bad);
+          const c = m.check(x);
+          row.appendChild(el("div", "pf-check", Feq(c.lhs, c.rhs)
+            ? "Check — at x = " + Ftxt(x) + " the fraction on the left comes to "
+              + Ftxt(c.lhs) + ", and so does the sum on the right."
+            : "This example does not check out at x = " + Ftxt(x) + " ("
+              + Ftxt(c.lhs) + " against " + Ftxt(c.rhs) + ") — please press "
+              + "“New example” rather than putting it on the board."));
+          list.appendChild(row);
+        }
+        wrap.appendChild(list);
+        stage.appendChild(wrap);
+
+        if (st.shown === 0) {
+          read.textContent = "Before any working, ask the class what the answer will look "
+            + "like. Naming the form is the first mark, and the one most often thrown away. "
+            + "Then press “Next line”.";
+        } else if (st.shown <= m.steps.length) {
+          read.textContent = m.steps[st.shown - 1].why;
+        } else {
+          read.textContent = m.point;
+        }
+        next.disabled = st.shown >= total;
+        next.textContent = st.shown >= total ? "Finished" : "Next line ▸";
+      }
+
+      function reset(key) {
+        st.key = key;
+        const c = CASES.filter((x) => x.key === key)[0] || CASES[0];
+        st.key = c.key;
+        st.model = c.build();
+        st.shown = 0;
+        draw();
+      }
+
+      const start = CASES.map((c) => c.key).indexOf(opts.caseKey) !== -1
+        ? opts.caseKey : CASES[0].key;
+      choice(ctrls, { label: "Case", value: start,
+        options: CASES.map((c) => ({ value: c.key, label: c.label })),
+        on: (v) => reset(v) });
+      const acts = el("div", "sim-ctrl");
+      const next = button(acts, "Next line ▸", () => {
+        if (st.shown < st.model.steps.length + 1) { st.shown += 1; draw(); }
+      });
+      button(acts, "Every line", () => { st.shown = st.model.steps.length + 1; draw(); });
+      button(acts, "New example", () => reset(st.key));
+      ctrls.appendChild(acts);
+      reset(start);
+    }
+  };
+
   return {
     list: defs,
     has: (id) => Object.prototype.hasOwnProperty.call(defs, id),

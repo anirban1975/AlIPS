@@ -575,6 +575,75 @@
   .sheet.sim-view { display: none; }
 }
 
+/* ---------- Partial fractions ----------
+   Algebra is set in a serif face and the fractions are drawn as fractions, not
+   written with a slash: what is on the board should be what a pupil writes in
+   an exam. Every rule is written under .pf so that the worksheet styles in
+   sheet.css cannot reach in and change the working when the simulator is shown
+   inside the sheet. */
+.pf {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 14px;
+  font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+  color: var(--ink);
+}
+.pf .pf-case {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+.pf .pf-ask { font-size: 0.85rem; color: var(--ink-soft); }
+.pf .pf-lines { display: flex; flex-direction: column; gap: 2px; }
+.pf .pf-expr {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  font-family: Cambria, Constantia, Georgia, "Times New Roman", serif;
+  font-size: 1.18rem;
+  line-height: 1.3;
+  color: var(--ink);
+}
+.pf .pf-big .pf-expr { font-size: 1.42rem; }
+.pf .pf-tx { white-space: pre-wrap; }
+.pf .pf-tx.pf-then { padding-inline-start: 22px; color: var(--ink-soft); }
+.pf .pf-frac {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0 5px;
+  vertical-align: middle;
+}
+.pf .pf-frac .pf-n { padding: 0 8px 1px; }
+.pf .pf-frac .pf-d { padding: 1px 8px 0; border-top: 2px solid currentColor; }
+.pf .pf-list { display: flex; flex-direction: column; gap: 10px; }
+.pf .pf-step {
+  border-inline-start: 3px solid var(--line);
+  padding: 5px 0 5px 12px;
+}
+.pf .pf-step.pf-now {
+  border-inline-start-color: var(--primary);
+  background: var(--primary-soft);
+  border-radius: 0 8px 8px 0;
+  padding-inline-end: 10px;
+}
+.pf .pf-why {
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+  margin-bottom: 5px;
+}
+.pf .pf-step.pf-now .pf-why { color: var(--ink); }
+.pf .pf-check {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: var(--oman);
+  font-weight: 600;
+}
+
 /* ---------- The Grade 1-4 simulators ---------- */
 
 .kid { display: flex; flex-direction: column; gap: 12px; font-size: 1rem; }

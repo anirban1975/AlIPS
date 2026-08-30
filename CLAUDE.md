@@ -28,9 +28,10 @@ department's request (v0.4). Do not re-introduce bilingual strings.
 - `lessons.js` — topic content library (concept, worked example, key points,
   resource links, and the `sim` attribute naming the topic's simulator) used to
   draft lesson plans and slides
-- `sims.js` — the interactive simulators for Grades 5-12: 29 manipulatives
+- `sims.js` — the interactive simulators for Grades 5-12: 30 manipulatives
   drawn with the browser's own SVG (no library, no internet, no account),
-  driven by sliders and selects
+  driven by sliders and selects, plus the partial fractions board, which is
+  laid out in HTML so the algebra is set as real fractions
 - `sims-kids.js` — the Grade 1-4 simulators: 12 manipulatives a child moves by
   hand (counters, coins, biscuits, cubes) plus a jungle-themed number-tracing
   board, each with Explore, Play and step-by-step modes, Support/Core/Challenge
@@ -324,6 +325,28 @@ coin purse becomes percentages for "Money and finance" at IGCSE). After the
 change, 752 of the 896 sub-topic entries match on their topic, 141 on wording
 (all Grade 8 and below), and 3 have no simulator — mock exams, past-paper
 booklets, and transforming trigonometric graphs.
+
+**Partial fractions is a worked-example board, not a manipulative.** Cambridge
+sets four shapes of question and a candidate who writes the wrong *form* on
+line one has lost the question before any arithmetic. So `defs.partialFractions`
+in `sims.js` names the form first and gives a reason for it, then reveals the
+working one line at a time: two different linear factors, a repeated linear
+factor, an irreducible quadratic factor, and an improper fraction that needs a
+whole term in front. Three rules hold it honest:
+
+- every example is built backwards from whole-number constants, and all the
+  arithmetic runs on exact fractions, so nothing on the board is ever rounded;
+- the constants shown are **re-derived** by the substitution a pupil would do,
+  not copied from the construction, so the working checks the answer;
+- the last line evaluates both sides at a test value and says they agree — and
+  if they ever did not, it says that instead of printing a wrong answer.
+
+A test (`/tmp/test/pf.js`, Playwright) reads the printed answer back off the
+page, rebuilds both sides from that text alone and compares them numerically
+over 240 random examples. It mounts the simulator inside `.sheet` on purpose:
+that is where the worksheet CSS lives, and it is where the tracing board broke
+on the live site. Every rule for this board is written under `.pf` for the same
+reason.
 
 `simulatorsFor(generatorId, subTopicName, grade)` in `lessons.js` is the single
 entry point and returns `{ builtIn, links, videos }`. To add a simulator: write
